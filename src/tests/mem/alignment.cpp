@@ -9,8 +9,7 @@ using namespace Novo;
 
 struct Allocator_Info
 {
-    FN_Allocator *fn;
-    void *user_data;
+    Allocator allocator;
     bool can_free;
 };
 
@@ -20,12 +19,12 @@ int main(int argc, char *argv[])
 {
 
     Linear_Allocator linear_allocator_data;
-    linear_allocator_create(&linear_allocator_data, c_allocator, nullptr, 4096 * 2 * 6);
+    Allocator linear_allocator = linear_allocator_create(&linear_allocator_data, c_allocator(), 4096 * 2 * 6);
 
 
     Allocator_Info allocators[] = {
-        { c_allocator, nullptr, true },
-        { linear_allocator, &linear_allocator_data, false },
+        { c_allocator(), true },
+        { linear_allocator,false },
     };
 
     bool ok = true;
@@ -47,14 +46,14 @@ bool test_align(Allocator_Info info)
             s64 size = align * i;
             printf("align: %llu, size: %lld\n", align, size);
 
-            void *ptr = allocate_aligned(info.fn, info.user_data, size, align);
+            void *ptr = allocate_aligned(info.allocator, size, align);
             assert((u64)ptr % align == 0);
 
-            if (info.can_free) free(ptr);
+            if (info.can_free) free(info.allocator, ptr);
         }
 
         printf("\n");
-        if (!info.can_free) free_all(info.fn, info.user_data);
+        if (!info.can_free) free_all(info.allocator);
 
     }
 

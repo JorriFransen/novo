@@ -6,7 +6,12 @@
 namespace Novo {
 
 
-FN_ALLOCATOR(c_allocator)
+NAPI Allocator c_allocator()
+{
+    return { c_allocator_fn, nullptr };
+}
+
+FN_ALLOCATOR(c_allocator_fn)
 {
     switch (mode) {
 
@@ -43,37 +48,37 @@ FN_ALLOCATOR(c_allocator)
 
 FN_DEFAULT_ALLOCATE(allocate)
 {
-    return allocate(c_allocator, nullptr, size);
+    return allocate(c_allocator(), size);
 }
 
 FN_ALLOCATE(allocate)
 {
-    return allocator(Allocator_Mode::ALLOCATE, size, 1, 0, nullptr, user_data, 0);
+    return allocator.fn(Allocator_Mode::ALLOCATE, size, 1, 0, nullptr, allocator.user_data, 0);
 }
 
 FN_DEFAULT_ALLOCATE_ALIGNED(allocate_aligned)
 {
-    return allocate_aligned(c_allocator, nullptr, size, align);
+    return allocate_aligned(c_allocator(), size, align);
 }
 
 FN_ALLOCATE_ALIGNED(allocate_aligned)
 {
-    return allocator(Allocator_Mode::ALLOCATE, size, align, 0, nullptr, user_data, 0);
+    return allocator.fn(Allocator_Mode::ALLOCATE, size, align, 0, nullptr, allocator.user_data, 0);
 }
 
 FN_DEFAULT_FREE(free)
 {
-    free(c_allocator, nullptr, ptr);
+    free(c_allocator(), ptr);
 }
 
 FN_FREE(free)
 {
-    allocator(Allocator_Mode::FREE, 0, 0, 0, ptr, user_data, 0);
+    allocator.fn(Allocator_Mode::FREE, 0, 0, 0, ptr, allocator.user_data, 0);
 }
 
 FN_FREE_ALL(free_all)
 {
-    allocator(Allocator_Mode::FREE_ALL, 0, 0, 0, nullptr, user_data, 0);
+    allocator.fn(Allocator_Mode::FREE_ALL, 0, 0, 0, nullptr, allocator.user_data, 0);
 }
 
 }

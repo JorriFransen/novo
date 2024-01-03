@@ -4,21 +4,17 @@
 
 namespace Novo {
 
-bool linear_allocator_create(Linear_Allocator *la, FN_Allocator backing_allocator, void *backing_user_data, s64 size)
+Allocator linear_allocator_create(Linear_Allocator *la, Allocator backing_allocator, s64 size)
 {
     la->backing_allocator = backing_allocator;
-    la->backing_allocator_data = backing_user_data;
 
-    la->buffer = (u8 *)allocate(backing_allocator, backing_user_data, size);
-
-    if (!la->buffer) {
-        return false;
-    }
+    la->buffer = (u8 *)allocate(backing_allocator, size);
+    assert(la->buffer);
 
     la->used = 0;
     la->size = size;
 
-    return true;
+    return { linear_allocator, la };
 }
 
 FN_ALLOCATOR(linear_allocator)
