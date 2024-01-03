@@ -32,7 +32,7 @@ bool fs_is_realpath(const String_Ref path)
     return false;
 }
 
-String fs_realpath(Allocator allocator, const String_Ref path)
+String fs_realpath(Allocator *allocator, const String_Ref path)
 {
     NSTRING_ASSERT_ZERO_TERMINATION(path);
 

@@ -9,7 +9,7 @@ using namespace Novo;
 
 struct Allocator_Info
 {
-    Allocator allocator;
+    Allocator *allocator;
     bool can_free;
 };
 
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
     Allocator_Info allocators[] = {
         { c_allocator(), true },
-        { linear_allocator,false },
+        { &linear_allocator, false },
     };
 
     bool ok = true;

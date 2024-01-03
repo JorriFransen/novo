@@ -10,6 +10,7 @@ namespace Novo {
 
 bool instance_start(Instance *instance)
 {
+    linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(1));
     if (!fs_is_directory(instance->cwd)) {
         assert(false && "Invalid cwd!");
     }
@@ -35,7 +36,6 @@ bool instance_start(Instance *instance)
     parse_task_create(&parse_task, first_file_path);
 
     task_execute(instance, &parse_task);
-    assert(false);
 
     return true;
 }

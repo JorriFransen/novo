@@ -4,7 +4,7 @@
 
 namespace Novo {
 
-Allocator linear_allocator_create(Linear_Allocator *la, Allocator backing_allocator, s64 size)
+Allocator linear_allocator_create(Linear_Allocator *la, Allocator *backing_allocator, s64 size)
 {
     la->backing_allocator = backing_allocator;
 
@@ -14,10 +14,10 @@ Allocator linear_allocator_create(Linear_Allocator *la, Allocator backing_alloca
     la->used = 0;
     la->size = size;
 
-    return { linear_allocator, la };
+    return { linear_allocator_fn, la };
 }
 
-FN_ALLOCATOR(linear_allocator)
+FN_ALLOCATOR(linear_allocator_fn)
 {
     auto la = (Linear_Allocator *)allocator_data;
 

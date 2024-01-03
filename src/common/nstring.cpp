@@ -21,7 +21,7 @@ String string(char *data, s64 length)
     return String { data, length };
 }
 
-String string_copy(Allocator allocator, const char *a_buf, s64 a_length)
+String string_copy(Allocator *allocator, const char *a_buf, s64 a_length)
 {
     String result = {
         .data = allocate_array<char>(allocator, a_length + 1),
@@ -34,7 +34,7 @@ String string_copy(Allocator allocator, const char *a_buf, s64 a_length)
     return result;
 }
 
-String string_append_internal(Allocator allocator, const char *a_buf, s64 a_length, const char *b_buf, s64 b_length)
+String string_append_internal(Allocator *allocator, const char *a_buf, s64 a_length, const char *b_buf, s64 b_length)
 {
     if (a_length <= 0) {
         return string_copy(allocator, b_buf, b_length);
