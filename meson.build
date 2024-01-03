@@ -1,13 +1,14 @@
 
-project('novo', 'cpp', default_options: ['unity=subprojects'])
+project('novo', 'cpp', default_options: ['unity=on'])
 
 common_source = [
   'src/common/defines.h',
-  'src/common/allocator.cpp', 'src/common/allocator.h'
+  'src/common/memory/allocator.cpp', 'src/common/memory/allocator.h',
+  'src/common/memory/linear_allocator.cpp', 'src/common/memory/linear_allocator.h',
 ]
 
 common_includes = include_directories('src/common/')
-common_lib = library('novo_common', sources: common_source)
+common_lib = library('novo_common', sources: common_source, include_directories: common_includes)
 
 
 compiler_source = [ 'src/compiler/instance.cpp', 'src/compiler/instance.h' ]

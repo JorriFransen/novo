@@ -1,12 +1,45 @@
 
-#include <allocator.h>
+#include <memory/allocator.h>
+#include <memory/linear_allocator.h>
 
 #include <cassert>
 #include <cstdio>
 
 using namespace Novo;
 
-bool test_align(FN_Allocator allocator)
+struct Allocator_Info
+{
+    FN_Allocator *fn;
+    void *user_data;
+    bool can_free;
+};
+
+bool test_align(Allocator_Info info);
+
+int main(int argc, char *argv[])
+{
+
+    Linear_Allocator linear_allocator_data;
+    linear_allocator_create(&linear_allocator_data, c_allocator, nullptr, 4096 * 2 * 6);
+
+
+    Allocator_Info allocators[] = {
+        { c_allocator, nullptr, true },
+        { linear_allocator, &linear_allocator_data, false },
+    };
+
+    bool ok = true;
+
+    for (unsigned i = 0; i < sizeof(allocators) / sizeof(allocators[0]); i++) {
+        if (!test_align(allocators[i])) {
+            ok = false;
+        }
+    }
+
+    return ok ? 0 : 1;
+}
+
+bool test_align(Allocator_Info info)
 {
     for (u64 align = 1; align <= 4096; align *= 2) {
 
@@ -14,23 +47,17 @@ bool test_align(FN_Allocator allocator)
             s64 size = align * i;
             printf("align: %llu, size: %lld\n", align, size);
 
-            void *ptr = allocate_aligned(size, align);
+            void *ptr = allocate_aligned(info.fn, info.user_data, size, align);
             assert((u64)ptr % align == 0);
-            free(ptr);
+
+            if (info.can_free) free(ptr);
         }
 
         printf("\n");
+        if (!info.can_free) free_all(info.fn, info.user_data);
 
     }
 
     return true;
 }
 
-int main(int argc, char *argv[])
-{
-    if (!test_align(c_allocator)) {
-        return 1;
-    }
-
-    return 0;
-}

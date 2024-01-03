@@ -1,6 +1,6 @@
 #pragma once
 
-#include "defines.h"
+#include <defines.h>
 
 namespace Novo {
 
@@ -23,7 +23,7 @@ NAPI FN_ALLOCATOR(c_allocator);
 typedef FN_DEFAULT_ALLOCATE(FN_Default_Allocate);
 NAPI FN_DEFAULT_ALLOCATE(allocate);
 
-#define FN_ALLOCATE(f) void *f(FN_Allocator allocator, s64 size)
+#define FN_ALLOCATE(f) void *f(FN_Allocator allocator, void *user_data, s64 size)
 typedef FN_ALLOCATE(FN_Allocate);
 NAPI FN_ALLOCATE(allocate);
 
@@ -31,7 +31,7 @@ NAPI FN_ALLOCATE(allocate);
 typedef FN_DEFAULT_ALLOCATE_ALIGNED(FN_Default_Allocate_Aligned);
 NAPI FN_DEFAULT_ALLOCATE_ALIGNED(allocate_aligned);
 
-#define FN_ALLOCATE_ALIGNED(f) void *f(FN_Allocator allocator, s64 size, u64 align)
+#define FN_ALLOCATE_ALIGNED(f) void *f(FN_Allocator allocator, void *user_data, s64 size, u64 align)
 typedef FN_ALLOCATE_ALIGNED(FN_Allocate_Aligned);
 NAPI FN_ALLOCATE_ALIGNED(allocate_aligned);
 
@@ -40,8 +40,11 @@ NAPI FN_ALLOCATE_ALIGNED(allocate_aligned);
 typedef FN_DEFAULT_FREE(FN_Default_Free);
 NAPI FN_DEFAULT_FREE(free);
 
-#define FN_FREE(f) void f(FN_Allocator allocator, void *ptr)
+#define FN_FREE(f) void f(FN_Allocator allocator, void *user_data, void *ptr)
 typedef FN_FREE(FN_Free);
 NAPI FN_FREE(free);
 
+#define FN_FREE_ALL(f) void f(FN_Allocator allocator, void *user_data)
+typedef FN_FREE_ALL(FN_Free_All);
+NAPI FN_FREE_ALL(free_all);
 }
