@@ -1,7 +1,5 @@
 #pragma once
 
-namespace Novo {
-
 #ifdef NEXPORT
 
 // Exports
@@ -24,6 +22,17 @@ namespace Novo {
 #define STATIC_ASSERT _Static_assert
 #else
 #define STATIC_ASSERT static_assert
+#endif
+
+#if defined(__clang__) || defined(__gcc__)
+#define NINLINE __attribute__((always_inline)) inline
+#define NNOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
+#define NINLINE __forceinline
+#define NNOINLINE __declspec(noinline)
+#else
+#define NINLINE static inline
+#define NNOINLINE
 #endif
 
 typedef unsigned char       u8;
@@ -74,5 +83,11 @@ STATIC_ASSERT(sizeof(r64) == 8, "Expected sizeof(r64) to be 8 bytes");
 #define GIGABYTE(x) (x * 1000 * 1000 * 1000)
 #define MEGABYTE(x) (x * 1000 * 1000)
 #define KILOBYTE(x) (x * 1000)
+
+namespace Novo {
+
+NINLINE u64 get_aligned(u64 operand, u64 alignment) {
+    return ((operand + (alignment - 1)) & ~(alignment - 1));
+}
 
 }
