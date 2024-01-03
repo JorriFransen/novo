@@ -14,7 +14,7 @@ enum class Allocator_Mode
 };
 
 
-#define FN_ALLOCATOR(f) void * f(Allocator_Mode mode, s64 size, s64 align, s64 old_size, void *old_pointer, void *allocator_data, s64 options)
+#define FN_ALLOCATOR(f) void * f(Allocator_Mode mode, s64 size, u64 align, s64 old_size, void *old_pointer, void *allocator_data, s64 options)
 typedef FN_ALLOCATOR(FN_Allocator);
 NAPI FN_ALLOCATOR(c_allocator);
 
@@ -27,11 +27,11 @@ NAPI FN_DEFAULT_ALLOCATE(allocate);
 typedef FN_ALLOCATE(FN_Allocate);
 NAPI FN_ALLOCATE(allocate);
 
-#define FN_DEFAULT_ALLOCATE_ALIGNED(f) void *f(s64 size, s64 align)
+#define FN_DEFAULT_ALLOCATE_ALIGNED(f) void *f(s64 size, u64 align)
 typedef FN_DEFAULT_ALLOCATE_ALIGNED(FN_Default_Allocate_Aligned);
 NAPI FN_DEFAULT_ALLOCATE_ALIGNED(allocate_aligned);
 
-#define FN_ALLOCATE_ALIGNED(f) void *f(FN_Allocator allocator, s64 size, s64 align)
+#define FN_ALLOCATE_ALIGNED(f) void *f(FN_Allocator allocator, s64 size, u64 align)
 typedef FN_ALLOCATE_ALIGNED(FN_Allocate_Aligned);
 NAPI FN_ALLOCATE_ALIGNED(allocate_aligned);
 

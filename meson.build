@@ -15,4 +15,6 @@ novo_lib = library('novo', sources: compiler_source, include_directories: common
 
 driver_source = [ 'src/driver/main.cpp']
 driver_libs = [ common_lib, novo_lib ]
-executable('novo', sources: driver_source, include_directories: common_includes, link_with: driver_libs)
+driver_exe = executable('novo', sources: driver_source, include_directories: common_includes, link_with: driver_libs)
+
+subdir('tests')
