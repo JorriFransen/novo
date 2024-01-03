@@ -1,0 +1,18 @@
+
+project('novo', 'cpp', default_options: ['unity=subprojects'])
+
+common_source = [
+  'src/common/defines.h',
+  'src/common/allocator.cpp', 'src/common/allocator.h'
+]
+
+common_includes = include_directories('src/common/')
+common_lib = library('novo_common', sources: common_source)
+
+
+compiler_source = [ 'src/compiler/instance.cpp', 'src/compiler/instance.h' ]
+novo_lib = library('novo', sources: compiler_source, include_directories: common_includes, link_with: common_lib)
+
+driver_source = [ 'src/driver/main.cpp']
+driver_libs = [ common_lib, novo_lib ]
+executable('novo', sources: driver_source, include_directories: common_includes, link_with: driver_libs)
