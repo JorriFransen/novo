@@ -24,6 +24,37 @@
 #define STATIC_ASSERT static_assert
 #endif
 
+
+
+
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+
+#define ZPLATFORM_WINDOWS 1
+#undef ZPLATFORM_DEFAULT_EXE_EXTENSION
+#define ZPLATFORM_DEFAULT_EXE_EXTENSION ".exe"
+#ifndef _WIN64
+#error "64-bit is required on Windows!"
+#endif // _WIN64
+
+#elif defined(__linux__) || defined(__gnu_linux__)
+
+//STATIC_ASSERT(false, "Unsupported platform (linux).");
+#define ZPLATFORM_LINUX 1
+
+#elif defined(__unix__)
+
+#define ZPLATFORM_UNIX 1
+STATIC_ASSERT(false, "Unsupported platform (unix).");
+
+#elif __APPLE__
+
+#define ZPLATFORM_APPLE 1
+STATIC_ASSERT(false, "Unsupported platform (Apple).");
+
+#endif // defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+
+
+
 #if defined(__clang__) || defined(__gcc__)
 #define NINLINE __attribute__((always_inline)) inline
 #define NNOINLINE __attribute__((noinline))

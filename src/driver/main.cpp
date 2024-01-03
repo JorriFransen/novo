@@ -1,7 +1,15 @@
-#include <stdio.h>
+#include <instance.h>
+
+using namespace Novo;
 
 int main(int argc, char *argv[])
 {
-    printf("Hello from novo driver!\n");
-    return 1;
+    Instance instance;
+    instance.first_file_name = "test/test.no";
+
+    if (!instance_start(&instance)) {
+        return 1;
+    }
+
+    return 0;
 }
