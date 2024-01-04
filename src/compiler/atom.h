@@ -18,6 +18,8 @@ struct Atom_Table
 };
 
 NAPI void atom_table_create(Atom_Table *at, Allocator *allocator);
+NAPI void atom_table_create(Atom_Table *at, Allocator *allocator, s64 capacity);
+NAPI void atom_table_free(Atom_Table *at);
 
 NAPI Atom atom_get(Atom_Table *at, const String_Ref &str);
 NAPI Atom atom_get(Atom_Table *at, const char *start, s64 length);

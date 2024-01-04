@@ -4,8 +4,22 @@ namespace Novo {
 
 void atom_table_create(Atom_Table *at, Allocator *allocator)
 {
+    atom_table_create(at, allocator, NOVO_DARRAY_DEFAULT_CAPACITY);
+}
+
+void atom_table_create(Atom_Table *at, Allocator *allocator, s64 capacity)
+{
     at->allocator = allocator;
-    darray_create(at->allocator, &at->strings);
+    darray_create(at->allocator, &at->strings, capacity);
+}
+
+void atom_table_free(Atom_Table *at)
+{
+    for (s64 i = 0; i < at->strings.count; i++) {
+        free(at->allocator, at->strings[i].data);
+    }
+
+    darray_free(&at->strings);
 }
 
 Atom atom_get(Atom_Table *at, const String_Ref &str)
