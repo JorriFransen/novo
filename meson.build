@@ -12,6 +12,7 @@ common_source = [
 
   'src/common/memory/allocator.cpp', 'src/common/memory/allocator.h',
   'src/common/memory/linear_allocator.cpp', 'src/common/memory/linear_allocator.h',
+  'src/common/memory/temp_allocator.cpp', 'src/common/memory/temp_allocator.h',
 ]
 
 common_includes = include_directories('src/common/')

@@ -17,6 +17,26 @@ Allocator linear_allocator_create(Linear_Allocator *la, Allocator *backing_alloc
     return { linear_allocator_fn, la, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
+void *linear_allocator_allocate(Linear_Allocator *la, s64 size, u64 align)
+{
+    s64 actual_size = size + (align - 1);
+
+    if (actual_size > (la->size - la->used)) {
+        assert(false && "Linear allocator out of space!");
+        return nullptr;
+    }
+
+    auto ptr = (void *)get_aligned((u64)&la->buffer[la->used], align);
+    la->used += actual_size;
+
+    return ptr;
+}
+
+void linear_allocator_free_all(Linear_Allocator *la)
+{
+    la->used = 0;
+}
+
 FN_ALLOCATOR(linear_allocator_fn)
 {
     auto la = (Linear_Allocator *)allocator_data;
@@ -24,18 +44,7 @@ FN_ALLOCATOR(linear_allocator_fn)
     switch (mode) {
 
         case Allocator_Mode::ALLOCATE: {
-
-            s64 actual_size = size + (align - 1);
-
-            if (actual_size > (la->size - la->used)) {
-                assert(false && "Linear allocator out of space!");
-                return nullptr;
-            }
-
-            auto ptr = (void *)get_aligned((u64)&la->buffer[la->used], align);
-            la->used += actual_size;
-
-            return ptr;
+            return linear_allocator_allocate(la, size, align);
         }
 
         case Allocator_Mode::REALLOCATE: {
@@ -49,7 +58,7 @@ FN_ALLOCATOR(linear_allocator_fn)
         }
 
         case Allocator_Mode::FREE_ALL: {
-            la->used = 0;
+            linear_allocator_free_all(la);
             return nullptr;
         }
     }
