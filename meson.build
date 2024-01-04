@@ -1,8 +1,6 @@
 
 project('novo', 'cpp', default_options: 'unity=on')
 
-add_project_arguments('-Wno-c99-designator', language: 'cpp')
-
 common_source = [
   'src/common/defines.h',
   'src/common/nstring.cpp', 'src/common/nstring.h',

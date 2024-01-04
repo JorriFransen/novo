@@ -299,21 +299,26 @@ void print_token(Token token)
     printf("%.*s\n", (int)str.length, str.data);
 }
 
-static String_Ref token_kind_to_string[TOK_LAST + 1] = {
-    [TOK_INVALID] = "INVALID",
-    [TOK_INT] = "INT",
-    [TOK_REAL] = "REAL",
-    [TOK_STRING] = "STRING",
-    [TOK_CHAR] = "CHAR",
-    [TOK_NAME] = "NAME",
-    [TOK_KEYWORD] = "KEYWORD",
-    [TOK_RIGHT_ARROW] = "->",
-    [TOK_EQ] = "==",
-    [TOK_NEQ] = "!=",
-    [TOK_LTEQ] = "<=",
-    [TOK_GTEQ] = ">=",
-    [TOK_EOF] = "EOF",
-};
+NINLINE const char *token_kind_to_string(Token_Kind kind) {
+    switch (kind) {
+        case TOK_INVALID: return "INVALID";
+        case TOK_INT: return "INT";
+        case TOK_REAL: return "REAL";
+        case TOK_STRING: return "STRING";
+        case TOK_CHAR: return "CHAR";
+        case TOK_NAME: return "NAME";
+        case TOK_KEYWORD: return "KEYWORD";
+        case TOK_RIGHT_ARROW: return "->";
+        case TOK_DOT_DOT: return "..";
+        case TOK_EQ: return "==";
+        case TOK_NEQ: return "!=";
+        case TOK_LTEQ: return "<=";
+        case TOK_GTEQ: return ">=";
+        case TOK_EOF: return "EOF";
+
+        default: assert(false);
+    }
+}
 
 String_Ref tmp_token_str(Token token)
 {
@@ -323,7 +328,7 @@ String_Ref tmp_token_str(Token token)
     if (token.atom.length > 0) {
         length = string_format(buffer, "%s", token.atom.data);
     } else if (token.kind == TOK_EOF) {
-        return token_kind_to_string[token.kind];
+        return token_kind_to_string(token.kind);
     } else {
         assert(false);
     }
@@ -341,7 +346,7 @@ String_Ref tmp_token_kind_str(Token_Kind kind)
     if (isprint((char)kind)) {
         length = string_format(buffer, "%c", (char)kind);
     } else {
-        return token_kind_to_string[kind];
+        return token_kind_to_string(kind);
     }
 
     auto buf = buffer;
@@ -349,24 +354,28 @@ String_Ref tmp_token_kind_str(Token_Kind kind)
     return String_Ref(buf, length);
 }
 
-static u8 char_to_digit[256] = {
-    ['0'] = 0,
-    ['1'] = 1,
-    ['2'] = 2,
-    ['3'] = 3,
-    ['4'] = 4,
-    ['5'] = 5,
-    ['6'] = 6,
-    ['7'] = 7,
-    ['8'] = 8,
-    ['9'] = 9,
-    ['a'] = 10, ['A'] = 10,
-    ['b'] = 11, ['B'] = 11,
-    ['c'] = 12, ['C'] = 12,
-    ['d'] = 13, ['D'] = 13,
-    ['e'] = 14, ['E'] = 14,
-    ['f'] = 15, ['F'] = 15,
-};
+NINLINE u8 char_to_digit(int i) {
+    switch (i) {
+        case '0': return 0;
+        case '1': return 1;
+        case '2': return 2;
+        case '3': return 3;
+        case '4': return 4;
+        case '5': return 5;
+        case '6': return 6;
+        case '7': return 7;
+        case '8': return 8;
+        case '9': return 9;
+        case 'a': case 'A': return 10;
+        case 'b': case 'B': return 11;
+        case 'c': case 'C': return 12;
+        case 'd': case 'D': return 13;
+        case 'e': case 'E': return 14;
+        case 'f': case 'F': return 15;
+
+        default: return 0;
+    }
+}
 
 static bool lex_int(Lexer *lexer)
 {
@@ -394,7 +403,7 @@ static bool lex_int(Lexer *lexer)
 
     while (true) {
 
-        u64 digit = char_to_digit[(int)*lexer->stream];
+        u64 digit = char_to_digit((int)*lexer->stream);
         if (digit == 0 && *lexer->stream != '0') {
             break;
         }
