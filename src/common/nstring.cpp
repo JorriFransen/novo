@@ -13,7 +13,7 @@ String_Ref::String_Ref(const char *cstr) : data(cstr), length(strlen(cstr)) {}
 String_Ref::String_Ref(const char *cstr, s64 length) : data(cstr), length(length) {}
 String_Ref::String_Ref(const String &str) : data(str.data), length(str.length) {}
 
-char String_Ref::operator[](s64 index) const
+const char &String_Ref::operator[](s64 index) const
 {
     assert(index >= 0 && index < this->length);
     return data[index];
@@ -112,6 +112,124 @@ s32 string_format(char *dest, const String_Ref fmt, va_list args)
     memcpy(dest, buffer, written_size + 1);
 
     return written_size;
+}
+
+// TODO: Emit these arrays with a macro
+static char special_characters[] = {
+    '\n',
+    '\t',
+    '\"',
+};
+
+static char escape_characters[] = {
+    'n',
+    't',
+    '"',
+};
+
+s64 is_special_character(char c)
+{
+    for (s64 i = 0; i < sizeof(special_characters) / sizeof(special_characters[0]); i++) {
+        if (c  == special_characters[i]) return i;
+    }
+
+    return -1;
+}
+
+s64 is_escape_character(char c)
+{
+    for (s64 i = 0; i < sizeof(escape_characters) / sizeof(escape_characters[0]); i++) {
+        if (c == escape_characters[i]) return i;
+    }
+
+    return -1;
+}
+
+String convert_special_characters_to_escape_characters(Allocator *allocator, const String_Ref str)
+{
+    if (str.length <= 0) {
+        return { nullptr, 0 };
+    }
+
+    s64 special_count = 0;
+
+    for (s64 i = 0; i < str.length; i++) {
+        auto c = str[i];
+
+        if (is_special_character(c) != -1) {
+            special_count += 1;
+            break;
+        }
+    }
+
+    if (!special_count) {
+        return string_copy(allocator, str);
+    }
+
+    auto new_length = str.length + special_count;
+
+    auto data = allocate_array<char>(allocator, new_length + 1);
+
+    s64 ni = 0;
+    for (s64 i = 0; i < str.length; i++) {
+        auto special_index = is_special_character(str[i]);
+        if (special_index != -1) {
+            data[ni++] = '\\';
+            data[ni++] = escape_characters[special_index];
+        } else {
+            data[ni++] = str[i];
+        }
+    }
+
+    data[new_length] = '\0';
+    return string(data, new_length);
+}
+
+String convert_escape_characters_to_special_characters(Allocator *allocator, const String_Ref str, const char **err_char/*=nullptr*/)
+{
+    s64 escape_count = 0;
+
+    for (s64 i = 0; i < str.length; i++) {
+        auto c = str[i];
+
+        if (c == '\\') {
+            assert(i + 1 < str.length);
+
+            if (is_escape_character(str[i + 1]) == -1) {
+                if (err_char) {
+                    *err_char = &str[i + 1];
+                } else {
+                    assert(false && "Invalid escape character!");
+                }
+            }
+
+            escape_count += 1;
+        }
+    }
+
+    if (!escape_count) {
+        return string_copy(allocator, str);
+    }
+
+    auto new_length = str.length - escape_count;
+
+    auto data = allocate_array<char>(allocator, new_length + 1);
+
+    s64 ni = 0;
+    for (s64 i = 0; i < str.length; i++) {
+        if (str[i] == '\\')  {
+            // debug_assert(i + 1 < str.length);
+            assert(i + 1 < str.length);
+            i += 1;
+            auto escape_index = is_escape_character(str[i]);
+            data[ni++] = special_characters[escape_index];
+        } else {
+            data[ni++] = str[i];
+        }
+    }
+
+    data[new_length] = '\0';
+    return string(data, new_length);
 }
 
 }

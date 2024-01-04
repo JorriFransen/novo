@@ -22,7 +22,7 @@ struct String_Ref {
     NAPI String_Ref(const char *cstr, s64 length);
     NAPI String_Ref(const String &str);
 
-    NAPI char operator[](s64 index) const;
+    NAPI const char &operator[](s64 index) const;
 };
 
 NAPI String string(char *data, s64 length);
@@ -57,6 +57,12 @@ NAPI const String string_format_va_list(Allocator *allocator, const String_Ref f
 
 NAPI s32 string_format(char *dest, const String_Ref fmt, ...);
 NAPI s32 string_format(char *dest, const String_Ref fmt, va_list args);
+
+NAPI s64 is_special_character(char c);
+NAPI s64 is_escape_character(char c);
+
+NAPI String convert_special_characters_to_escape_characters(Allocator *allocator, const String_Ref str);
+NAPI String convert_escape_characters_to_special_characters(Allocator *allocator, const String_Ref str, const char **err_char = nullptr);
 
 #define NSTRING_ASSERT_ZERO_TERMINATION(str) assert((str).data[(str).length] == '\0')
 

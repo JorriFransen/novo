@@ -242,20 +242,16 @@ case (first_char): {                                                \
     if (length) {
 
             if (lex->token.kind == TOK_STRING) {
-                assert(false);
-
-                // const char *err_char = nullptr;
-                // String str_lit = convert_escape_characters_to_special_characters(temp_allocator_allocator(), String_Ref(start, length), &err_char);
-                // if (err_char) {
-                //     auto range = lex->token.sr;
-                //     report_lex_error(lex, range, "Invalid escape sequence in string literal: '\\%c'", *err_char);
-                //     return false;
-                // }
-                //
-                // lex->token.atom = string_copy(&lex->instance->ast_allocator, str_lit);
+                const char *err_char = nullptr;
+                String str_lit = convert_escape_characters_to_special_characters(&lex->instance->temp_allocator, String_Ref(start, length), &err_char);
+                if (err_char) {
+                    report_lex_error(lex, lex->pos, "Invalid escape sequence in string literal: '\\%c'", *err_char);
+                    return false;
+                }
 
                 // lex->token.atom = atom_get(&lex->context->atoms, str_lit);
-                //
+                lex->token.atom = string_copy(&lex->instance->ast_allocator, str_lit);
+
             } else {
 
                 // lex->token.atom = atom_get(&lex->context->atoms, start, length);
