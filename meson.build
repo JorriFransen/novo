@@ -1,6 +1,8 @@
 
 project('novo', 'cpp')
 
+add_project_arguments('-Wno-c99-designator', language: 'cpp')
+
 common_source = [
   'src/common/defines.h',
   'src/common/nstring.cpp', 'src/common/nstring.h',
@@ -18,6 +20,8 @@ compiler_includes = include_directories('src/compiler/')
 
 compiler_source = [
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
+  'src/compiler/lexer.cpp', 'src/compiler/lexer.h',
+  'src/compiler/parser.cpp', 'src/compiler/parser.h',
   'src/compiler/task.cpp', 'src/compiler/task.h',
 ]
 

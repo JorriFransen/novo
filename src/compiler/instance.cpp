@@ -10,7 +10,8 @@ namespace Novo {
 
 bool instance_start(Instance *instance)
 {
-    linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(1));
+    instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(1));
+
     if (!fs_is_directory(instance->cwd)) {
         assert(false && "Invalid cwd!");
     }

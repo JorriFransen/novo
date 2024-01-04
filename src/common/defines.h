@@ -121,4 +121,10 @@ NINLINE u64 get_aligned(u64 operand, u64 alignment) {
     return ((operand + (alignment - 1)) & ~(alignment - 1));
 }
 
+struct Real_Value
+{
+    float r32;
+    double r64;
+};
+
 }

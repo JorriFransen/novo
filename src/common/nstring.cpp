@@ -1,7 +1,10 @@
 #include "nstring.h"
 
 #include <cassert>
+#include <cstdio>
 #include <cstring>
+
+#define ZSTRING_FORMAT_STACK_BUFFER_SIZE 32000
 
 namespace Novo {
 
@@ -51,6 +54,64 @@ String string_append_internal(Allocator *allocator, const char *a_buf, s64 a_len
 
     return string(new_buf, new_length);
 
+}
+
+String string_format(Allocator *allocator, const String_Ref fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    auto result = string_format_va_list(allocator, fmt, args);
+
+    va_end(args);
+
+    return result;
+}
+
+const String string_format_va_list(Allocator *allocator, const String_Ref fmt, va_list args)
+{
+    va_list args_copy;
+    va_copy(args_copy, args);
+
+    assert(fmt.data[fmt.length] == '\0' && "Null terminated string expected");
+    auto size = vsnprintf(nullptr, 0, (const char *)fmt.data, args_copy);
+
+    va_end(args_copy);
+
+    char *buf = allocate_array<char>(allocator, size + 1);
+    assert(buf);
+
+    auto written_size = vsnprintf(buf, (size_t)size + 1, fmt.data, args);
+    assert(written_size <= size);
+
+    assert(written_size <= size && "Written size does not match the expected size");
+
+    return string(buf, size);
+}
+
+s32 string_format(char *dest, const String_Ref fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    auto out_length = string_format(dest, fmt, args);
+    assert(out_length < ZSTRING_FORMAT_STACK_BUFFER_SIZE);
+
+    va_end(args);
+
+    return out_length;
+}
+
+s32 string_format(char *dest, const String_Ref fmt, va_list args)
+{
+    static char buffer[ZSTRING_FORMAT_STACK_BUFFER_SIZE];
+
+    assert(fmt.data[fmt.length] == '\0' && "Null terminated string expected");
+    auto written_size = vsnprintf(buffer, ZSTRING_FORMAT_STACK_BUFFER_SIZE, fmt.data, args);
+    buffer[written_size] = '\0';
+    memcpy(dest, buffer, written_size + 1);
+
+    return written_size;
 }
 
 }

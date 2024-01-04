@@ -1,6 +1,7 @@
 #include "task.h"
 
 #include "instance.h"
+#include "parser.h"
 
 #include <cassert>
 #include <cstdio>
@@ -30,7 +31,7 @@ bool task_execute(Instance *instance, Task *task)
         case Task_Kind::PARSE: {
             printf("Parsing: %s\n", task->parse.full_path.data);
 
-            // parse_file(instance->ast_allocator, task->parse.full_path.data);
+            parse_file(instance, task->parse.full_path.data);
             break;
         }
 
