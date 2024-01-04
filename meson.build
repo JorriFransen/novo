@@ -1,5 +1,7 @@
 
-project('novo', 'cpp', default_options: 'unity=on')
+project('novo', 'cpp',
+        version: 'dev',
+        default_options: 'unity=on')
 
 common_source = [
   'src/common/defines.h',

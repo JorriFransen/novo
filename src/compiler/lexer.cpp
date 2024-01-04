@@ -32,7 +32,7 @@ static void _report_lex_error(Lexer *lexer, Source_Pos pos, const char *fmt, ...
 {                                                               \
     (lexer)->token.kind = TOK_INVALID;                          \
     _report_lex_error(lexer, (node), (fmt), ##__VA_ARGS__);     \
-    (lex)->error = true;                                        \
+    (lexer)->error = true;                                      \
 }
 
 void lexer_create(Instance *instance, Lexer *out_lexer)
@@ -55,10 +55,10 @@ void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref s
     lexer->line_start = stream.data;
 
     lexer->token.kind = TOK_INVALID;
-    lexer->token.pos.name = stream_name;
-    lexer->token.pos.line = 1;
-    lexer->token.pos.index_in_line = 0;
-    lexer->token.pos.length = 0;
+    lexer->pos.name = stream_name;
+    lexer->pos.line = 1;
+    lexer->pos.index_in_line = 0;
+    lexer->pos.length = 0;
 
     next_token(lexer);
 }
@@ -103,7 +103,7 @@ case (first_char): {                                                \
 
         case ' ': case '\n': case '\r': case '\t': {
             if (*lex->stream == '\n') {
-                lex->token.pos.line += 1;
+                lex->pos.line += 1;
                 lex->line_start = lex->stream + 1;
             }
             lex->stream += 1;
@@ -146,10 +146,10 @@ case (first_char): {                                                \
             if (*lex->stream != '\'') {
 
                 auto length = lex->stream - start;
-                lex->token.pos.index_in_line = lex->stream - lex->line_start - length + 1;
-                lex->token.pos.index_in_line += 2;
+                lex->pos.index_in_line = lex->stream - lex->line_start - length + 1;
+                lex->pos.index_in_line += 2;
 
-                report_lex_error(lex, lex->token.pos, "Exected \"'\" to end character literal");
+                report_lex_error(lex, lex->pos, "Exected \"'\" to end character literal");
                 return false;
             }
 
@@ -226,7 +226,7 @@ case (first_char): {                                                \
                 lex->token.kind = (Token_Kind)*lex->stream;
                 lex->stream += 1;
             } else {
-                fprintf(stderr, "Unexpected character: '%c', value: '%d'", *lex->stream, *lex->stream);
+                report_lex_error(lex, lex->pos, "Unexpected character: '%c', value: '%d'", *lex->stream, *lex->stream);
                 assert(false);
                 return false;
             }
@@ -243,7 +243,7 @@ case (first_char): {                                                \
 
             if (lex->token.kind == TOK_STRING) {
                 assert(false);
-                //
+
                 // const char *err_char = nullptr;
                 // String str_lit = convert_escape_characters_to_special_characters(temp_allocator_allocator(), String_Ref(start, length), &err_char);
                 // if (err_char) {
@@ -252,6 +252,8 @@ case (first_char): {                                                \
                 //     return false;
                 // }
                 //
+                // lex->token.atom = string_copy(&lex->instance->ast_allocator, str_lit);
+
                 // lex->token.atom = atom_get(&lex->context->atoms, str_lit);
                 //
             } else {
@@ -268,8 +270,11 @@ case (first_char): {                                                \
         lex->token.atom = {};
     }
 
-    lex->token.pos.length = lex->token.atom.length;
-    lex->token.pos.index_in_line = lex->stream - lex->line_start - length + 1;
+    lex->pos.length = lex->token.atom.length;
+    lex->pos.index_in_line = lex->stream - lex->line_start - length + 1;
+
+    lex->token.source_pos_id = lex->instance->source_positions.count;
+    darray_append(&lex->instance->source_positions, lex->pos);
 
     return true;
 }
@@ -282,39 +287,6 @@ bool is_token(Lexer *lexer, Token_Kind kind)
 bool is_token(Lexer *lexer, char c)
 {
     return is_token(lexer, (Token_Kind)c);
-}
-
-bool match_token(Lexer *lexer, Token_Kind kind)
-{
-    if (is_token(lexer, kind)) {
-        next_token(lexer);
-        return true;
-    }
-
-    return false;
-}
-
-bool match_token(Lexer *lexer, char c)
-{
-    return match_token(lexer, (Token_Kind)c);
-}
-
-bool expect_token(Lexer *lexer, Token_Kind kind)
-{
-    if (is_token(lexer, kind)) {
-        next_token(lexer);
-        return true;
-    }
-
-    Token t = lexer->token;
-    fprintf(stderr, "Expected token '%s', got: '%s'", tmp_token_kind_str(kind).data,  tmp_token_str(t).data);
-    assert(false);
-    return false;
-}
-
-bool expect_token(Lexer *lexer, char c)
-{
-    return expect_token(lexer, (Token_Kind)c);
 }
 
 void print_token(Token token)
