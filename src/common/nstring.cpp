@@ -248,4 +248,23 @@ String convert_escape_characters_to_special_characters(Allocator *allocator, con
     return string(data, new_length);
 }
 
+
+u64 hash_string(const char *cstr, u64 length)
+{
+    u64 hash = 14695981039346656037u;
+
+    for (u64 i = 0; i < length; i++)
+    {
+        hash = hash ^ ((u64)cstr[i]);
+        hash = hash * 1099511628211;
+    }
+
+    return hash;
+}
+
+u64 hash_string(const char *cstr)
+{
+    return hash_string(cstr, strlen(cstr));
+}
+
 }

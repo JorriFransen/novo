@@ -5,6 +5,8 @@
 #include <memory/allocator.h>
 #include <nstring.h>
 
+#define NOVO_ATOM_TABLE_DEFAULT_CAPACITY 32
+
 namespace Novo {
 
 typedef u32 Atom;
@@ -13,7 +15,11 @@ struct Atom_Table
 {
     Allocator *allocator;
 
-    // TODO: Use some sort of hash table
+    u32 capacity;
+
+    u64 *hashes;
+    u32 *ids;
+
     DArray<String> strings;
 };
 

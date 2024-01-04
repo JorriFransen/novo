@@ -84,7 +84,7 @@ void darray_free(DArray<Element_Type> *array)
         }
     }
 
-    memset(array, 0, sizeof(DArray<Element_Type>));
+    *array = {};
 }
 
 template <typename Element_Type>

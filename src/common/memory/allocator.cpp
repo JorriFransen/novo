@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
 
 namespace Novo {
 
@@ -60,7 +61,9 @@ FN_DEFAULT_ALLOCATE(allocate)
 
 FN_ALLOCATE(allocate)
 {
-    return allocator->fn(Allocator_Mode::ALLOCATE, size, 1, 0, nullptr, allocator->user_data, 0);
+    auto ptr = allocator->fn(Allocator_Mode::ALLOCATE, size, 1, 0, nullptr, allocator->user_data, 0);
+    memset(ptr, 0, size);
+    return ptr;
 }
 
 FN_DEFAULT_ALLOCATE_ALIGNED(allocate_aligned)
@@ -70,7 +73,9 @@ FN_DEFAULT_ALLOCATE_ALIGNED(allocate_aligned)
 
 FN_ALLOCATE_ALIGNED(allocate_aligned)
 {
-    return allocator->fn(Allocator_Mode::ALLOCATE, size, align, 0, nullptr, allocator->user_data, 0);
+    auto ptr = allocator->fn(Allocator_Mode::ALLOCATE, size, align, 0, nullptr, allocator->user_data, 0);
+    memset(ptr, 0, size);
+    return ptr;
 }
 
 FN_DEFAULT_FREE(free)

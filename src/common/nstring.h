@@ -67,6 +67,9 @@ NAPI s64 is_escape_character(char c);
 NAPI String convert_special_characters_to_escape_characters(Allocator *allocator, const String_Ref str);
 NAPI String convert_escape_characters_to_special_characters(Allocator *allocator, const String_Ref str, const char **err_char = nullptr);
 
+NAPI u64 hash_string(const char *cstr, u64 length);
+NAPI u64 hash_string(const char *cstr);
+
 #define NSTRING_ASSERT_ZERO_TERMINATION(str) assert((str).data[(str).length] == '\0')
 
 }

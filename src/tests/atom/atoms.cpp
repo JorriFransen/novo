@@ -88,16 +88,16 @@ static void growing()
     Atom_Table at;
     atom_table_create(&at, allocator, 2);
 
-    assert(at.strings.capacity == 2);
+    assert(at.capacity == 2);
     Atom a1 = atom_get(&at, "a1");
     Atom a2 = atom_get(&at, "a2");
-    assert(at.strings.capacity == 2);
+    assert(at.capacity == 2);
     Atom a3 = atom_get(&at, "a3");
-    assert(at.strings.capacity == 4);
+    assert(at.capacity == 4);
     Atom a4 = atom_get(&at, "a4");
-    assert(at.strings.capacity == 4);
+    assert(at.capacity == 4);
     Atom a5 = atom_get(&at, "a5");
-    assert(at.strings.capacity == 8);
+    assert(at.capacity == 8);
 
     assert(a1 == atom_get(&at, "a1"));
     assert(a2 == atom_get(&at, "a2"));
