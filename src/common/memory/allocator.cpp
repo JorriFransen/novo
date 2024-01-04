@@ -11,7 +11,7 @@ Allocator g_c_allocator;
 Allocator *c_allocator()
 {
     if (!g_c_allocator_initialized) {
-        g_c_allocator = { c_allocator_fn, nullptr };
+        g_c_allocator = { c_allocator_fn, nullptr, ALLOCATOR_FLAG_CANT_REALLOC };
         g_c_allocator_initialized = true;
     }
 

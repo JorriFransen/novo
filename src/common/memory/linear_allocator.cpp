@@ -14,7 +14,7 @@ Allocator linear_allocator_create(Linear_Allocator *la, Allocator *backing_alloc
     la->used = 0;
     la->size = size;
 
-    return { linear_allocator_fn, la };
+    return { linear_allocator_fn, la, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
 FN_ALLOCATOR(linear_allocator_fn)

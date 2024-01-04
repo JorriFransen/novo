@@ -127,4 +127,10 @@ struct Real_Value
     double r64;
 };
 
+template <typename T>
+T max(T a, T b) {
+    if (a > b) return a;
+    return b;
+}
+
 }

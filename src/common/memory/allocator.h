@@ -13,12 +13,23 @@ enum class Allocator_Mode
     FREE_ALL,
 };
 
+typedef u64 Allocator_Flags;
+
+enum Allocator_Flag : Allocator_Flags
+{
+    ALLOCATOR_FLAG_NONE         = 0x00,
+    ALLOCATOR_FLAG_CANT_FREE    = 0x01,
+    ALLOCATOR_FLAG_CANT_REALLOC = 0x02,
+};
+
 #define FN_ALLOCATOR(f) void * f(Allocator_Mode mode, s64 size, u64 align, s64 old_size, void *old_pointer, void *allocator_data, s64 options)
 typedef FN_ALLOCATOR(FN_Allocator);
 
 struct Allocator {
     FN_Allocator *fn;
     void *user_data;
+
+    Allocator_Flags flags;
 };
 
 NAPI Allocator *c_allocator();

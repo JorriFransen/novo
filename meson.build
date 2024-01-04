@@ -6,6 +6,8 @@ common_source = [
   'src/common/nstring.cpp', 'src/common/nstring.h',
   'src/common/platform.cpp', 'src/common/platform.h',
 
+  'src/common/containers/darray.h',
+
   'src/common/memory/allocator.cpp', 'src/common/memory/allocator.h',
   'src/common/memory/linear_allocator.cpp', 'src/common/memory/linear_allocator.h',
 ]
