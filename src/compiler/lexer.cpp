@@ -16,10 +16,23 @@ namespace Novo {
 static bool lex_int(Lexer *lexer);
 static bool lex_real(Lexer *lexer);
 
-#define report_lex_error(lexer, range, fmt, ...)                                            \
-{                                                                                           \
-    (lexer)->token.kind = TOK_INVALID;                                                      \
-    /* zodiac_report_error((lexer)->context, ZODIAC_LEX_ERROR, (range), (fmt), ##__VA_ARGS__); \ */ \
+static void _report_lex_error(Lexer *lexer, Source_Pos pos, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    fprintf(stderr, "%s:%llu:%llu: error:", pos.name.data, pos.line, pos.index_in_line);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
+
+    va_end(args);
+}
+
+#define report_lex_error(lexer, node, fmt, ...)                 \
+{                                                               \
+    (lexer)->token.kind = TOK_INVALID;                          \
+    _report_lex_error(lexer, (node), (fmt), ##__VA_ARGS__);     \
+    (lex)->error = true;                                        \
 }
 
 void lexer_create(Instance *instance, Lexer *out_lexer)
@@ -30,6 +43,7 @@ void lexer_create(Instance *instance, Lexer *out_lexer)
     out_lexer->line_start = nullptr;
 
     out_lexer->token = {};
+    out_lexer->error = false;
 }
 
 void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref stream_name)
@@ -41,9 +55,10 @@ void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref s
     lexer->line_start = stream.data;
 
     lexer->token.kind = TOK_INVALID;
-    // lexer->token.sr.start.name = stream_name;
-    // lexer->token.sr.start.line = 1;
-    // lexer->token.sr.start.index_in_line = 0;
+    lexer->token.pos.name = stream_name;
+    lexer->token.pos.line = 1;
+    lexer->token.pos.index_in_line = 0;
+    lexer->token.pos.length = 0;
 
     next_token(lexer);
 }
@@ -57,6 +72,10 @@ void lexer_destroy(Lexer *lexer)
 
 bool next_token(Lexer *lex)
 {
+    if (lex->error) {
+        return false;
+    }
+
     assert(lex && lex->stream_start && lex->stream);
 
 next_token__start_lexing_token:
@@ -84,13 +103,12 @@ case (first_char): {                                                \
 
         case ' ': case '\n': case '\r': case '\t': {
             if (*lex->stream == '\n') {
-                // lex->token.sr.start.line += 1;
-                // lex->line_start = lex->stream + 1;
+                lex->token.pos.line += 1;
+                lex->line_start = lex->stream + 1;
             }
             lex->stream += 1;
             while (isspace(*lex->stream)) {
                 if (*lex->stream == '\n') {
-                    // lex->token.sr.start.line += 1;
                     lex->line_start = lex->stream + 1;
                 }
                 lex->stream += 1;
@@ -126,7 +144,12 @@ case (first_char): {                                                \
             lex->stream += 1;
 
             if (*lex->stream != '\'') {
-                report_lex_error(lex, lex->token.sr, "Exected \"'\" to end character literal");
+
+                auto length = lex->stream - start;
+                lex->token.pos.index_in_line = lex->stream - lex->line_start - length + 1;
+                lex->token.pos.index_in_line += 2;
+
+                report_lex_error(lex, lex->token.pos, "Exected \"'\" to end character literal");
                 return false;
             }
 
@@ -245,7 +268,8 @@ case (first_char): {                                                \
         lex->token.atom = {};
     }
 
-    // lex->token.sr.start.index_in_line = lex->stream - lex->line_start - length + 1;
+    lex->token.pos.length = lex->token.atom.length;
+    lex->token.pos.index_in_line = lex->stream - lex->line_start - length + 1;
 
     return true;
 }

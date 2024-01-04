@@ -22,6 +22,7 @@ compiler_source = [
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
   'src/compiler/lexer.cpp', 'src/compiler/lexer.h',
   'src/compiler/parser.cpp', 'src/compiler/parser.h',
+  'src/compiler/source_pos.h',
   'src/compiler/task.cpp', 'src/compiler/task.h',
 ]
 

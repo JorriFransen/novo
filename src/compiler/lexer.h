@@ -1,5 +1,7 @@
 #pragma once
 
+#include "source_pos.h"
+
 #include <nstring.h>
 
 namespace Novo {
@@ -41,7 +43,7 @@ enum Token_Kind
 struct Token
 {
     Token_Kind kind;
-
+    // TODO: Use atom
     String_Ref atom;
 
     union
@@ -50,6 +52,8 @@ struct Token
         Real_Value real;
         char character;
     };
+
+    Source_Pos pos;
 };
 
 struct Lexer
@@ -63,6 +67,7 @@ struct Lexer
     const char *line_start;
 
     Token token;
+    bool error;
 };
 
 #define ALL_ZODIAC_KEYWORDS  \

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lexer.h"
+
 #include <defines.h>
 #include <memory/linear_allocator.h>
 #include <nstring.h>
