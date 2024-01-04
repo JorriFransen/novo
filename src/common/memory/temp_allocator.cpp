@@ -1,5 +1,7 @@
 #include "temp_allocator.h"
+
 #include <cassert>
+#include <cstring>
 
 namespace Novo {
 
@@ -9,6 +11,16 @@ Allocator temp_allocator_create(Temp_Allocator *ta, Allocator *backing_allocator
     return { temp_allocator_fn, ta, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
+Temp_Allocator_Mark temp_allocator_get_mark(Temp_Allocator *ta)
+{
+    return ta->linear_allocator_data.used;
+}
+
+void temp_allocator_reset(Temp_Allocator *ta, Temp_Allocator_Mark mark/*={}*/)
+{
+    ta->linear_allocator_data.used = mark;
+}
+
 FN_ALLOCATOR(temp_allocator_fn)
 {
     auto ta = (Temp_Allocator *)allocator_data;
@@ -16,7 +28,9 @@ FN_ALLOCATOR(temp_allocator_fn)
     switch (mode) {
 
         case Allocator_Mode::ALLOCATE: {
-            return linear_allocator_allocate(&ta->linear_allocator_data, size, align);
+            auto result = linear_allocator_allocate(&ta->linear_allocator_data, size, align);
+            memset(result, 0, size);
+            return result;
         }
 
         case Allocator_Mode::REALLOCATE: {

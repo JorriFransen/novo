@@ -27,6 +27,9 @@ struct String_Ref {
 
 NAPI String string(char *data, s64 length);
 
+NAPI bool string_equal(String &a, String &b);
+NAPI bool string_equal(const String_Ref &a, const String_Ref &b);
+
 String string_append_internal(Allocator *allocator, const char *a_buf, s64 a_length, const char *b_buf, s64 b_length);
 String string_append_internal(Allocator *allocator, const char *a_buf, s64 a_length, const char *b_buf, s64 b_length);
 

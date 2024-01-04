@@ -1,6 +1,6 @@
 
 main :: () -> int {
     x := 'a';
-    return 0;
     "abc";
+    return 0;
 }

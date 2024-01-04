@@ -1,5 +1,6 @@
 #pragma once
 
+#include "atom.h"
 #include "source_pos.h"
 
 #include <nstring.h>
@@ -8,7 +9,7 @@ namespace Novo {
 
 struct Instance;
 
-enum Token_Kind
+enum Token_Kind : u32
 {
     TOK_INVALID = 0,
 
@@ -43,8 +44,7 @@ enum Token_Kind
 struct Token
 {
     Token_Kind kind;
-    // TODO: Use atom
-    String_Ref atom;
+    Atom atom;
 
     union
     {
@@ -81,7 +81,7 @@ NAPI bool is_token(Lexer *lexer, char c);
 
 NAPI void print_token(Token token);
 
-NAPI String_Ref tmp_token_str(Token token);
+NAPI String_Ref tmp_token_str(Atom_Table *at, Token token);
 NAPI String_Ref tmp_token_kind_str(Token_Kind kind);
 
 }

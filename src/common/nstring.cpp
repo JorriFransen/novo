@@ -24,6 +24,22 @@ String string(char *data, s64 length)
     return String { data, length };
 }
 
+bool string_equal(String &a, String &b)
+{
+    if (a.length != b.length) return false;
+    if (a.data == b.data) return true;
+
+    return memcmp(a.data, b.data, a.length) == 0;
+}
+
+bool string_equal(const String_Ref &a, const String_Ref &b)
+{
+    if (a.length != b.length) return false;
+    if (a.data == b.data) return true;
+
+    return memcmp(a.data, b.data, a.length) == 0;
+}
+
 String string_copy(Allocator *allocator, const char *a_buf, s64 a_length)
 {
     String result = {
@@ -129,7 +145,7 @@ static char escape_characters[] = {
 
 s64 is_special_character(char c)
 {
-    for (s64 i = 0; i < sizeof(special_characters) / sizeof(special_characters[0]); i++) {
+    for (s64 i = 0; i < (s64)(sizeof(special_characters) / sizeof(special_characters[0])); i++) {
         if (c  == special_characters[i]) return i;
     }
 
@@ -138,7 +154,7 @@ s64 is_special_character(char c)
 
 s64 is_escape_character(char c)
 {
-    for (s64 i = 0; i < sizeof(escape_characters) / sizeof(escape_characters[0]); i++) {
+    for (s64 i = 0; i < (s64)(sizeof(escape_characters) / sizeof(escape_characters[0])); i++) {
         if (c == escape_characters[i]) return i;
     }
 

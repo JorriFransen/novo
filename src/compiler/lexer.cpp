@@ -249,13 +249,13 @@ case (first_char): {                                                \
                     return false;
                 }
 
-                // lex->token.atom = atom_get(&lex->context->atoms, str_lit);
-                lex->token.atom = string_copy(&lex->instance->ast_allocator, str_lit);
+                lex->token.atom = atom_get(&lex->instance->atoms, str_lit);
+                // lex->token.atom = string_copy(&lex->instance->ast_allocator, str_lit);
 
             } else {
 
-                // lex->token.atom = atom_get(&lex->context->atoms, start, length);
-                lex->token.atom = string_copy(&lex->instance->ast_allocator, start, length);
+                lex->token.atom = atom_get(&lex->instance->atoms, start, length);
+                // lex->token.atom = string_copy(&lex->instance->ast_allocator, start, length);
             }
 
         // if (lex->token.kind == TOK_NAME && is_keyword(lex->token.atom)) {
@@ -266,7 +266,7 @@ case (first_char): {                                                \
         lex->token.atom = {};
     }
 
-    lex->pos.length = lex->token.atom.length;
+    lex->pos.length = length;
     lex->pos.index_in_line = lex->stream - lex->line_start - length + 1;
 
     lex->token.source_pos_id = lex->instance->source_positions.count;
@@ -285,9 +285,9 @@ bool is_token(Lexer *lexer, char c)
     return is_token(lexer, (Token_Kind)c);
 }
 
-void print_token(Token token)
+void print_token(Atom_Table *at, Token token)
 {
-    auto str = tmp_token_str(token);
+    auto str = tmp_token_str(at, token);
     printf("%.*s\n", (int)str.length, str.data);
 }
 
@@ -312,13 +312,16 @@ NINLINE const char *token_kind_to_string(Token_Kind kind) {
     }
 }
 
-String_Ref tmp_token_str(Token token)
+String_Ref tmp_token_str(Atom_Table *at, Token token)
 {
     static char buffer[1024];
     s32 length = 0;
 
-    if (token.atom.length > 0) {
-        length = string_format(buffer, "%s", token.atom.data);
+    if (token.atom != 0) {
+        auto str = atom_string(at, token.atom);
+        length = str.length;
+        memcpy(buffer, str.data, length);
+        buffer[length] = '\0';
     } else if (token.kind == TOK_EOF) {
         return token_kind_to_string(token.kind);
     } else {
