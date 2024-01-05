@@ -13,19 +13,34 @@ void atom_table_create(Atom_Table *at, Allocator *allocator, s64 capacity)
 
     at->capacity = capacity;
 
-    at->hashes = allocate_array<u64>(allocator, capacity);
-    at->ids = allocate_array<u32>(allocator, capacity);
+    at->hashes = (u64 *)allocate(allocator, capacity * (sizeof(at->hashes[0]) + sizeof(at->ids[0])));
+    at->ids = (u32 *)&at->hashes[capacity];
 
     darray_create(allocator, &at->strings);
+
+    auto string_block_buffer_size = NOVO_ATOM_TABLE_DEFAULT_STRING_BLOCK_SIZE;
+    at->next_block_size = string_block_buffer_size;
+    auto string_block_size = sizeof(Atom_String_Memory_Block) + string_block_buffer_size;
+    at->first_sting_block = (Atom_String_Memory_Block *)allocate(allocator, string_block_size);
+
+    at->first_sting_block->mem = &((char *)at->first_sting_block)[sizeof(Atom_String_Memory_Block)];
+    at->first_sting_block->end = at->first_sting_block->mem + string_block_buffer_size;
+    at->first_sting_block->next_block = nullptr;
+
+    at->current_string_block = at->first_sting_block;
 }
 
 void atom_table_free(Atom_Table *at)
 {
     free(at->allocator, at->hashes);
-    free(at->allocator, at->ids);
 
-    for (s64 i = 0; i < at->strings.count; i++) {
-        free(at->allocator, at->strings[i].data);
+    auto sb = at->first_sting_block;
+    while (sb) {
+        auto next = sb->next_block;
+
+        free(at->allocator, sb);
+
+        sb = next;
     }
 
     darray_free(&at->strings);
@@ -39,8 +54,8 @@ static void atom_table_grow(Atom_Table *at)
     auto old_hashes = at->hashes;
     auto old_ids = at->ids;
 
-    auto new_hashes = allocate_array<u64>(at->allocator, new_cap);
-    auto new_ids = allocate_array<u32>(at->allocator, new_cap);
+    auto new_hashes = (u64 *)allocate(at->allocator, new_cap * (sizeof(at->hashes[0]) + sizeof(at->ids[0])));
+    auto new_ids = (u32 *)&new_hashes[new_cap];
 
     at->capacity = new_cap;
     at->hashes = new_hashes;
@@ -69,7 +84,62 @@ static void atom_table_grow(Atom_Table *at)
     }
 
     free(at->allocator, old_hashes);
-    free(at->allocator, old_ids);
+}
+
+static char *atom_table_add_string(Atom_Table *at, const String_Ref &str)
+{
+    auto sb = at->current_string_block;
+
+    auto remaining = sb->end - sb->mem;
+    auto required = str.length + 1;
+
+    if (required > remaining) {
+
+        // Try to find an existing block first
+        Atom_String_Memory_Block *ex_block = nullptr;
+        auto cb = at->first_sting_block;
+
+        // sb should be the last block in the chain
+        while (cb != sb) {
+            auto next = cb->next_block;
+
+            auto r = cb->end - sb->end;
+
+            if (required <= r) {
+                ex_block = cb;
+                break;
+            }
+
+            cb = next;
+        }
+
+        if (ex_block) {
+            sb = ex_block;
+        } else {
+            auto new_block_size = at->next_block_size;
+            while (new_block_size < str.length * 2) new_block_size *= 2;
+            at->next_block_size = new_block_size;
+
+            auto total_size = new_block_size + sizeof(Atom_String_Memory_Block);
+            auto new_block = (Atom_String_Memory_Block *)allocate(at->allocator, total_size);
+
+            new_block->mem = &((char *)new_block)[sizeof(Atom_String_Memory_Block)];
+            new_block->end = new_block->mem + new_block_size;
+            new_block->next_block = nullptr;
+
+            at->current_string_block->next_block = new_block;
+            at->current_string_block = new_block;
+
+            sb = new_block;
+        }
+    }
+
+    memcpy(sb->mem, str.data, required);
+    sb->mem[str.length] = '\0';
+
+    char *result = sb->mem;
+    sb->mem += required;
+    return result;
 }
 
 Atom atom_get(Atom_Table *at, const String_Ref &str)
@@ -90,7 +160,8 @@ Atom atom_get(Atom_Table *at, const String_Ref &str)
             at->hashes[hash_index] = hash;
             at->ids[hash_index] = id;
 
-            darray_append(&at->strings, string_copy(at->allocator, str));
+            auto str_ptr = atom_table_add_string(at, str);
+            darray_append(&at->strings, string(str_ptr, str.length));
 
             return id;
 

@@ -1,5 +1,6 @@
 
 #include <memory/allocator.h>
+
 #include "atom.h"
 
 using namespace Novo;
