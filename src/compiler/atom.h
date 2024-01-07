@@ -5,8 +5,7 @@
 #include <memory/allocator.h>
 #include <nstring.h>
 
-#define NOVO_ATOM_TABLE_DEFAULT_CAPACITY 32
-#define NOVO_ATOM_TABLE_DEFAULT_STRING_BLOCK_SIZE 16
+#define NOVO_ATOM_TABLE_DEFAULT_STRING_BLOCK_SIZE 2048
 
 namespace Novo {
 
@@ -37,13 +36,15 @@ struct Atom_Table
 
 };
 
-NAPI void atom_table_create(Atom_Table *at, Allocator *allocator);
-NAPI void atom_table_create(Atom_Table *at, Allocator *allocator, s64 capacity);
-NAPI void atom_table_free(Atom_Table *at);
+NAPI extern Atom_Table g_atoms;
+NAPI extern bool g_atoms_initialized;
 
-NAPI Atom atom_get(Atom_Table *at, const String_Ref &str);
-NAPI Atom atom_get(Atom_Table *at, const char *start, s64 length);
+NAPI void atom_table_init(Allocator *allocator, s64 capacity);
+NAPI void atom_table_free();
 
-NAPI String &atom_string(Atom_Table *at, Atom atom);
+NAPI Atom atom_get(const String_Ref &str);
+NAPI Atom atom_get(const char *start, s64 length);
+
+NAPI String &atom_string(Atom atom);
 
 }

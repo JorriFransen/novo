@@ -1,6 +1,7 @@
 #include "instance.h"
 
 #include "task.h"
+#include "keywords.h"
 
 #include <cassert>
 #include <cstdio>
@@ -13,9 +14,13 @@ bool instance_start(Instance *instance)
     instance->temp_allocator = temp_allocator_create(&instance->temp_allocator_data, instance->default_allocator, KIBIBYTE(1));
     instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(1));
 
-    atom_table_create(&instance->atoms, instance->default_allocator);
-
     darray_create(instance->default_allocator, &instance->source_positions);
+
+    if (!g_atoms_initialized) {
+        atom_table_init(instance->default_allocator, 128);
+        initialize_keywords();
+        g_atoms_initialized = true;
+    }
 
     if (!fs_is_directory(instance->cwd)) {
         assert(false && "Invalid cwd!");
@@ -42,6 +47,8 @@ bool instance_start(Instance *instance)
     parse_task_create(&parse_task, first_file_path);
 
     task_execute(instance, &parse_task);
+
+
 
     return true;
 }

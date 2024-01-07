@@ -81,7 +81,7 @@ NAPI bool is_token(Lexer *lexer, char c);
 
 NAPI void print_token(Token token);
 
-NAPI String_Ref tmp_token_str(Atom_Table *at, Token token);
+NAPI String_Ref tmp_token_str(Token token);
 NAPI String_Ref tmp_token_kind_str(Token_Kind kind);
 
 }

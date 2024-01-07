@@ -2,6 +2,7 @@
 
 #include "defines.h"
 #include "instance.h"
+#include "keywords.h"
 
 #include <cassert>
 #include <cctype>
@@ -249,18 +250,16 @@ case (first_char): {                                                \
                     return false;
                 }
 
-                lex->token.atom = atom_get(&lex->instance->atoms, str_lit);
-                // lex->token.atom = string_copy(&lex->instance->ast_allocator, str_lit);
+                lex->token.atom = atom_get(str_lit);
 
             } else {
 
-                lex->token.atom = atom_get(&lex->instance->atoms, start, length);
-                // lex->token.atom = string_copy(&lex->instance->ast_allocator, start, length);
+                lex->token.atom = atom_get(start, length);
             }
 
-        // if (lex->token.kind == TOK_NAME && is_keyword(lex->token.atom)) {
-        //     lex->token.kind = TOK_KEYWORD;
-        // }
+        if (lex->token.kind == TOK_NAME && (lex->token.atom >= g_first_keyword_atom && lex->token.atom <= g_last_keyword_atom)) {
+            lex->token.kind = TOK_KEYWORD;
+        }
 
     } else {
         lex->token.atom = {};
@@ -285,9 +284,9 @@ bool is_token(Lexer *lexer, char c)
     return is_token(lexer, (Token_Kind)c);
 }
 
-void print_token(Atom_Table *at, Token token)
+void print_token(Token token)
 {
-    auto str = tmp_token_str(at, token);
+    auto str = tmp_token_str(token);
     printf("%.*s\n", (int)str.length, str.data);
 }
 
@@ -312,13 +311,13 @@ NINLINE const char *token_kind_to_string(Token_Kind kind) {
     }
 }
 
-String_Ref tmp_token_str(Atom_Table *at, Token token)
+String_Ref tmp_token_str(Token token)
 {
     static char buffer[1024];
     s32 length = 0;
 
     if (token.atom != 0) {
-        auto str = atom_string(at, token.atom);
+        auto str = atom_string(token.atom);
         length = str.length;
         memcpy(buffer, str.data, length);
         buffer[length] = '\0';

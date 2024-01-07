@@ -1,6 +1,5 @@
 #pragma once
 
-#include "atom.h"
 #include "lexer.h"
 
 #include <containers/darray.h>
@@ -23,8 +22,6 @@ struct Instance
 
     Linear_Allocator ast_allocator_data;
     Allocator ast_allocator;
-
-    Atom_Table atoms;
 
     DArray<Source_Pos> source_positions;
 };

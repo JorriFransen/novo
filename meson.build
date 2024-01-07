@@ -24,6 +24,7 @@ compiler_includes = include_directories('src/compiler/')
 compiler_source = [
   'src/compiler/atom.cpp', 'src/compiler/atom.h',
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
+  'src/compiler/keywords.cpp', 'src/compiler/keywords.h',
   'src/compiler/lexer.cpp', 'src/compiler/lexer.h',
   'src/compiler/parser.cpp', 'src/compiler/parser.h',
   'src/compiler/source_pos.h',
