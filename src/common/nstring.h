@@ -10,6 +10,8 @@ namespace Novo {
 struct String {
     char *data;
     s64 length;
+
+    NAPI char &operator[](s64 index);
 };
 
 

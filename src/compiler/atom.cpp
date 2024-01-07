@@ -5,7 +5,7 @@ namespace Novo {
 Atom_Table g_atoms;
 bool g_atoms_initialized = false;
 
-void atom_table_init(Allocator *allocator, s64 capacity)
+void initialize_atoms(Allocator *allocator, s64 capacity)
 {
     g_atoms.allocator = allocator;
 
@@ -28,7 +28,7 @@ void atom_table_init(Allocator *allocator, s64 capacity)
     g_atoms.current_string_block = g_atoms.first_sting_block;
 }
 
-void atom_table_free()
+void free_atoms()
 {
     free(g_atoms.allocator, g_atoms.hashes);
 

@@ -9,7 +9,7 @@ static void single_match()
 {
     auto allocator = c_allocator();
 
-    atom_table_init(allocator, 4);
+    initialize_atoms(allocator, 4);
 
     auto cstr = "test string";
     Atom atom = atom_get(cstr);
@@ -25,14 +25,14 @@ static void single_match()
     assert(str1.data == str2.data);
     assert(string_equal(str1, str2));
 
-    atom_table_free();
+    free_atoms();
 }
 
 static void multiple_match()
 {
     auto allocator = c_allocator();
 
-    atom_table_init(allocator, 8);
+    initialize_atoms(allocator, 8);
 
     Atom a1 = atom_get("a1");
     Atom a2 = atom_get("a2");
@@ -77,14 +77,14 @@ static void multiple_match()
     Atom z1 = atom_get("z1");
     assert(a1 != z1);
 
-    atom_table_free();
+    free_atoms();
 }
 
 static void growing()
 {
     auto allocator = c_allocator();
 
-    atom_table_init(allocator, 2);
+    initialize_atoms(allocator, 2);
 
     assert(g_atoms.capacity == 2);
     Atom a1 = atom_get("a1");
@@ -128,7 +128,7 @@ static void growing()
     assert(a5 != a3);
     assert(a5 != a4);
 
-    atom_table_free();
+    free_atoms();
 }
 
 int main(int argc, char *argv[]) {

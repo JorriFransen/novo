@@ -70,4 +70,9 @@ ET *allocate_array(Allocator *allocator, s64 size) {
     return (ET *)allocate(allocator, size * sizeof(ET));
 }
 
+template <typename T>
+T *allocate(Allocator *allocator) {
+    return (T *)allocate(allocator, sizeof(T));
+}
+
 }

@@ -11,13 +11,13 @@ namespace Novo {
 
 bool instance_start(Instance *instance)
 {
-    instance->temp_allocator = temp_allocator_create(&instance->temp_allocator_data, instance->default_allocator, KIBIBYTE(1));
-    instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(1));
+    instance->temp_allocator = temp_allocator_create(&instance->temp_allocator_data, instance->default_allocator, KIBIBYTE(2));
+    instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(2));
 
     darray_create(instance->default_allocator, &instance->source_positions);
 
     if (!g_atoms_initialized) {
-        atom_table_init(instance->default_allocator, 128);
+        initialize_atoms(instance->default_allocator, 128);
         initialize_keywords();
         g_atoms_initialized = true;
     }

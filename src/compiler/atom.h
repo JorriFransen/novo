@@ -39,8 +39,8 @@ struct Atom_Table
 NAPI extern Atom_Table g_atoms;
 NAPI extern bool g_atoms_initialized;
 
-NAPI void atom_table_init(Allocator *allocator, s64 capacity);
-NAPI void atom_table_free();
+NAPI void initialize_atoms(Allocator *allocator, s64 capacity);
+NAPI void free_atoms();
 
 NAPI Atom atom_get(const String_Ref &str);
 NAPI Atom atom_get(const char *start, s64 length);

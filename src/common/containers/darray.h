@@ -2,6 +2,7 @@
 
 #include "defines.h"
 #include "memory/allocator.h"
+#include "memory/temp_allocator.h"
 
 #include <cassert>
 #include <cstring>
@@ -193,54 +194,54 @@ void darray_remove_ordered(DArray< Element_Type> *array, s64 index)
     array->count -= 1;
 }
 
-// template <typename T>
-// struct Temp_Array
-// {
-//     Temporary_Allocator_Mark mark;
-//     DArray<T> array;
-//
-//     T& operator[](s64 index) {
-//         return array.operator[](index);
-//     }
-//
-//     const T& operator[](s64 index) const {
-//         return array.operator[](index);
-//     }
-// };
-//
-// template <typename T>
-// file_local Temp_Array<T> temp_array_create(Allocator *allocator, s64 cap = 0)
-// {
-//     Temp_Array<T> result;
-//
-//     auto tas = (Temporary_Allocator *)allocator->user_data;
-//     assert(tas);
-//
-//     result.mark = temporary_allocator_get_mark(tas);
-//     dynamic_array_create(allocator, &result.array, cap);
-//     return result;
-// }
-//
-// template <typename T>
-// file_local void temp_array_destroy(Temp_Array<T> *ta)
-// {
-//     auto tas = (Temporary_Allocator *)ta->array.backing_allocator->user_data;
-//     assert(tas);
-//
-//     temporary_allocator_reset(tas, ta->mark);
-// }
-//
-// template <typename T>
-// file_local DArray<T> temp_array_finalize(Allocator *allocator, Temp_Array<T> *ta)
-// {
-//     auto result = dynamic_array_copy(&ta->array, allocator);
-//     temp_array_destroy(ta);
-//     return result;
-// }
-//
-// template <typename T>
-// void dynamic_array_append(Temp_Array<T> *ta, T element) {
-//     dynamic_array_append(&ta->array, element);
-// }
+template <typename T>
+struct Temp_Array
+{
+    Temp_Allocator_Mark mark;
+    DArray<T> array;
+
+    T& operator[](s64 index) {
+        return array.operator[](index);
+    }
+
+    const T& operator[](s64 index) const {
+        return array.operator[](index);
+    }
+};
+
+template <typename T>
+static Temp_Array<T> temp_array_create(Allocator *allocator, s64 cap = 0)
+{
+    Temp_Array<T> result;
+
+    auto tas = (Temp_Allocator *)allocator->user_data;
+    assert(tas);
+
+    result.mark = temp_allocator_get_mark(tas);
+    darray_create(allocator, &result.array, cap);
+    return result;
+}
+
+template <typename T>
+static void temp_array_destroy(Temp_Array<T> *ta)
+{
+    auto tas = (Temp_Allocator *)ta->array.backing_allocator->user_data;
+    assert(tas);
+
+    temp_allocator_reset(tas, ta->mark);
+}
+
+template <typename T>
+static DArray<T> temp_array_finalize(Allocator *allocator, Temp_Array<T> *ta)
+{
+    auto result = darray_copy(&ta->array, allocator);
+    temp_array_destroy(ta);
+    return result;
+}
+
+template <typename T>
+static void darray_append(Temp_Array<T> *ta, T element) {
+    darray_append(&ta->array, element);
+}
 
 }

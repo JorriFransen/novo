@@ -1,6 +1,11 @@
 
 main :: () -> int {
     x := 'a';
-    "abc";
+    y := "abc";
+    z := 42;
     return 0;
+}
+
+add :: (a: int, b: int) -> int {
+    return a + b;
 }
