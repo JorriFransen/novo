@@ -1,15 +1,15 @@
 #pragma once
 
-#include "nstring.h"
+#include <defines.h>
 
 namespace Novo {
 
 struct Source_Pos
 {
-    String_Ref name;
-    u64 line;
-    u64 index_in_line;
-    u64 length;
+    const char *name;
+    u32 line;
+    u32 start;
+    u32 length;
 };
 
 }

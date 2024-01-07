@@ -22,7 +22,7 @@ static void _report_lex_error(Lexer *lexer, Source_Pos pos, const char *fmt, ...
     va_list args;
     va_start(args, fmt);
 
-    fprintf(stderr, "%s:%llu:%llu: error:", pos.name.data, pos.line, pos.index_in_line);
+    fprintf(stderr, "%s:%u:%u: error:", pos.name, pos.line, pos.start);
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
 
@@ -56,9 +56,12 @@ void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref s
     lexer->line_start = stream.data;
 
     lexer->token.kind = TOK_INVALID;
-    lexer->pos.name = stream_name;
+
+    NSTRING_ASSERT_ZERO_TERMINATION(stream_name);
+    lexer->pos.name = stream_name.data;
+
     lexer->pos.line = 1;
-    lexer->pos.index_in_line = 0;
+    lexer->pos.start = 0;
     lexer->pos.length = 0;
 
     next_token(lexer);
@@ -103,13 +106,9 @@ case (first_char): {                                                \
         }
 
         case ' ': case '\n': case '\r': case '\t': {
-            if (*lex->stream == '\n') {
-                lex->pos.line += 1;
-                lex->line_start = lex->stream + 1;
-            }
-            lex->stream += 1;
             while (isspace(*lex->stream)) {
                 if (*lex->stream == '\n') {
+                    lex->pos.line += 1;
                     lex->line_start = lex->stream + 1;
                 }
                 lex->stream += 1;
@@ -147,8 +146,8 @@ case (first_char): {                                                \
             if (*lex->stream != '\'') {
 
                 auto length = lex->stream - start;
-                lex->pos.index_in_line = lex->stream - lex->line_start - length + 1;
-                lex->pos.index_in_line += 2;
+                lex->pos.start = lex->stream - lex->line_start - length + 1;
+                lex->pos.start += 2;
 
                 report_lex_error(lex, lex->pos, "Exected \"'\" to end character literal");
                 return false;
@@ -266,7 +265,7 @@ case (first_char): {                                                \
     }
 
     lex->pos.length = length;
-    lex->pos.index_in_line = lex->stream - lex->line_start - length + 1;
+    lex->pos.start = lex->stream - lex->line_start - length + 1;
 
     lex->token.source_pos_id = lex->instance->source_positions.count;
     darray_append(&lex->instance->source_positions, lex->pos);

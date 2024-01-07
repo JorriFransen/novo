@@ -13,6 +13,7 @@ namespace Novo {
 
 AST_File *parse_file(Instance *instance, const String_Ref file_path)
 {
+
     Lexer lexer;
     lexer_create(instance, &lexer);
 
@@ -24,6 +25,17 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
     assert(read_ok);
 
     lexer_init_stream(&lexer, file_content, file_path);
+
+    // while (!is_token(&lexer, TOK_EOF) && !lexer.error) {
+    //     auto pos = instance->source_positions[lexer.token.source_pos_id];
+    //     printf("%u:%u:%u: ", pos.line, pos.start, pos.length);
+    //     printf("'%s' :\t'%s'\n", tmp_token_kind_str(lexer.token.kind).data, tmp_token_str(lexer.token).data);
+    //     next_token(&lexer);
+    // }
+    //
+    // temp_allocator_reset(&instance->temp_allocator_data, mark);
+    //
+    // return nullptr;
 
     Parser parser;
     parser.instance = instance;
@@ -250,7 +262,7 @@ bool expect_token(Parser *parser, Token_Kind kind)
     auto ct = parser->lexer->token;
     if (ct.kind != kind) {
         auto pos = parser->instance->source_positions[ct.source_pos_id];
-        fprintf(stderr, "%s:%llu:%llu:", pos.name.data, pos.line, pos.index_in_line);
+        fprintf(stderr, "%s:%u:%u:", pos.name, pos.line, pos.start);
 
         auto tok_str = atom_string(ct.atom);
         fprintf(stderr, " error: Expected token '%s', got '%s'\n", tmp_token_kind_str(kind).data, tok_str.data);
