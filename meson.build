@@ -3,6 +3,11 @@ project('novo', 'cpp',
         version: 'dev',
         default_options: ['unity=on', 'unity_size=4' ])
 
+compiler = meson.get_compiler('cpp')
+if compiler.get_id() == 'clang-cl'
+  add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')
+endif
+
 common_source = [
   'src/common/defines.h',
   'src/common/nstring.cpp', 'src/common/nstring.h',
