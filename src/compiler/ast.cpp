@@ -70,7 +70,7 @@ AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind)
 
 AST_Expression *ast_identifier_expression(Instance *instance, AST_Identifier *ident)
 {
-    auto result = allocate<AST_Expression>(&instance->ast_allocator);
+    auto result = ast_expression(instance, AST_Expression_Kind::IDENTIFIER);
     result->identifier = ident;
     return result;
 }

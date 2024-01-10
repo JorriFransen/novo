@@ -19,7 +19,7 @@ struct String_Builder_Block
 
 static String_Builder_Block *string_builder_block(Allocator *allocator, u64 size);
 
-void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_block_size)
+void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_block_size/*=NOVO_SB_INITAL_BLOCK_SIZE*/)
 {
     sb->allocator = allocator;
     auto ta = allocate<Temp_Allocator>(allocator);
@@ -33,14 +33,17 @@ void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_b
 void string_builder_free(String_Builder *sb)
 {
     auto ta = (Temp_Allocator *)sb->temp_allocator.user_data;
-    free(sb->allocator, ta->linear_allocator_data.buffer);
-    free(sb->allocator, ta);
 
-    auto block = sb->first_block;
-    while (block) {
-        auto next = block->next_block;
-        free(sb->allocator, block);
-        block = next;
+    if (!(sb->temp_allocator.flags & ALLOCATOR_FLAG_CANT_FREE)) {
+        free(sb->allocator, ta->linear_allocator_data.buffer);
+        free(sb->allocator, ta);
+
+        auto block = sb->first_block;
+        while (block) {
+            auto next = block->next_block;
+            free(sb->allocator, block);
+            block = next;
+        }
     }
 }
 

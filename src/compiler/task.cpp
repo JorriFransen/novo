@@ -1,5 +1,6 @@
 #include "task.h"
 
+#include "ast_print.h"
 #include "instance.h"
 #include "parser.h"
 
@@ -31,7 +32,10 @@ bool task_execute(Instance *instance, Task *task)
         case Task_Kind::PARSE: {
             printf("Parsing: %s\n", task->parse.full_path.data);
 
-            parse_file(instance, task->parse.full_path.data);
+            auto file = parse_file(instance, task->parse.full_path.data);
+
+            auto ast_str = ast_to_string(file, &instance->temp_allocator);
+            printf("%s\n", ast_str.data);
             break;
         }
 

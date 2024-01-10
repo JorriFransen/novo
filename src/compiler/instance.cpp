@@ -11,8 +11,8 @@ namespace Novo {
 
 bool instance_start(Instance *instance)
 {
-    instance->temp_allocator = temp_allocator_create(&instance->temp_allocator_data, instance->default_allocator, KIBIBYTE(2));
-    instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(2));
+    instance->temp_allocator = temp_allocator_create(&instance->temp_allocator_data, instance->default_allocator, KIBIBYTE(16));
+    instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(16));
 
     darray_create(instance->default_allocator, &instance->source_positions);
 

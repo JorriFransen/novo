@@ -29,6 +29,7 @@ compiler_includes = include_directories('src/compiler/')
 
 compiler_source = [
   'src/compiler/ast.cpp', 'src/compiler/ast.h',
+  'src/compiler/ast_print.cpp', 'src/compiler/ast_print.h',
   'src/compiler/atom.cpp', 'src/compiler/atom.h',
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
   'src/compiler/keywords.cpp', 'src/compiler/keywords.h',

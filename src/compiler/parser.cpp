@@ -177,16 +177,6 @@ AST_Expression *parse_expr_add(Parser *parser)
 
         assert(op == '+' || op == '-');
         lhs = ast_binary_expression(parser->instance, op, lhs, rhs);
-
-        // char op = cur_tok(parser).kind;
-        // next_token(parser);
-        //
-        // AST_Expression *rhs = parse_expr_mul(parser);
-        // return_if_null(rhs);
-        //
-        // auto ast_op = token_kind_to_ast_binop[(int)op];
-        // debug_assert(ast_op != AST_Binary_Operator::INVALID);
-        // lhs = ast_binary_expr_new(parser->context, {lhs->sr.start, rhs->sr.end}, ast_op, lhs, rhs);
     }
 
     return lhs;

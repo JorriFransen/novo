@@ -5,6 +5,8 @@
 
 #include <cstdarg>
 
+#define NOVO_SB_INITAL_BLOCK_SIZE 2048
+
 namespace Novo {
 
 struct Allocator;
@@ -22,7 +24,7 @@ struct String_Builder
     String_Builder_Block *current_block;
 };
 
-NAPI void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_block_size);
+NAPI void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_block_size = NOVO_SB_INITAL_BLOCK_SIZE);
 NAPI void string_builder_free(String_Builder *sb);
 
 NAPI void string_builder_append(String_Builder *sb, const String_Ref fmt, ...);
