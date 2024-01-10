@@ -29,9 +29,8 @@ NAPI AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier 
 NAPI AST_Statement *parse_statement(Parser *parser);
 NAPI AST_Statement *parse_keyword_statement(Parser *parser);
 
-NAPI AST_Expression *parse_expr_operand(Parser *parser);
-NAPI AST_Expression *parse_expr_add(Parser *parser);
-NAPI AST_Expression *parse_expression(Parser *parser);
+NAPI AST_Expression *parse_leaf_expression(Parser *parser);
+NAPI AST_Expression *parse_expression(Parser *parser, u64 min_prec = 0);
 
 NAPI AST_Identifier *parse_identifier(Parser *parser);
 

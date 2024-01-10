@@ -135,7 +135,7 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
     return ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts);
 }
 
-AST_Expression *parse_expr_operand(Parser *parser)
+AST_Expression *parse_leaf_expression(Parser *parser)
 {
     auto ct = parser->lexer->token;
 
@@ -158,33 +158,75 @@ AST_Expression *parse_expr_operand(Parser *parser)
         next_token(parser->lexer);
         return ast_string_literal_expression(parser->instance, ct.atom);
 
+    } else if (is_token(parser, '(')) {
+        next_token(parser->lexer);
+        auto result = parse_expression(parser);
+        expect_token(parser, ')');
+
+        return result;
     }
 
     assert(false);
     return nullptr;
 }
 
-AST_Expression *parse_expr_add(Parser *parser)
+static bool is_binary_op(Token &token)
 {
-    AST_Expression *lhs = parse_expr_operand(parser);
-
-    while (is_token(parser, '+') || is_token(parser, '-')) {
-
-        char op = parser->lexer->token.kind;
-        next_token(parser->lexer);
-
-        AST_Expression *rhs = parse_expr_operand(parser);
-
-        assert(op == '+' || op == '-');
-        lhs = ast_binary_expression(parser->instance, op, lhs, rhs);
+    switch ((char)token.kind) {
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+            return true;
     }
 
-    return lhs;
+    return false;
 }
 
-AST_Expression *parse_expression(Parser *parser)
+static u64 get_precedence(Token &token)
 {
-    return parse_expr_add(parser);
+    switch ((char)token.kind) {
+
+        case '+':
+        case '-':
+            return 1;
+
+        case '*':
+        case '/':
+            return 2;
+    }
+
+    assert(false);
+    return 0;
+}
+
+static AST_Expression *parse_increasing_precedence(Parser *parser, AST_Expression *left, u64 min_prec)
+{
+    auto op_token = parser->lexer->token;
+
+    if (!is_binary_op(op_token)) return left;
+
+    auto new_prec = get_precedence(op_token);
+
+    if (new_prec <= min_prec) {
+        return left;
+    } else {
+        next_token(parser->lexer);
+        auto right = parse_expression(parser, new_prec);
+        return ast_binary_expression(parser->instance, op_token.kind, left, right);
+    }
+}
+
+AST_Expression *parse_expression(Parser *parser, u64 min_prec/*=0*/)
+{
+    auto left = parse_leaf_expression(parser);
+
+    while (true) {
+        auto new_left = parse_increasing_precedence(parser, left, min_prec);
+        if (left == new_left) return left;
+
+        left = new_left;
+    }
 }
 
 AST_Statement *parse_statement(Parser *parser)
