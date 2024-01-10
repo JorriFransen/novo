@@ -43,12 +43,11 @@ bool instance_start(Instance *instance)
         first_file_path = string_copy(instance->default_allocator, instance->first_file_name);
     }
 
+
     Task parse_task;
     parse_task_create(&parse_task, first_file_path);
 
     task_execute(instance, &parse_task);
-
-
 
     return true;
 }

@@ -309,6 +309,9 @@ NINLINE const char *token_kind_to_string(Token_Kind kind) {
 
         default: assert(false);
     }
+
+    assert(false);
+    return nullptr;
 }
 
 String_Ref tmp_token_str(Token token)
@@ -472,7 +475,7 @@ static bool lex_real(Lexer *lexer)
     Real_Value result;
     char *err;
 
-    result.r32 = strtof(start, &err);
+    result.r32 = strtof(start, &err);;
     if (result.r32 == 0.0 && err == start) {
         fprintf(stderr, "Convertion to float failed");
         assert(false);

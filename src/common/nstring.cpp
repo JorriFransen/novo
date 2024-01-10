@@ -49,8 +49,8 @@ bool string_equal(const String_Ref &a, const String_Ref &b)
 String string_copy(Allocator *allocator, const char *a_buf, s64 a_length)
 {
     String result = {
-        .data = allocate_array<char>(allocator, a_length + 1),
-        .length = a_length,
+        allocate_array<char>(allocator, a_length + 1),
+        a_length,
     };
 
     memcpy(result.data, a_buf, a_length);

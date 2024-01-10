@@ -18,7 +18,7 @@ void parse_task_create(Task *task, const String_Ref file_path)
 {
     create_task(task, Task_Kind::PARSE);
     task->parse = {
-        .full_path = file_path,
+        file_path,
     };
 }
 

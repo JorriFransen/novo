@@ -3,6 +3,42 @@
 #include <cassert>
 #include <cstdio>
 
+#ifdef ZPLATFORM_LINUX
+
+#include <stdlib.h> // IWYU pragma: keep
+#include <linux/limits.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#elif ZPLATFORM_WINDOWS
+
+#include <direct.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#define chdir _chdir
+#define PATH_MAX _MAX_PATH
+
+#define realpath(n, r) _fullpath((r), (n), PATH_MAX)
+
+#ifndef S_ISREG
+#define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#endif // S_ISREG
+
+#ifdef S_IFLNK
+#ifndef S_ISLNK
+#define S_ISLNK(m) (((m) & S_IFMT) == S_IFLNK)
+#endif // S_ISLNK
+#else
+#define S_ISLNK(m) (0 && (m))
+#endif // S_IFLNK
+
+#ifndef S_ISDIR
+#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#endif // S_ISDIR
+
+#endif // ZPLATFORM_LINUX
 
 namespace Novo {
 
@@ -102,17 +138,6 @@ bool fs_read(File_Handle *handle, u64 size, u8 *out_bytes, u64 *out_size)
     return true;
 }
 
-}
-
-#ifdef ZPLATFORM_LINUX
-
-#include <stdlib.h> // IWYU pragma: keep
-#include <linux/limits.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-namespace Novo {
-
 void fs_chdir(const String_Ref path)
 {
     NSTRING_ASSERT_ZERO_TERMINATION(path);
@@ -120,6 +145,7 @@ void fs_chdir(const String_Ref path)
     int res = chdir(path.data);
     assert(res == 0);
 }
+
 
 bool fs_is_realpath(const String_Ref path)
 {
@@ -171,5 +197,5 @@ bool fs_is_file(const String_Ref path)
     return false;
 }
 
-#endif // ZPLATFORM_LINUX
 }
+

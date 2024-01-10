@@ -146,9 +146,10 @@ AST_Expression *parse_expr_operand(Parser *parser)
         next_token(parser->lexer);
         return ast_string_literal_expression(parser->instance, ct.atom);
 
-    } else {
-        assert(false);
     }
+
+    assert(false);
+    return nullptr;
 }
 
 AST_Expression *parse_expr_add(Parser *parser)
@@ -199,6 +200,7 @@ AST_Statement *parse_statement(Parser *parser)
         assert(false);
     }
 
+    return nullptr;
     assert(false);
 }
 
@@ -215,9 +217,10 @@ AST_Statement *parse_keyword_statement(Parser *parser)
         }
         expect_token(parser, ';');
         return ast_return_statement(parser->instance, expr);
-    } else {
-        assert(false);
     }
+
+    assert(false);
+    return nullptr;
 }
 
 AST_Identifier *parse_identifier(Parser *parser)
@@ -236,9 +239,10 @@ AST_Type_Spec *parse_type_spec(Parser *parser)
     if (is_token(parser, TOK_NAME)) {
         AST_Identifier *ident = parse_identifier(parser);
         return ast_identifier_type_spec(parser->instance, ident);
-    } else {
-        assert(false);
     }
+
+    assert(false);
+    return nullptr;
 }
 
 bool expect_token(Parser *parser, Token_Kind kind)

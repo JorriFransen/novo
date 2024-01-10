@@ -1,7 +1,7 @@
 
 project('novo', 'cpp',
         version: 'dev',
-        default_options: ['unity=on', 'unity_size=10' ])
+        default_options: ['unity=on', 'unity_size=4' ])
 
 common_source = [
   'src/common/defines.h',
@@ -16,7 +16,7 @@ common_source = [
 ]
 
 common_includes = include_directories('src/common/')
-common_lib = library('novo_common', sources: common_source, include_directories: common_includes)
+common_lib = library('novo_common', sources: common_source, include_directories: common_includes, cpp_args: '-DNEXPORT')
 
 
 compiler_includes = include_directories('src/compiler/')
@@ -32,7 +32,7 @@ compiler_source = [
   'src/compiler/task.cpp', 'src/compiler/task.h',
 ]
 
-compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: common_includes, link_with: common_lib)
+compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: common_includes, link_with: common_lib, cpp_args: '-DNEXPORT')
 
 driver_includes = [ common_includes, compiler_includes ]
 driver_source = [ 'src/driver/main.cpp']

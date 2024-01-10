@@ -14,7 +14,6 @@ struct String {
     NAPI char &operator[](s64 index);
 };
 
-
 struct String_Ref {
     const char *data;
     s64 length;
