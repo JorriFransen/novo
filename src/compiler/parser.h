@@ -38,8 +38,8 @@ NAPI AST_Identifier *parse_identifier(Parser *parser);
 
 NAPI AST_Type_Spec *parse_type_spec(Parser *parser);
 
-NAPI bool expect_token(Parser *parser, Token_Kind kind);
-NAPI bool expect_token(Parser *parser, char c);
+NAPI bool expect_token_internal(Parser *parser, Token_Kind kind);
+NAPI bool expect_token_internal(Parser *parser, char c);
 
 NAPI bool match_token(Parser *parser, Token_Kind kind);
 NAPI bool match_token(Parser *parser, char c);

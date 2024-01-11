@@ -15,10 +15,10 @@
 #include "source_pos.h"
 
 #include <cassert>
-#include <cstdio>
-#include <cstdlib>
 
 namespace Novo {
+
+#define expect_token(p, k) if (!expect_token_internal((p), (k))) return {};
 
 AST_File *parse_file(Instance *instance, const String_Ref file_path)
 {
@@ -84,7 +84,6 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
     u64 end = 0;
 
     expect_token(parser, ':');
-
 
     AST_Type_Spec *ts = nullptr;
     if (!is_token(parser, ':') && !is_token(parser, '=')) {
@@ -347,9 +346,7 @@ AST_Identifier *parse_identifier(Parser *parser)
 {
     auto ident_tok = parser->lexer->token;
 
-    if (!expect_token(parser, TOK_NAME)) {
-        return nullptr;
-    }
+    expect_token(parser, TOK_NAME);
 
     auto range = source_range(parser->instance, ident_tok.source_pos_id);
     return ast_identifier(parser->instance, ident_tok.atom, range);
@@ -366,16 +363,12 @@ AST_Type_Spec *parse_type_spec(Parser *parser)
     return nullptr;
 }
 
-bool expect_token(Parser *parser, Token_Kind kind)
+bool expect_token_internal(Parser *parser, Token_Kind kind)
 {
     auto ct = parser->lexer->token;
     if (ct.kind != kind) {
-        auto pos = parser->instance->source_positions[ct.source_pos_id];
-        fprintf(stderr, "%s:%u:%u:", pos.name, pos.line, pos.offset);
-
         auto tok_str = atom_string(ct.atom);
-        fprintf(stderr, " error: Expected token '%s', got '%s'\n", tmp_token_kind_str(kind).data, tok_str.data);
-        exit(1);
+        instance_fatal_error(parser->instance, ct.source_pos_id, "Expected token '%s', got '%s'", tmp_token_kind_str(kind).data, tok_str.data);
         return false;
     }
 
@@ -384,8 +377,8 @@ bool expect_token(Parser *parser, Token_Kind kind)
     return true;
 }
 
-bool expect_token(Parser *parser, char c) {
-    return expect_token(parser, (Token_Kind)c);
+bool expect_token_internal(Parser *parser, char c) {
+    return expect_token_internal(parser, (Token_Kind)c);
 }
 
 bool match_token(Parser *parser, Token_Kind kind)

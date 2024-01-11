@@ -22,6 +22,9 @@ bool resolve_declaration(Instance *instance, AST_Declaration *decl, Scope *scope
             break;
         }
     }
+
+    assert(false);
+    return false;
 }
 
 }
