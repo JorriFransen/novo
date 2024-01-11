@@ -1,5 +1,6 @@
 #include "string_builder.h"
 
+#include "memory/linear_allocator.h"
 #include "memory/temp_allocator.h"
 
 #include <cstring>

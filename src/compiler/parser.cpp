@@ -1,9 +1,18 @@
 #include "parser.h"
 
+#include <containers/darray.h>
+#include <defines.h>
+#include <memory/temp_allocator.h>
+#include <nstring.h>
+
 #include "ast.h"
+#include "atom.h"
+#include "instance.h"
 #include "keywords.h"
 #include "lexer.h"
 #include "platform.h"
+#include "scope.h"
+#include "source_pos.h"
 
 #include <cassert>
 #include <cstdio>
@@ -13,7 +22,6 @@ namespace Novo {
 
 AST_File *parse_file(Instance *instance, const String_Ref file_path)
 {
-
     Lexer lexer;
     lexer_create(instance, &lexer);
 
@@ -26,47 +34,57 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
 
     lexer_init_stream(&lexer, file_content, file_path);
 
-    // while (!is_token(&lexer, TOK_EOF) && !lexer.error) {
-    //     auto pos = instance->source_positions[lexer.token.source_pos_id];
-    //     printf("%u:%u:%u: ", pos.line, pos.start, pos.length);
-    //     printf("'%s' :\t'%s'\n", tmp_token_kind_str(lexer.token.kind).data, tmp_token_str(lexer.token).data);
-    //     next_token(&lexer);
-    // }
-    //
-    // temp_allocator_reset(&instance->temp_allocator_data, mark);
-    //
-    // return nullptr;
-
     Parser parser;
     parser.instance = instance;
     parser.lexer = &lexer;
 
     auto decls = temp_array_create<AST_Declaration *>(&instance->temp_allocator, 4);
 
+    Scope *file_scope = scope_new(instance, Scope_Kind::FILE);
+
     while (!is_token(&lexer, TOK_EOF) && !lexer.error) {
 
-        auto decl = parse_declaration(&parser, true);
+        auto decl = parse_declaration(&parser, file_scope, true);
+        if (!decl) return nullptr;
         darray_append(&decls, decl);
     }
 
-    auto result = ast_file(instance, temp_array_finalize(&instance->ast_allocator, &decls));
+    auto result = ast_file(instance, temp_array_finalize(&instance->ast_allocator, &decls), file_scope);
 
     temp_allocator_reset(&instance->temp_allocator_data, mark);
 
     return result;
 }
 
-AST_Declaration *parse_declaration(Parser *parser, bool eat_semi)
+AST_Declaration *parse_declaration(Parser *parser, Scope *scope, bool eat_semi)
 {
     AST_Identifier *ident = parse_identifier(parser);
-    return parse_declaration(parser, ident, eat_semi);
+
+    // Report redeclarations in higher level scopes first
+    if (scope_find_symbol(scope, ident->atom)) {
+        auto name = atom_string(ident->atom);
+        auto start = source_range_start(parser->instance, ident->range_id);
+
+        auto ex_decl = scope_find_symbol(scope, ident->atom);
+        assert(ex_decl);
+        assert(ex_decl->ident);
+        auto ex_start = source_range_start(parser->instance, ex_decl->ident->range_id);
+
+        instance_fatal_error(parser->instance, start, "Redeclaration of symbol: '%s'", name.data);
+        instance_fatal_error_note(parser->instance, ex_start, "Previous declaration was here");
+        return nullptr;
+    }
+
+    return parse_declaration(parser, ident, scope, eat_semi);
 }
 
-AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, bool eat_semi)
+AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope *scope, bool eat_semi)
 {
+    AST_Declaration *result = nullptr;
+    u64 end = 0;
+
     expect_token(parser, ':');
 
-    u64 end = 0;
 
     AST_Type_Spec *ts = nullptr;
     if (!is_token(parser, ':') && !is_token(parser, '=')) {
@@ -80,7 +98,7 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, bool e
             // TODO: report error
             assert(false);
         }
-        return parse_function_declaration(parser, ident);
+        result = parse_function_declaration(parser, ident, scope);
 
     } else {
 
@@ -97,13 +115,34 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, bool e
 
         auto start = source_range_start(parser->instance, ident->range_id);
         auto range_id = source_range(parser->instance, start, end);
-        return ast_variable_declaration(parser->instance, ident, ts, init_expr, range_id);
+        result = ast_variable_declaration(parser->instance, ident, ts, init_expr, range_id);
     }
+
+    if (!result) return nullptr;
+
+    if (!scope_add_symbol(scope, ident->atom, result)) {
+        auto name = atom_string(ident->atom);
+        auto start = source_range_start(parser->instance, ident->range_id);
+
+        auto ex_decl = scope_find_symbol(scope, ident->atom);
+        assert(ex_decl);
+        assert(ex_decl->ident);
+        auto ex_start = source_range_start(parser->instance, ex_decl->ident->range_id);
+
+        instance_fatal_error(parser->instance, start, "Redeclaration of symbol: '%s'", name.data);
+        instance_fatal_error_note(parser->instance, ex_start, "Previous declaration was here");
+        return nullptr;
+    }
+    return result;
 }
 
-AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *ident)
+AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *ident, Scope *scope)
 {
+    assert(scope->kind == Scope_Kind::FILE);
+
     auto params = temp_array_create<AST_Declaration *>(&parser->instance->temp_allocator, 2);
+
+    Scope *fn_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
     expect_token(parser, '(');
     while (!is_token(parser, ')')) {
@@ -111,7 +150,8 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
             expect_token(parser, ',');
         }
 
-        AST_Declaration *param_decl = parse_declaration(parser, false);
+        AST_Declaration *param_decl = parse_declaration(parser, fn_scope, false);
+        if (!param_decl) return nullptr;
 
         // TODO: report error
         assert(param_decl->kind == AST_Declaration_Kind::VARIABLE);
@@ -132,7 +172,7 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
     expect_token(parser, '{');
     while (!is_token(parser, '}')) {
 
-        auto stmt = parse_statement(parser);
+        auto stmt = parse_statement(parser, fn_scope);
         if (!stmt) return nullptr;
 
         darray_append(&stmts, stmt);
@@ -146,7 +186,7 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
     auto start = source_range_start(parser->instance, ident->range_id);
     auto range = source_range(parser->instance, start, end);
 
-    return ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, range);
+    return ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope, range);
 }
 
 AST_Expression *parse_leaf_expression(Parser *parser)
@@ -249,16 +289,17 @@ AST_Expression *parse_expression(Parser *parser, u64 min_prec/*=0*/)
     }
 }
 
-AST_Statement *parse_statement(Parser *parser)
+AST_Statement *parse_statement(Parser *parser, Scope *scope)
 {
     if (is_token(parser, TOK_KEYWORD)) {
-        return parse_keyword_statement(parser);
+        return parse_keyword_statement(parser, scope);
     }
 
     // Remaining options start with identifier
     auto ident = parse_identifier(parser);
     if (is_token(parser, ':')) {
-        auto decl = parse_declaration(parser, ident, true);
+        auto decl = parse_declaration(parser, ident, scope, true);
+        if (!decl) return nullptr;
         return ast_declaration_statement(parser->instance, decl, decl->range_id);
     } else {
         assert(false);
@@ -268,7 +309,7 @@ AST_Statement *parse_statement(Parser *parser)
     assert(false);
 }
 
-AST_Statement *parse_keyword_statement(Parser *parser)
+AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
 {
     auto ct = parser->lexer->token;
     assert(ct.kind == TOK_KEYWORD);

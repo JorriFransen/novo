@@ -1,5 +1,7 @@
 #include "linear_allocator.h"
 
+#include "memory/allocator.h"
+
 #include <cassert>
 
 namespace Novo {

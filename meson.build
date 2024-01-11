@@ -1,7 +1,7 @@
 
 project('novo', 'cpp',
         version: 'dev',
-        default_options: ['unity=on', 'unity_size=4' ])
+        default_options: ['unity=on', 'unity_size=8' ])
 
 compiler = meson.get_compiler('cpp')
 if compiler.get_id() == 'clang-cl'
@@ -34,7 +34,9 @@ compiler_source = [
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
   'src/compiler/keywords.cpp', 'src/compiler/keywords.h',
   'src/compiler/lexer.cpp', 'src/compiler/lexer.h',
+  'src/compiler/scope.cpp', 'src/compiler/scope.h',
   'src/compiler/parser.cpp', 'src/compiler/parser.h',
+  'src/compiler/resolve.cpp', 'src/compiler/resolve.h',
   'src/compiler/source_pos.cpp', 'src/compiler/source_pos.h',
   'src/compiler/task.cpp', 'src/compiler/task.h',
 ]

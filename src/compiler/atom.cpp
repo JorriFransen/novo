@@ -1,5 +1,13 @@
 #include "atom.h"
 
+#include <containers/darray.h>
+#include <defines.h>
+#include <memory/allocator.h>
+#include <nstring.h>
+
+#include <assert.h>
+#include <string.h>
+
 namespace Novo {
 
 Atom_Table g_atoms;

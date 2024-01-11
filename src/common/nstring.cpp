@@ -1,5 +1,7 @@
 #include "nstring.h"
 
+#include "memory/allocator.h"
+
 #include <cassert>
 #include <cstdio>
 #include <cstring>

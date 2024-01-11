@@ -2,14 +2,13 @@
 
 #include "defines.h"
 #include "nstring.h"
+#include "memory/allocator.h"
 
 #include <cstdarg>
 
 #define NOVO_SB_INITAL_BLOCK_SIZE 2048
 
 namespace Novo {
-
-struct Allocator;
 
 struct String_Builder_Block;
 

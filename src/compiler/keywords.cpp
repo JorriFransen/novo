@@ -1,5 +1,7 @@
 #include "keywords.h"
 
+#include "atom.h"
+
 namespace Novo {
 
 #define NOVO_KEYWORD(kw) Atom g_atom_##kw;

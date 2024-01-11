@@ -1,9 +1,10 @@
 #pragma once
 
+#include <defines.h>
+#include <nstring.h>
+
 #include "atom.h"
 #include "source_pos.h"
-
-#include <nstring.h>
 
 namespace Novo {
 

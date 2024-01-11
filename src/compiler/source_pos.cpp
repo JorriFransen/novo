@@ -2,6 +2,11 @@
 
 #include "instance.h"
 
+#include <containers/darray.h>
+#include <defines.h>
+
+#include <assert.h>
+
 namespace Novo {
 
 u32 source_range(Instance *instance, u32 pos_id_a, u32 pos_id_b)

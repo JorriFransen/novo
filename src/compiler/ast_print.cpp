@@ -1,9 +1,16 @@
 #include "ast_print.h"
 
+#include <containers/darray.h>
+#include <defines.h>
+#include <nstring.h>
 #include <string_builder.h>
 
 #include "ast.h"
+#include "atom.h"
 #include "instance.h"
+#include "source_pos.h"
+
+#include <assert.h>
 
 namespace Novo {
 

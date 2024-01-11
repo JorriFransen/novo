@@ -1,5 +1,7 @@
 #pragma once
 
+#include <defines.h>
+
 #include "atom.h"
 
 namespace Novo {

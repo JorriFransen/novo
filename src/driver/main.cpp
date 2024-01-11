@@ -1,3 +1,5 @@
+
+#include <defines.h>
 #include <instance.h>
 
 using namespace Novo;

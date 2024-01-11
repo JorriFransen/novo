@@ -1,20 +1,7 @@
 
 main :: () -> int {
-    x := 'a';
-    y := "abc";
-    z := 42;
-    return 0;
-}
-
-add :: (a: int, b: int) -> int {
-    return a + b;
-}
-
-test :: () -> int {
     x : int;
-    y : int;
-    z : int;
-
-    r := x * y + z / 2;
-    r2 := x * (y + z) / 2;
+    x : int;
+    return x;
 }
+

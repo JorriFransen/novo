@@ -1,12 +1,14 @@
 #include "platform.h"
 
+#include "memory/allocator.h"
+
 #include <cassert>
 #include <cstdio>
 
 #ifdef ZPLATFORM_LINUX
 
+#include <limits.h> // IWYU pragma: keep
 #include <stdlib.h> // IWYU pragma: keep
-#include <linux/limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
 

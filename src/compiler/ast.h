@@ -1,21 +1,25 @@
 #pragma once
 
+#include <defines.h>
+
 #include "atom.h"
 
 #include <containers/darray.h>
 
 namespace Novo {
 
-struct Instance;
 struct AST_Declaration;
-struct AST_Statement;
 struct AST_Expression;
-struct AST_Type_Spec;
 struct AST_Identifier;
+struct AST_Statement;
+struct AST_Type_Spec;
+struct Scope;
+struct Instance;
 
 struct AST_File
 {
     DArray<AST_Declaration *> declarations;
+    Scope *scope;
 };
 
 enum class AST_Declaration_Kind
@@ -42,6 +46,8 @@ struct AST_Declaration
             DArray<AST_Declaration *> params;
             DArray<AST_Statement *> body;
             AST_Type_Spec *return_ts;
+
+            Scope *scope;
 
             u32 param_range_id;
             u32 body_range_id;
@@ -128,11 +134,11 @@ struct AST_Identifier
     u32 range_id;
 };
 
-NAPI AST_File *ast_file(Instance *instance, DArray<AST_Declaration *> decls);
+NAPI AST_File *ast_file(Instance *instance, DArray<AST_Declaration *> decls, Scope *scope);
 
 NAPI AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, AST_Identifier *ident, u32 range_id);
 NAPI AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *init, u32 range_id);
-NAPI AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, u32 range_id);
+NAPI AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, Scope *scope, u32 range_id);
 
 NAPI AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u32 range_id);
 NAPI AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaration *decl, u32 range_id);

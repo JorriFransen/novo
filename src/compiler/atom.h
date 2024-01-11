@@ -2,12 +2,13 @@
 
 #include <containers/darray.h>
 #include <defines.h>
-#include <memory/allocator.h>
 #include <nstring.h>
 
 #define NOVO_ATOM_TABLE_DEFAULT_STRING_BLOCK_SIZE 2048
 
 namespace Novo {
+
+struct Allocator;
 
 typedef u32 Atom;
 

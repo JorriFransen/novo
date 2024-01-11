@@ -1,7 +1,11 @@
 
+#include <defines.h>
 #include <memory/allocator.h>
+#include <nstring.h>
 
 #include "atom.h"
+
+#include <assert.h>
 
 using namespace Novo;
 

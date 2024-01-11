@@ -1,11 +1,12 @@
 #pragma once
 
 #include "defines.h"
-#include "memory/allocator.h"
 
 #include <cstdarg>
 
 namespace Novo {
+
+struct Allocator;
 
 struct String {
     char *data;

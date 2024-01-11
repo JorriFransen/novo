@@ -1,8 +1,13 @@
 #include "lexer.h"
 
-#include "defines.h"
+#include <containers/darray.h>
+#include <defines.h>
+#include <nstring.h>
+
+#include "atom.h"
 #include "instance.h"
 #include "keywords.h"
+#include "source_pos.h"
 
 #include <cassert>
 #include <cctype>
@@ -11,6 +16,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <stdarg.h>
+#include <string.h>
 
 namespace Novo {
 

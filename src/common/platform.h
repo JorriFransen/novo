@@ -5,6 +5,8 @@
 
 namespace Novo {
 
+struct Allocator;
+
 struct File_Handle
 {
     void *handle;

@@ -1,12 +1,14 @@
 
-#include <ast.h>
 #include <ast_print.h>
 #include <cstdio>
+#include <defines.h>
 #include <instance.h>
 #include <memory/allocator.h>
+#include <nstring.h>
 #include <parser.h>
 
 #include <cassert>
+#include <string.h>
 
 using namespace Novo;
 

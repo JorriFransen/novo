@@ -1,16 +1,21 @@
 #include "ast.h"
 
+#include "atom.h"
 #include "instance.h"
-#include "parser.h"
+#include "source_pos.h"
 
+#include <containers/darray.h>
+#include <defines.h>
 #include <memory/allocator.h>
 
 namespace Novo {
 
-AST_File *ast_file(Instance *instance, DArray<AST_Declaration *> decls)
+AST_File *ast_file(Instance *instance, DArray<AST_Declaration *> decls, Scope *scope)
 {
     auto result = allocate<AST_File>(&instance->ast_allocator);
     result->declarations = decls;
+    result->scope = scope;
+
     return result;
 }
 
@@ -31,12 +36,13 @@ AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *id
     return result;
 }
 
-AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> param_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, u32 range_id)
+AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> param_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, Scope *scope, u32 range_id)
 {
     auto result = ast_declaration(instance, AST_Declaration_Kind::FUNCTION, ident, range_id);
     result->function.params = param_decls;
     result->function.body = body_stmts;
     result->function.return_ts = return_ts;
+    result->function.scope = scope;
 
     if (param_decls.count) {
         auto start = source_range_start(instance, param_decls[0]->range_id);
