@@ -105,6 +105,8 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
         AST_Expression *init_expr = nullptr;
         if (match_token(parser, '=')) {
             init_expr = parse_expression(parser);
+            if (!init_expr) return nullptr;
+
             end = source_range_end(parser->instance, init_expr->range_id);
         }
 
@@ -194,12 +196,17 @@ AST_Expression *parse_leaf_expression(Parser *parser)
     auto ct = parser->lexer->token;
     auto range = source_range(parser->instance, ct.source_pos_id);
 
+    if (ct.kind == TOK_ERROR) {
+        return nullptr;
+    }
+
     if (is_token(parser, TOK_INT)) {
         next_token(parser->lexer);
         return ast_integer_literal_expression(parser->instance, ct.integer, range);
 
     } else if (is_token(parser, TOK_REAL)) {
-        assert(false);
+        next_token(parser->lexer);
+        return ast_real_literal_expression(parser->instance, ct.real, range);
 
     } else if (is_token(parser, TOK_CHAR)) {
         next_token(parser->lexer);
@@ -291,6 +298,8 @@ AST_Expression *parse_expression(Parser *parser, u64 min_prec/*=0*/)
 
 AST_Statement *parse_statement(Parser *parser, Scope *scope)
 {
+    if (parser->lexer->token.kind == TOK_ERROR) return nullptr;
+
     if (is_token(parser, TOK_KEYWORD)) {
         return parse_keyword_statement(parser, scope);
     }

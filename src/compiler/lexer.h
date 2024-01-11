@@ -38,6 +38,8 @@ enum Token_Kind : u32
     TOK_LTEQ,
     TOK_GTEQ,
 
+    TOK_ERROR,
+
     TOK_EOF,
     TOK_LAST = TOK_EOF,
 };
@@ -79,8 +81,6 @@ NAPI void lexer_destroy(Lexer *lexer);
 NAPI bool next_token(Lexer *lexer);
 NAPI bool is_token(Lexer *lexer, Token_Kind kind);
 NAPI bool is_token(Lexer *lexer, char c);
-
-NAPI void print_token(Token token);
 
 NAPI String_Ref tmp_token_str(Token token);
 NAPI String_Ref tmp_token_kind_str(Token_Kind kind);

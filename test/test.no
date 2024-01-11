@@ -1,7 +1,10 @@
 
-main :: () -> int {
-    x : int;
-    x : int;
+main :: (y: int) -> int {
+    x : int = 'a';
+    str := "abc";
+    yy := 42;
+    //z := 1.2;
+    z := 1.2e9;
     return x;
 }
 

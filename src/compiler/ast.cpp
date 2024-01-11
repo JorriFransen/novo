@@ -117,6 +117,13 @@ AST_Expression *ast_integer_literal_expression(Instance *instance, u64 i, u32 ra
     return result;
 }
 
+AST_Expression *ast_real_literal_expression(Instance *instance, Real_Value rv, u32 range_id)
+{
+    auto result = ast_expression(instance, AST_Expression_Kind::REAL_LITERAL, range_id);
+    result->real_literal = rv;
+    return result;
+}
+
 AST_Expression *ast_char_literal_expression(Instance *instance, char c, u32 range_id)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::CHAR_LITERAL, range_id);

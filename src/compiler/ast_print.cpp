@@ -193,6 +193,11 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
             break;
         }
 
+        case AST_Expression_Kind::REAL_LITERAL: {
+            string_builder_append(sb, "EXPR_REAL: %f/%f\n", expr->real_literal.r32, expr->real_literal.r64);
+            break;
+        }
+
         case AST_Expression_Kind::CHAR_LITERAL: {
             string_builder_append(sb, "EXPR_CHAR: '%c'\n", expr->char_literal);
             break;
