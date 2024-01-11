@@ -15,6 +15,12 @@ void instance_init(Instance *instance)
     instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(16));
 
     darray_create(instance->default_allocator, &instance->source_positions);
+    // push dummy because index zero is invalid
+    darray_append(&instance->source_positions, {});
+
+    darray_create(instance->default_allocator, &instance->source_ranges);
+    // push dummy because index zero is invalid
+    darray_append(&instance->source_ranges, {});
 
     if (!g_atoms_initialized) {
         initialize_atoms(instance->default_allocator, 128);

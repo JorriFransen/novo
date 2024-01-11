@@ -34,9 +34,8 @@ bool task_execute(Instance *instance, Task *task)
 
             auto file = parse_file(instance, task->parse.full_path.data);
 
-            auto ast_str = ast_to_string(file, &instance->temp_allocator);
+            auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
             printf("\"%s\"\n", ast_str.data);
-            printf("%.*s", (int)5, ast_str.data);
             break;
         }
 

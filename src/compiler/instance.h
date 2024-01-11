@@ -24,6 +24,7 @@ struct Instance
     Allocator ast_allocator;
 
     DArray<Source_Pos> source_positions;
+    DArray<Source_Range> source_ranges;
 };
 
 NAPI void instance_init(Instance *instance);
