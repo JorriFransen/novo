@@ -102,7 +102,7 @@ static void ast_stmt_to_string(String_Builder *sb, AST_Statement *stmt, int inde
 
         case AST_Statement_Kind::RETURN: {
             ast_print_indent(sb, indent);
-            string_builder_append(sb, "STMT_RETURN: \n");
+            string_builder_append(sb, "STMT_RETURN:\n");
 
             if (stmt->return_expr) {
                 ast_expr_to_string(sb, stmt->return_expr, indent + 1);

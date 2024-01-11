@@ -9,7 +9,7 @@
 
 namespace Novo {
 
-bool instance_start(Instance *instance)
+void instance_init(Instance *instance)
 {
     instance->temp_allocator = temp_allocator_create(&instance->temp_allocator_data, instance->default_allocator, KIBIBYTE(16));
     instance->ast_allocator = linear_allocator_create(&instance->ast_allocator_data, instance->default_allocator, KIBIBYTE(16));
@@ -21,16 +21,20 @@ bool instance_start(Instance *instance)
         initialize_keywords();
         g_atoms_initialized = true;
     }
+}
 
+bool instance_start(Instance *instance, const String_Ref first_file_name)
+{
     if (!fs_is_directory(instance->cwd)) {
         assert(false && "Invalid cwd!");
     }
 
     fs_chdir(instance->cwd);
 
-    String first_file_path;
+    assert(first_file_name.length);
+    instance->first_file_name = first_file_name;
 
-    assert(instance->first_file_name.length);
+    String first_file_path;
 
     if (!fs_is_file(instance->first_file_name)) {
         fprintf(stderr, "Invalid file path: %s\n", instance->first_file_name.data);

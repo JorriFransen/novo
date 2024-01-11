@@ -111,7 +111,7 @@ String string_builder_to_string(String_Builder *sb, Allocator *allocator)
         auto next = block->next_block;
 
         auto start = (char *)&block[1];
-        auto block_size = block->end - start;
+        auto block_size = block->cursor - start;
         size += block_size;
 
         block = next;
@@ -129,7 +129,7 @@ String string_builder_to_string(String_Builder *sb, Allocator *allocator)
         auto next = block->next_block;
 
         auto start = (char *)&block[1];
-        auto block_size = block->end - start;
+        auto block_size = block->cursor - start;
 
         memcpy(cursor, start, block_size);
         cursor += block_size;

@@ -26,6 +26,7 @@ struct Instance
     DArray<Source_Pos> source_positions;
 };
 
-NAPI bool instance_start(Instance *instance);
+NAPI void instance_init(Instance *instance);
+NAPI bool instance_start(Instance *instance, const String_Ref first_file_name);
 
 }
