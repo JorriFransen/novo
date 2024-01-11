@@ -14,7 +14,6 @@
 #include <cerrno>
 #include <cfloat>
 #include <cmath>
-#include <cstdio>
 #include <cstdlib>
 #include <string.h>
 
@@ -31,7 +30,6 @@ void lexer_create(Instance *instance, Lexer *out_lexer)
     out_lexer->line_start = nullptr;
 
     out_lexer->token = {};
-    out_lexer->error = false;
 }
 
 void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref stream_name)
@@ -62,7 +60,7 @@ void lexer_destroy(Lexer *lexer)
 
 bool next_token(Lexer *lex)
 {
-    if (lex->error) {
+    if (lex->token.kind == TOK_ERROR) {
         return false;
     }
 
@@ -136,7 +134,6 @@ case (first_char): {                                                \
                 lex->pos.offset += 2;
 
                 instance_fatal_error(lex->instance, lex->pos, "Exected \"'\" to end character literal");
-                lex->error = true;
                 return false;
             }
 
@@ -215,7 +212,6 @@ case (first_char): {                                                \
             } else {
                 instance_fatal_error(lex->instance, lex->pos, "Unexpected character: '%c', value: '%d'", *lex->stream, *lex->stream);
                 lex->token.kind = TOK_ERROR;
-                lex->error = true;
                 return false;
             }
             break;
@@ -235,7 +231,6 @@ case (first_char): {                                                \
                 if (err_char) {
                     instance_fatal_error(lex->instance, lex->pos, "Invalid escape sequence in string literal: '\\%c'", *err_char);
                     lex->token.kind = TOK_ERROR;
-                    lex->error = true;
                     return false;
                 }
 
@@ -395,7 +390,6 @@ static bool lex_int(Lexer *lexer)
 
             instance_fatal_error(lexer->instance, lexer->pos, "Digit '%c' out of range for base %llu", *lexer->stream, base);
             lexer->token.kind = TOK_ERROR;
-            lexer->error = true;
             return false;
         }
 
@@ -406,7 +400,6 @@ static bool lex_int(Lexer *lexer)
 
             instance_fatal_error(lexer->instance, lexer->pos, "Integer literal overflow: '%.*s'", (int)length + 1, start);
             lexer->token.kind = TOK_ERROR;
-            lexer->error = true;
 
             // Skip the rest of this integer
             while (isdigit(*lexer->stream)) lexer->stream += 1;
@@ -424,7 +417,6 @@ static bool lex_int(Lexer *lexer)
 
         instance_fatal_error(lexer->instance, lexer->pos, "Expected base %llu digit, got '%c'", base, *lexer->stream);
         lexer->token.kind = TOK_ERROR;
-        lexer->error = true;
         return false;
     }
 
@@ -467,7 +459,6 @@ static bool lex_real(Lexer *lexer)
 
             instance_fatal_error(lexer->instance, lexer->pos, "Expected digit after float literal exponent, found '%c'.", *lexer->stream);
             lexer->token.kind = TOK_ERROR;
-            lexer->error = true;
             return false;
         }
 
@@ -486,7 +477,6 @@ static bool lex_real(Lexer *lexer)
 
         instance_fatal_error(lexer->instance, lexer->pos, "Convertion to float failed");
         lexer->token.kind = TOK_ERROR;
-        lexer->error = true;
 
         return false;
     }
@@ -497,7 +487,6 @@ static bool lex_real(Lexer *lexer)
 
         instance_fatal_error(lexer->instance, lexer->pos, "Float literal overflow");
         lexer->token.kind = TOK_ERROR;
-        lexer->error = true;
 
         return false;
     }
@@ -508,7 +497,6 @@ static bool lex_real(Lexer *lexer)
 
         instance_fatal_error(lexer->instance, lexer->pos, "Float literal underflow");
         lexer->token.kind = TOK_ERROR;
-        lexer->error = true;
 
         return false;
     }
@@ -521,7 +509,6 @@ static bool lex_real(Lexer *lexer)
 
         instance_fatal_error(lexer->instance, lexer->pos, "Convertion to double failed");
         lexer->token.kind = TOK_ERROR;
-        lexer->error = true;
 
         return false;
     }
@@ -532,7 +519,6 @@ static bool lex_real(Lexer *lexer)
 
         instance_fatal_error(lexer->instance, lexer->pos, "Double literal overflow");
         lexer->token.kind = TOK_ERROR;
-        lexer->error = true;
 
         return false;
     }
@@ -542,7 +528,6 @@ static bool lex_real(Lexer *lexer)
 
         instance_fatal_error(lexer->instance, lexer->pos, "Double literal underflow");
         lexer->token.kind = TOK_ERROR;
-        lexer->error = true;
 
         return false;
     }

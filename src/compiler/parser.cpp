@@ -42,7 +42,7 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
 
     Scope *file_scope = scope_new(instance, Scope_Kind::FILE);
 
-    while (!is_token(&lexer, TOK_EOF) && !lexer.error) {
+    while (!is_token(&lexer, TOK_EOF) && !is_token(&lexer, TOK_ERROR)) {
 
         auto decl = parse_declaration(&parser, file_scope, true);
         if (!decl) return nullptr;

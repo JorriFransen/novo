@@ -70,7 +70,6 @@ struct Lexer
     const char *line_start;
 
     Token token;
-    bool error;
     Source_Pos pos;
 };
 
