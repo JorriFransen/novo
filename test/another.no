@@ -1,0 +1,4 @@
+
+abc :: () -> int {
+    return 5;
+}

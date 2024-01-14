@@ -25,8 +25,28 @@ static void ast_ts_to_string(Instance *instance, String_Builder *sb, AST_Type_Sp
 
 String ast_to_string(Instance *instance, AST_File *file, String_Builder *sb)
 {
-    for (s64 i = 0; i < file->declarations.count; i++) {
-        ast_decl_to_string(instance, sb, file->declarations[i]);
+    for (s64 i = 0; i < file->nodes.count; i++) {
+        auto &node = file->nodes[i];
+
+        switch (node.kind) {
+
+            case AST_Node_Kind::INVALID: assert(false); break;
+
+            case AST_Node_Kind::DECLARATION: {
+                ast_decl_to_string(instance, sb, node.declaration);
+                break;
+            }
+
+            case AST_Node_Kind::STATEMENT: {
+                assert(node.statement->kind == AST_Statement_Kind::IMPORT);
+                ast_stmt_to_string(instance, sb, node.statement);
+                break;
+            }
+
+            case AST_Node_Kind::EXPRESSION: assert(false); break;
+        }
+
+        string_builder_append(sb, "\n");
     }
 
     return string_builder_to_string(sb);
@@ -132,8 +152,6 @@ static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Decla
             for (s64 i = 0; i < decl->function.body.count; i++) {
                 ast_stmt_to_string(instance, sb, decl->function.body[i], indent + 2);
             }
-
-            string_builder_append(sb, "\n");
             break;
         }
 
@@ -146,6 +164,13 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
     switch (stmt->kind) {
 
         case AST_Statement_Kind::INVALID: assert(false); break;
+
+        case AST_Statement_Kind::IMPORT: {
+            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "STMT_IMPORT: '%s'\n", stmt->import_path.data);
+            break;
+        }
 
         case AST_Statement_Kind::DECLARATION: {
             ast_decl_to_string(instance, sb, stmt->declaration, indent);

@@ -43,6 +43,7 @@ NAPI bool expect_token_internal(Parser *parser, char c);
 
 NAPI bool match_token(Parser *parser, Token_Kind kind);
 NAPI bool match_token(Parser *parser, char c);
+NAPI bool match_name(Parser *parser, const char *name);
 
 NAPI bool is_token(Parser *parser, Token_Kind kind);
 NAPI bool is_token(Parser *parser, char c);

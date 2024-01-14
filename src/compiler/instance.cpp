@@ -88,6 +88,7 @@ bool instance_start(Instance *instance, const String_Ref first_file_name)
                 progress = true;
                 darray_remove_unordered(&instance->tasks, i);
                 i--;
+                max--;
             }
         }
     }

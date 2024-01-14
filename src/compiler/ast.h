@@ -3,6 +3,7 @@
 #include <defines.h>
 
 #include "atom.h"
+#include "parser.h"
 
 #include <containers/darray.h>
 
@@ -16,9 +17,29 @@ struct AST_Type_Spec;
 struct Scope;
 struct Instance;
 
+enum class AST_Node_Kind
+{
+    INVALID,
+    DECLARATION,
+    STATEMENT,
+    EXPRESSION,
+};
+
+struct AST_Node
+{
+    AST_Node_Kind kind;
+
+    union
+    {
+        AST_Declaration *declaration;
+        AST_Statement *statement;
+        AST_Expression *expression;
+    };
+};
+
 struct AST_File
 {
-    DArray<AST_Declaration *> declarations;
+    DArray<AST_Node> nodes;
     Scope *scope;
 };
 
@@ -60,6 +81,7 @@ struct AST_Declaration
 enum class AST_Statement_Kind
 {
     INVALID,
+    IMPORT,
     DECLARATION,
     CALL,
     RETURN,
@@ -71,6 +93,7 @@ struct AST_Statement
 
     union
     {
+        String_Ref import_path;
         AST_Declaration *declaration;
         AST_Expression *call;
         AST_Expression *return_expr;
@@ -147,13 +170,18 @@ struct AST_Identifier
     AST_Declaration *decl;
 };
 
-NAPI AST_File *ast_file(Instance *instance, DArray<AST_Declaration *> decls, Scope *scope);
+NAPI AST_Node ast_node(AST_Declaration *decl);
+NAPI AST_Node ast_node(AST_Statement *stmt);
+NAPI AST_Node ast_node(AST_Expression *expr);
+
+NAPI AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes, Scope *scope);
 
 NAPI AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, AST_Identifier *ident, u32 range_id);
 NAPI AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *init, u32 range_id);
 NAPI AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, Scope *scope, u32 range_id);
 
 NAPI AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u32 range_id);
+NAPI AST_Statement *ast_import_statement(Instance *instance, String_Ref path, u32 range_id);
 NAPI AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaration *decl, u32 range_id);
 NAPI AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call);
 NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id);

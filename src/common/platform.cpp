@@ -7,6 +7,7 @@
 
 #ifdef ZPLATFORM_LINUX
 
+#include <libgen.h>
 #include <limits.h> // IWYU pragma: keep
 #include <stdlib.h> // IWYU pragma: keep
 #include <sys/stat.h>
@@ -197,6 +198,23 @@ bool fs_is_file(const String_Ref path)
     }
 
     return false;
+}
+
+String fs_dirname(Allocator *allocator, const String_Ref path)
+{
+    auto path_copy = string_copy(allocator, path);
+    NSTRING_ASSERT_ZERO_TERMINATION(path_copy);
+
+    auto result = dirname(path_copy.data);
+
+    auto result_copy = string_copy(allocator, result);
+
+
+    if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
+        free(allocator, path_copy.data);
+    }
+
+    return result_copy;
 }
 
 }

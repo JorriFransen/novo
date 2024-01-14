@@ -38,18 +38,45 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
     parser.instance = instance;
     parser.lexer = &lexer;
 
-    auto decls = temp_array_create<AST_Declaration *>(&instance->temp_allocator, 4);
+    auto nodes = temp_array_create<AST_Node>(&instance->temp_allocator, 4);
 
     Scope *file_scope = scope_new(instance, Scope_Kind::FILE);
 
     while (!is_token(&lexer, TOK_EOF) && !is_token(&lexer, TOK_ERROR)) {
 
-        auto decl = parse_declaration(&parser, file_scope, true);
-        if (!decl) return nullptr;
-        darray_append(&decls, decl);
+        auto start = parser.lexer->token.source_pos_id;
+
+        if (match_token(&parser, '#')) {
+
+            if (match_name(&parser, "import")) {
+                auto str_tok = parser.lexer->token;
+                expect_token(&parser, TOK_STRING);
+
+                // Remove the "'s from the string literal
+                String str_lit = atom_string(str_tok.atom);
+
+                String current_file_dir = fs_dirname(&instance->temp_allocator, file_path);
+                current_file_dir = string_append(&instance->temp_allocator, current_file_dir, "/");
+                String import_path = string_append(&instance->ast_allocator, current_file_dir, String_Ref(str_lit.data + 1, str_lit.length - 2));
+                assert(fs_is_file(import_path));
+
+                auto range = source_range(instance, start, str_tok.source_pos_id);
+                auto stmt = ast_import_statement(instance, import_path, range);
+                if (!stmt) return nullptr;
+                darray_append(&nodes, ast_node(stmt));
+
+            } else {
+                assert(false && "Unhandled directive");
+            }
+        } else {
+
+            auto decl = parse_declaration(&parser, file_scope, true);
+            if (!decl) return nullptr;
+            darray_append(&nodes, ast_node(decl));
+        }
     }
 
-    auto result = ast_file(instance, temp_array_finalize(&instance->ast_allocator, &decls), file_scope);
+    auto result = ast_file(instance, temp_array_finalize(&instance->ast_allocator, &nodes), file_scope);
 
     temp_allocator_reset(&instance->temp_allocator_data, mark);
 
@@ -430,6 +457,16 @@ bool match_token(Parser *parser, Token_Kind kind)
 bool match_token(Parser *parser, char c)
 {
     return match_token(parser, (Token_Kind)c);
+}
+
+bool match_name(Parser *parser, const char *name)
+{
+    if (parser->lexer->token.kind == TOK_NAME && parser->lexer->token.atom == atom_get(name)) {
+        next_token(parser->lexer);
+        return true;
+    }
+
+    return false;
 }
 
 bool is_token(Parser *parser, Token_Kind kind)

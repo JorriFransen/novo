@@ -10,10 +10,25 @@
 
 namespace Novo {
 
-AST_File *ast_file(Instance *instance, DArray<AST_Declaration *> decls, Scope *scope)
+AST_Node ast_node(AST_Declaration *decl)
+{
+    return AST_Node { AST_Node_Kind::DECLARATION, { .declaration = decl } };
+}
+
+AST_Node ast_node(AST_Statement *stmt)
+{
+    return AST_Node { AST_Node_Kind::STATEMENT, { .statement = stmt } };
+}
+
+AST_Node ast_node(AST_Expression *expr)
+{
+    return AST_Node { AST_Node_Kind::EXPRESSION, { .expression = expr } };
+}
+
+AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes, Scope *scope)
 {
     auto result = allocate<AST_File>(&instance->ast_allocator);
-    result->declarations = decls;
+    result->nodes = nodes;
     result->scope = scope;
 
     return result;
@@ -63,12 +78,18 @@ AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *id
     return result;
 }
 
-
 AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u32 range_id)
 {
     auto result = allocate<AST_Statement>(&instance->ast_allocator);
     result->kind = kind;
     result->range_id = range_id;
+    return result;
+}
+
+AST_Statement *ast_import_statement(Instance *instance, String_Ref path, u32 range_id)
+{
+    auto result = ast_statement(instance, AST_Statement_Kind::IMPORT, range_id);
+    result->import_path = path;
     return result;
 }
 

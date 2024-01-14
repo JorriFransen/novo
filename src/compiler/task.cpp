@@ -4,6 +4,7 @@
 #include <defines.h>
 #include <nstring.h>
 
+#include "ast_print.h"
 #include "atom.h"
 #include "ast.h"
 #include "instance.h"
@@ -49,14 +50,35 @@ bool task_execute(Instance *instance, Task *task)
             auto file = parse_file(instance, task->parse.full_path.data);
             if (!file) return false;
 
-            for (s64 i = 0; i < file->declarations.count; i++) {
-                Task task;
-                resolve_task_create(&task, file->declarations[i]);
-                darray_append(&instance->tasks, task);
+            for (s64 i = 0; i < file->nodes.count; i++) {
+                auto &node = file->nodes[i];
+
+                switch (node.kind) {
+                    case AST_Node_Kind::INVALID: assert(false); break;
+
+                    case AST_Node_Kind::DECLARATION: {
+                        Task task;
+                        resolve_task_create(&task, node.declaration);
+                        darray_append(&instance->tasks, task);
+                        break;
+                    }
+
+                    case AST_Node_Kind::STATEMENT: {
+                        assert(node.statement->kind == AST_Statement_Kind::IMPORT);
+
+                        Task task;
+                        parse_task_create(&task, node.statement->import_path);
+                        darray_append(&instance->tasks, task);
+                        break;
+                    }
+
+                    case AST_Node_Kind::EXPRESSION: assert(false); break;
+                }
+
             }
 
-            // auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
-            // printf("\"%s\"\n", ast_str.data);
+            auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
+            printf("%s\n", ast_str.data);
             break;
         }
 
