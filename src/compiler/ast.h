@@ -44,8 +44,8 @@ struct AST_Declaration
 
         struct {
             DArray<AST_Declaration *> params;
-            DArray<AST_Statement *> body;
             AST_Type_Spec *return_ts;
+            DArray<AST_Statement *> body;
 
             Scope *scope;
 
@@ -61,6 +61,7 @@ enum class AST_Statement_Kind
 {
     INVALID,
     DECLARATION,
+    CALL,
     RETURN,
 };
 
@@ -71,6 +72,7 @@ struct AST_Statement
     union
     {
         AST_Declaration *declaration;
+        AST_Expression *call;
         AST_Expression *return_expr;
     };
 
@@ -83,6 +85,7 @@ enum class AST_Expression_Kind
 
     IDENTIFIER,
     BINARY,
+    CALL,
 
     INTEGER_LITERAL,
     REAL_LITERAL,
@@ -103,6 +106,12 @@ struct AST_Expression
             AST_Expression *lhs;
             AST_Expression *rhs;
         } binary;
+
+        struct
+        {
+            AST_Expression *base;
+            DArray<AST_Expression *> args;
+        } call;
 
         u64 integer_literal;
         Real_Value real_literal;
@@ -134,6 +143,8 @@ struct AST_Identifier
 {
     Atom atom;
     u32 range_id;
+
+    AST_Declaration *decl;
 };
 
 NAPI AST_File *ast_file(Instance *instance, DArray<AST_Declaration *> decls, Scope *scope);
@@ -144,11 +155,13 @@ NAPI AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifie
 
 NAPI AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u32 range_id);
 NAPI AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaration *decl, u32 range_id);
+NAPI AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call);
 NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id);
 
 NAPI AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32 range_id);
 NAPI AST_Expression *ast_identifier_expression(Instance *instance, AST_Identifier *ident, u32 range_id);
 NAPI AST_Expression *ast_binary_expression(Instance *instance, char op, AST_Expression *lhs, AST_Expression *rhs, u32 range_id);
+NAPI AST_Expression *ast_call_expression(Instance *instance, AST_Expression *base_expr, DArray<AST_Expression *> args, u32 range_id);
 NAPI AST_Expression *ast_integer_literal_expression(Instance *instance, u64 i, u32 range_id);
 NAPI AST_Expression *ast_real_literal_expression(Instance *instance, Real_Value rv, u32 range_id);
 NAPI AST_Expression *ast_char_literal_expression(Instance *instance, char c, u32 range_id);

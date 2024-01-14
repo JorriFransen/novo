@@ -79,6 +79,15 @@ AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaration *de
     return result;
 }
 
+AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call)
+{
+    assert(call->kind == AST_Expression_Kind::CALL);
+
+    auto result = ast_statement(instance, AST_Statement_Kind::CALL, call->range_id);
+    result->call = call;
+    return result;
+}
+
 AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id)
 {
     auto result = ast_statement(instance, AST_Statement_Kind::RETURN, range_id);
@@ -107,6 +116,14 @@ NAPI AST_Expression *ast_binary_expression(Instance *instance, char op, AST_Expr
     result->binary.op = op;
     result->binary.lhs = lhs;
     result->binary.rhs = rhs;
+    return result;
+}
+
+AST_Expression *ast_call_expression(Instance *instance, AST_Expression *base_expr, DArray<AST_Expression *> args, u32 range_id)
+{
+    auto result = ast_expression(instance, AST_Expression_Kind::CALL, range_id);
+    result->call.base = base_expr;
+    result->call.args = args;
     return result;
 }
 
@@ -158,6 +175,7 @@ AST_Identifier *ast_identifier(Instance *instance, Atom atom, u32 range_id)
     auto result = allocate<AST_Identifier>(&instance->ast_allocator);
     result->atom = atom;
     result->range_id = range_id;
+    result->decl = nullptr;
     return result;
 }
 

@@ -152,6 +152,11 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             break;
         }
 
+        case AST_Statement_Kind::CALL: {
+            ast_expr_to_string(instance, sb, stmt->call, indent);
+            break;
+        }
+
         case AST_Statement_Kind::RETURN: {
             ast_print_pos(instance, sb, stmt->range_id);
             ast_print_indent(sb, indent);
@@ -185,6 +190,23 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
             string_builder_append(sb, "EXPR_BINARY: '%c'\n", expr->binary.op);
             ast_expr_to_string(instance, sb, expr->binary.lhs, indent + 1);
             ast_expr_to_string(instance, sb, expr->binary.rhs, indent + 1);
+            break;
+        }
+
+        case AST_Expression_Kind::CALL: {
+            string_builder_append(sb, "EXPR_CALL:\n");
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "BASE:\n");
+            ast_expr_to_string(instance, sb, expr->call.base, indent + 2);
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "ARGS: %d\n", expr->call.args.count);
+
+            for (s64 i = 0; i < expr->call.args.count; i++) {
+                ast_expr_to_string(instance, sb, expr->call.args[i], indent + 2);
+            }
             break;
         }
 

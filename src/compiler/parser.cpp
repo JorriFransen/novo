@@ -193,42 +193,71 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
 AST_Expression *parse_leaf_expression(Parser *parser)
 {
     auto ct = parser->lexer->token;
+    auto range_start = ct.source_pos_id;
     auto range = source_range(parser->instance, ct.source_pos_id);
 
     if (ct.kind == TOK_ERROR) {
         return nullptr;
     }
 
+    AST_Expression *result = nullptr;
+
     if (is_token(parser, TOK_INT)) {
         next_token(parser->lexer);
-        return ast_integer_literal_expression(parser->instance, ct.integer, range);
+        result = ast_integer_literal_expression(parser->instance, ct.integer, range);
 
     } else if (is_token(parser, TOK_REAL)) {
         next_token(parser->lexer);
-        return ast_real_literal_expression(parser->instance, ct.real, range);
+        result = ast_real_literal_expression(parser->instance, ct.real, range);
 
     } else if (is_token(parser, TOK_CHAR)) {
         next_token(parser->lexer);
-        return ast_char_literal_expression(parser->instance, ct.character, range);
+        result = ast_char_literal_expression(parser->instance, ct.character, range);
 
     } else if (is_token(parser, TOK_NAME)) {
         AST_Identifier *ident = parse_identifier(parser);
-        return ast_identifier_expression(parser->instance, ident, range);
+
+        result = ast_identifier_expression(parser->instance, ident, range);
 
     } else if (is_token(parser, TOK_STRING)) {
         next_token(parser->lexer);
-        return ast_string_literal_expression(parser->instance, ct.atom, range);
+        result = ast_string_literal_expression(parser->instance, ct.atom, range);
 
     } else if (is_token(parser, '(')) {
         next_token(parser->lexer);
-        auto result = parse_expression(parser);
+        result = parse_expression(parser);
         expect_token(parser, ')');
-
-        return result;
     }
 
-    assert(false);
-    return nullptr;
+    if (!result) return nullptr;
+
+    while (is_token(parser, '(')) {
+
+        if (match_token(parser, '(')) {
+
+            auto args_temp = temp_array_create<AST_Expression *>(&parser->instance->temp_allocator);
+
+            u32 end = ct.source_pos_id;
+
+            while (!is_token(parser, ')')) {
+                if (args_temp.array.count) {
+                    expect_token(parser, ',');
+                }
+
+                AST_Expression *arg_expr = parse_expression(parser);
+                darray_append(&args_temp, arg_expr);
+            }
+            end = parser->lexer->token.source_pos_id;
+            next_token(parser->lexer);
+
+            auto args = temp_array_finalize(&parser->instance->ast_allocator, &args_temp);
+            auto call_range = source_range(parser->instance, range_start, end);
+
+            result = ast_call_expression(parser->instance, result, args, call_range);
+        }
+    }
+
+    return result;
 }
 
 static bool is_binary_op(Token &token)
@@ -303,10 +332,17 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope)
         return parse_keyword_statement(parser, scope);
     }
 
-    // Remaining options start with identifier
-    auto ident = parse_identifier(parser);
-    if (is_token(parser, ':')) {
-        auto decl = parse_declaration(parser, ident, scope, true);
+    // Remaining options start with (unary?) expression
+    AST_Expression *expr = parse_leaf_expression(parser);
+    if (!expr) return nullptr;
+
+    if (expr->kind == AST_Expression_Kind::CALL) {
+        auto result = ast_call_expr_statement(parser->instance, expr);
+        expect_token(parser, ';');
+        return result;
+
+    } else if (expr->kind == AST_Expression_Kind::IDENTIFIER && is_token(parser, ':')) {
+        auto decl = parse_declaration(parser, expr->identifier, scope,true);
         if (!decl) return nullptr;
         return ast_declaration_statement(parser->instance, decl, decl->range_id);
     } else {
