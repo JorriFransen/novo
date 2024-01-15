@@ -1,8 +1,8 @@
 
-#import "another.no"
-
 main :: () -> int {
     abc();
     return 0;
 }
+
+#import "another.no"
 

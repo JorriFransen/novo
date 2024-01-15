@@ -77,17 +77,17 @@ bool task_execute(Instance *instance, Task *task)
 
             }
 
-            auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
-            printf("%s\n", ast_str.data);
+            // auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
+            // printf("%s\n", ast_str.data);
             break;
         }
 
         case Task_Kind::RESOLVE: {
             auto name = atom_string(task->resolve.decl->ident->atom);
-            printf("Resolving: %s...", name.data);
+            printf("Resolving: %s...\n", name.data);
 
             bool result = resolve_declaration(instance, task->resolve.decl, task->resolve.scope);
-            printf("%s\n", result ? "success" : "fail");
+            printf("Resolving: %s...%s\n", name.data, result ? "success" : "fail");
 
             return result;
         };

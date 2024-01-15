@@ -25,11 +25,10 @@ AST_Node ast_node(AST_Expression *expr)
     return AST_Node { AST_Node_Kind::EXPRESSION, { .expression = expr } };
 }
 
-AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes, Scope *scope)
+AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes)
 {
     auto result = allocate<AST_File>(&instance->ast_allocator);
     result->nodes = nodes;
-    result->scope = scope;
 
     return result;
 }

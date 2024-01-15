@@ -26,6 +26,8 @@ struct String_Builder
 NAPI void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_block_size = NOVO_SB_INITAL_BLOCK_SIZE);
 NAPI void string_builder_free(String_Builder *sb);
 
+NAPI void string_builder_reset(String_Builder *sb);
+
 NAPI void string_builder_append(String_Builder *sb, const String_Ref fmt, ...);
 NAPI void string_builder_append_va(String_Builder *sb, const String_Ref fmt, va_list args);
 

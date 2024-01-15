@@ -40,8 +40,6 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
 
     auto nodes = temp_array_create<AST_Node>(&instance->temp_allocator, 4);
 
-    Scope *file_scope = scope_new(instance, Scope_Kind::FILE);
-
     while (!is_token(&lexer, TOK_EOF) && !is_token(&lexer, TOK_ERROR)) {
 
         auto start = parser.lexer->token.source_pos_id;
@@ -70,13 +68,13 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
             }
         } else {
 
-            auto decl = parse_declaration(&parser, file_scope, true);
+            auto decl = parse_declaration(&parser, instance->global_scope, true);
             if (!decl) return nullptr;
             darray_append(&nodes, ast_node(decl));
         }
     }
 
-    auto result = ast_file(instance, temp_array_finalize(&instance->ast_allocator, &nodes), file_scope);
+    auto result = ast_file(instance, temp_array_finalize(&instance->ast_allocator, &nodes));
 
     temp_allocator_reset(&instance->temp_allocator_data, mark);
 
@@ -166,7 +164,7 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
 
 AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *ident, Scope *scope)
 {
-    assert(scope->kind == Scope_Kind::FILE);
+    assert(scope->kind == Scope_Kind::GLOBAL);
 
     auto params = temp_array_create<AST_Declaration *>(&parser->instance->temp_allocator, 2);
 

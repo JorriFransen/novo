@@ -40,7 +40,6 @@ struct AST_Node
 struct AST_File
 {
     DArray<AST_Node> nodes;
-    Scope *scope;
 };
 
 enum class AST_Declaration_Kind
@@ -174,7 +173,7 @@ NAPI AST_Node ast_node(AST_Declaration *decl);
 NAPI AST_Node ast_node(AST_Statement *stmt);
 NAPI AST_Node ast_node(AST_Expression *expr);
 
-NAPI AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes, Scope *scope);
+NAPI AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes);
 
 NAPI AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, AST_Identifier *ident, u32 range_id);
 NAPI AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *init, u32 range_id);

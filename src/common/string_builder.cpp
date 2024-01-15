@@ -48,6 +48,19 @@ void string_builder_free(String_Builder *sb)
     }
 }
 
+void string_builder_reset(String_Builder *sb)
+{
+    sb->current_block = sb->first_block;
+
+    auto block = sb->first_block;
+
+    while (block) {
+        auto next = block->next_block;
+        block->cursor = (char *)&block[1];
+        block = next;
+    }
+}
+
 void string_builder_append(String_Builder *sb, const String_Ref fmt, ...)
 {
     va_list args;
@@ -78,14 +91,29 @@ void string_builder_append_va(String_Builder *sb, const String_Ref fmt, va_list 
         memcpy(sb->current_block->cursor, temp_result.data, size_a);
         sb->current_block->cursor += size_a;
 
-        while (sb->next_block_size < size_b) sb->next_block_size *= 2;
+        auto read_cursor = temp_result.data + size_a;
 
-        auto new_block = string_builder_block(sb->allocator, sb->next_block_size);
-        sb->current_block->next_block = new_block;
-        sb->current_block = new_block;
+        while (size_b && sb->current_block->next_block) {
 
-        memcpy(sb->current_block->cursor, temp_result.data + size_a, size_b);
-        sb->current_block->cursor += size_b;
+            sb->current_block = sb->current_block->next_block;
+
+            auto write_size = min(size_b, (s64)(sb->current_block->end - sb->current_block->cursor));
+            memcpy(sb->current_block->cursor, read_cursor, write_size);
+            sb->current_block->cursor += write_size;
+            read_cursor += write_size;
+            size_b -= write_size;
+        }
+
+        if (size_b) {
+            while (sb->next_block_size < size_b) sb->next_block_size *= 2;
+
+            auto new_block = string_builder_block(sb->allocator, sb->next_block_size);
+            sb->current_block->next_block = new_block;
+            sb->current_block = new_block;
+
+            memcpy(sb->current_block->cursor, temp_result.data + size_a, size_b);
+            sb->current_block->cursor += size_b;
+        }
     }
 
     temp_allocator_reset(ta, mark);

@@ -19,7 +19,7 @@ struct Symbol
 enum Scope_Kind : u32
 {
     INVALID,
-    FILE,
+    GLOBAL,
     FUNCTION_LOCAL,
 };
 
