@@ -1,5 +1,6 @@
 #include "platform.h"
 
+#include "logger.h"
 #include "memory/allocator.h"
 
 #include <cassert>
@@ -48,7 +49,7 @@ namespace Novo {
 bool fs_read_entire_file(Allocator *allocator, const String_Ref path, String *out_string)
 {
     if (!fs_is_file(path)) {
-        fprintf(stderr, "Not a regular file: %s\n", path.data);
+        log_error("Not a regular file: %s\n", path.data);
         return false;
     }
 
@@ -91,13 +92,13 @@ bool fs_open(const String_Ref path, File_Mode mode, File_Handle *out_handle)
     } else if (!read && write) {
         mode_str = "wb";
     } else {
-        fprintf(stderr, "Invalid mode passed to filesystem_open(): %s", path.data);
+        log_error("Invalid mode passed to filesystem_open(): %s", path.data);
         return false;
     }
 
     FILE *file = fopen(path.data, mode_str);
     if (!file) {
-        fprintf(stderr, "Error opening file: %s", path.data);
+        log_error("Error opening file: %s", path.data);
         return false;
     }
 
@@ -113,7 +114,7 @@ bool fs_size(File_Handle *handle, u64 *out_size)
     assert(out_size);
 
     if (fseek((FILE *)handle->handle, 0, SEEK_END) == -1) {
-        fprintf(stderr, "fseek failed....");
+        log_error("fseek failed....");
         return false;
     }
 

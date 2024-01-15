@@ -10,6 +10,7 @@ endif
 
 common_source = [
   'src/common/defines.h',
+  'src/common/logger.cpp', 'src/common/logger.h',
   'src/common/nstring.cpp', 'src/common/nstring.h',
   'src/common/platform.cpp', 'src/common/platform.h',
   'src/common/string_builder.cpp', 'src/common/string_builder.h',

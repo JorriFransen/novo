@@ -110,6 +110,8 @@ bool instance_start(Instance *inst, const String_Ref first_file_name)
         for (s64 i = 0; i < inst->cycle_errors.count; i++) {
             fprintf(stderr, "%s\n", inst->cycle_errors[i].data);
         }
+
+        return false;
     }
 
     return true;
@@ -117,10 +119,6 @@ bool instance_start(Instance *inst, const String_Ref first_file_name)
 
 static void instance_error_va(Instance *inst, Source_Pos sp, const char *fmt, va_list args)
 {
-    // fprintf(stderr, "%s:%d:%d: error: ", sp.name, sp.line, sp.offset);
-    // vfprintf(stderr, fmt, args);
-    // fprintf(stderr, "\n");
-
     string_builder_reset(&inst->cycle_error_sb);
 
     string_builder_append(&inst->cycle_error_sb, "%s:%d:%d: error: ", sp.name, sp.line, sp.offset);

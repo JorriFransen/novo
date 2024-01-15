@@ -8,11 +8,11 @@
 #include "atom.h"
 #include "ast.h"
 #include "instance.h"
+#include "logger.h"
 #include "parser.h"
 #include "resolve.h"
 
 #include <cassert>
-#include <cstdio>
 
 namespace Novo {
 
@@ -45,7 +45,7 @@ bool task_execute(Instance *instance, Task *task)
         case Task_Kind::INVALID: assert(false); break;
 
         case Task_Kind::PARSE: {
-            printf("Parsing: %s\n", task->parse.full_path.data);
+            log_trace("Parsing: %s\n", task->parse.full_path.data);
 
             auto file = parse_file(instance, task->parse.full_path.data);
             if (!file) return false;
@@ -84,10 +84,10 @@ bool task_execute(Instance *instance, Task *task)
 
         case Task_Kind::RESOLVE: {
             auto name = atom_string(task->resolve.decl->ident->atom);
-            printf("Resolving: %s...\n", name.data);
+            log_trace("Resolving: %s...\n", name.data);
 
             bool result = resolve_declaration(instance, task->resolve.decl, task->resolve.scope);
-            printf("Resolving: %s...%s\n", name.data, result ? "success" : "fail");
+            log_trace("Resolving: %s...%s\n", name.data, result ? "success" : "fail");
 
             return result;
         };

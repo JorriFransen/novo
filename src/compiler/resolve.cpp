@@ -2,10 +2,10 @@
 
 #include "ast.h"
 #include "instance.h"
+#include "logger.h"
 #include "scope.h"
 #include "source_pos.h"
 
-#include <stdio.h>
 #include <cassert>
 
 namespace Novo {
@@ -160,7 +160,7 @@ bool resolve_ident(Instance *instance, AST_Identifier *ident, Scope *scope)
     auto start_id = source_range_start(instance, ident->range_id);
     auto name = atom_string(ident->atom);
     instance_error(instance, start_id, "Reference to undeclared identifier: '%s'", name.data);
-    fprintf(stdout, "Waiting for undeclared identifier: '%s'\n", name.data);
+    log_trace("Waiting for undeclared identifier: '%s'\n", name.data);
 
     return false;
 }
