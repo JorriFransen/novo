@@ -42,17 +42,24 @@ compiler_source = [
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
   'src/compiler/keywords.cpp', 'src/compiler/keywords.h',
   'src/compiler/lexer.cpp', 'src/compiler/lexer.h',
-  'src/compiler/scope.cpp', 'src/compiler/scope.h',
+  'src/compiler/options.cpp', 'src/compiler/options.h',
   'src/compiler/parser.cpp', 'src/compiler/parser.h',
   'src/compiler/resolve.cpp', 'src/compiler/resolve.h',
+  'src/compiler/scope.cpp', 'src/compiler/scope.h',
   'src/compiler/source_pos.cpp', 'src/compiler/source_pos.h',
   'src/compiler/task.cpp', 'src/compiler/task.h',
 ]
 
 compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: common_includes, link_with: common_lib, cpp_args: '-DNEXPORT')
 
+
 driver_includes = [ common_includes, compiler_includes ]
-driver_source = [ 'src/driver/main.cpp']
+
+driver_source = [
+  'src/driver/main.cpp',
+  'src/driver/command_line_args.cpp', 'src/driver/command_line_args.cpp',
+]
+
 driver_libs = [ common_lib, compiler_lib ]
 driver_exe = executable('novo', sources: driver_source, include_directories: driver_includes, link_with: driver_libs)
 

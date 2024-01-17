@@ -6,8 +6,6 @@
 #include <nstring.h>
 #include <platform.h>
 
-#include "logger.h"
-
 #include "ast.h"
 #include "atom.h"
 #include "filesystem.h"
@@ -63,7 +61,6 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
                 }
 
                 String import_path = string_append(&instance->ast_allocator, current_file_dir, String_Ref(str_lit.data + 1, str_lit.length - 2));
-                log_warn("import path: %s\n", import_path.data);
                 assert(fs_is_file(import_path));
 
                 auto range = source_range(instance, start, str_tok.source_pos_id);

@@ -56,6 +56,7 @@ static void log_message_va(Log_Level level, const char *fmt, va_list args)
     if (file) {
         fprintf(file, "%s ", label);
         vfprintf(file, fmt, args);
+        fprintf(file, "\n");
     }
 }
 

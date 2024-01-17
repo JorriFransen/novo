@@ -22,6 +22,13 @@ namespace Novo {
 
 void instance_init(Instance *inst)
 {
+    if (!fs_is_directory(inst->cwd)) {
+        assert(false && "Invalid cwd!");
+    }
+
+    fs_chdir(inst->cwd);
+
+
     auto default_alloc = inst->default_allocator;
 
     inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data, default_alloc, KIBIBYTE(16));
@@ -55,12 +62,6 @@ void instance_init(Instance *inst)
 
 bool instance_start(Instance *inst, const String_Ref first_file_name)
 {
-    if (!fs_is_directory(inst->cwd)) {
-        assert(false && "Invalid cwd!");
-    }
-
-    fs_chdir(inst->cwd);
-
     assert(first_file_name.length);
     inst->first_file_name = first_file_name;
 

@@ -48,6 +48,19 @@ bool string_equal(const String_Ref &a, const String_Ref &b)
     return memcmp(a.data, b.data, a.length) == 0;
 }
 
+bool string_equal(const char *a, const char *b)
+{
+    return strcmp(a, b) == 0;
+}
+
+bool string_starts_with(const String_Ref &str, const String_Ref &start)
+{
+    if (start.length > str.length) return false;
+
+    String_Ref substr(str.data, start.length);
+    return string_equal(substr, start);
+}
+
 bool string_ends_with(const String_Ref &str, const String_Ref &end)
 {
     if (end.length > str.length) return false;
