@@ -2,6 +2,7 @@
 
 #include "defines.h"
 
+#include <cassert>
 #include <cstdarg>
 
 namespace Novo {

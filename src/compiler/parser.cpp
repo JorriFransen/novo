@@ -7,10 +7,10 @@
 
 #include "ast.h"
 #include "atom.h"
+#include "filesystem.h"
 #include "instance.h"
 #include "keywords.h"
 #include "lexer.h"
-#include "platform.h"
 #include "scope.h"
 #include "source_pos.h"
 

@@ -2,11 +2,11 @@
 
 #include <containers/darray.h>
 #include <defines.h>
+#include <filesystem.h>
 #include <memory/allocator.h>
 #include <memory/linear_allocator.h>
 #include <memory/temp_allocator.h>
 #include <nstring.h>
-#include <platform.h>
 
 #include "atom.h"
 #include "keywords.h"
