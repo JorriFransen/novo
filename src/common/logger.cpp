@@ -47,11 +47,9 @@ static void log_message_va(Log_Level level, const char *fmt, va_list args)
         };
     }
 
-    assert(g_min_log_level < g_err_log_level);
-
-    if (level < g_min_log_level) {
+    if (level < NOVO_MIN_LOG_LEVEL) {
         file = nullptr;
-    } else if (level >= g_err_log_level) {
+    } else if (level >= NOVO_ERR_LOG_LEVEL) {
         file = stderr;
     }
 
