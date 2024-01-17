@@ -61,7 +61,7 @@ static void log_message_va(Log_Level level, const char *fmt, va_list args)
 
 #define LOG_MESSAGE(l, f) {         \
     va_list args;                   \
-    va_start(args, (f));            \
+    va_start(args, f);              \
     log_message_va((l), (f), args); \
     va_end(args);                   \
 }

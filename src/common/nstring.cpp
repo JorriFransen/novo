@@ -48,6 +48,14 @@ bool string_equal(const String_Ref &a, const String_Ref &b)
     return memcmp(a.data, b.data, a.length) == 0;
 }
 
+bool string_ends_with(const String_Ref &str, const String_Ref &end)
+{
+    if (end.length > str.length) return false;
+
+    String_Ref substr(str.data + (str.length - end.length), end.length);
+    return string_equal(substr, end);
+}
+
 String string_copy(Allocator *allocator, const char *a_buf, s64 a_length)
 {
     String result = {

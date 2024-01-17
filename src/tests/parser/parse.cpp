@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     Instance instance;
     instance_init(&instance);
 
-    auto file = parse_file(&instance, "/home/jorri/dev/novo/src/tests/parser/test.no");
+    auto file = parse_file(&instance, "test.no");
     assert(file);
 
     auto ast_str = ast_to_string(&instance, file, c_allocator());

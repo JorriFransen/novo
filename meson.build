@@ -3,6 +3,8 @@ project('novo', 'cpp',
         version: 'dev',
         default_options: ['unity=on', 'unity_size=8' ])
 
+add_global_arguments('-std:c++20', language: 'cpp')
+
 compiler = meson.get_compiler('cpp')
 if compiler.get_id() == 'clang-cl'
   add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')
