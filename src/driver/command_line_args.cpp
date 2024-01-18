@@ -1,9 +1,11 @@
 #include "command_line_args.h"
 
-#include <logger.h>
+#include <defines.h>
 #include <nstring.h>
 
+#include <cassert>
 #include <cctype>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -15,7 +17,6 @@ struct Cmd_Opt_Parser;
 
 static void handle_long_option(Cmd_Opt_Parser *cop);
 static void handle_short_option(Cmd_Opt_Parser *cop);
-static char *next_arg(Cmd_Opt_Parser *cop);
 static void command_line_usage(FILE *file, const char *prog_name, bool suggest_help);
 static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...);
 static void command_line_help(FILE *file, Cmd_Opt_Parser *cop);
@@ -223,72 +224,64 @@ static void handle_long_option(Cmd_Opt_Parser *cop)
 
 static void handle_short_option(Cmd_Opt_Parser *cop)
 {
-    auto opt = cop->args[cop->arg_index];
-    auto length = strlen(opt);
 
-    bool match = false;
+    auto chars = &cop->args[cop->arg_index][1];
+    bool handled_arg = false;
 
-    for (size_t i = 0; i < sizeof(option_infos) / sizeof(option_infos[0]); i++) {
+    while (*chars && !handled_arg) {
 
-        auto &info = option_infos[i];
-        if (info.short_name == opt[1]) {
-            match = true;
+        bool match = false;
+        for (size_t i = 0; i < sizeof(option_infos) / sizeof(option_infos[0]); i++) {
+            auto &info = option_infos[i];
+            if (info.short_name == chars[0]) {
+                match = true;
 
-            switch (info.type) {
-
-                case Option_Type::BOOL: {
-
-                    if (length > 2) {
-                        command_line_error(cop, "Invalid length for short boolean option: '%s'", opt);
+                switch (info.type) {
+                    case Option_Type::BOOL: {
+                        SET_OPTION(&cop->result, info.offset_in_option_struct, bool, !info.bool_value);
+                        break;
                     }
 
-                    SET_OPTION(&cop->result, info.offset_in_option_struct, bool, !info.bool_value);
-                    break;
-                }
+                    case Option_Type::STRING: {
+                        const char *value = nullptr;
 
-                case Option_Type::STRING: {
-                    const char *value = nullptr;
-                    if (length > 2) {
-                        value = &opt[2];
-                    } else if (cop->arg_index < cop->arg_count - 1 && cop->args[cop->arg_index + 1][0] != '-'){
-                        value = next_arg(cop);
-                    } else {
-                        command_line_error(cop, "Expected argument after option '%s'", opt);
+                        if (chars[1]) {
+                            value = &chars[1];
+                        } else if (cop->arg_index < cop->arg_count - 1 && cop->args[cop->arg_index + 1][0] != '-') {
+                            cop->arg_index += 1;
+                            value = cop->args[cop->arg_index];
+                        } else {
+                            command_line_error(cop, "Expected argument after option '%c'", info.short_name);
+                        }
+
+                        handled_arg = true;
+                        SET_OPTION(&cop->result, info.offset_in_option_struct, const char *, value);
+                        break;
                     }
-                    SET_OPTION(&cop->result, info.offset_in_option_struct, const char *, value);
-                    break;
-                }
 
-                case Option_Type::CALLBACK: {
-                    info.callback(cop);
-                    break;
+                    case Option_Type::CALLBACK: {
+                        info.callback(cop);
+                        break;
+                    }
+
                 }
             }
-            break;
         }
 
-    }
 
-    if (!match) {
-        command_line_error(cop, "Invalid option: '%c'", opt[1]);
-    }
-}
+        if (!match) {
+            command_line_error(cop, "Invalid option: '%c'", chars[0]);
+        }
 
-static char *next_arg(Cmd_Opt_Parser *cop)
-{
-    cop->arg_index++;
-    if (cop->arg_index >= cop->arg_count) {
-        command_line_error(cop, "Unexpected end of arguments (after '%s')", cop->args[cop->arg_index - 1]);
+        chars++;
     }
-
-    return cop->args[cop->arg_index];
 }
 
 static void command_line_usage(FILE *file, const char *prog_name, bool suggest_help)
 {
     fprintf(file, "Usage: %s input_file [options]\n", prog_name);
 
-    if (suggest_help) fprintf(file, "       %s -h\tto display all options\n" ,prog_name);
+    if (suggest_help) fprintf(file, "       %s -h\tto display all options\n\n" ,prog_name);
 }
 
 static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...)
@@ -310,6 +303,7 @@ static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...)
 static OPTION_CALLBACK_FN(command_line_help_callback)
 {
     command_line_help(stdout, cop);
+    exit(0);
 }
 
 static void command_line_help(FILE *file, Cmd_Opt_Parser *cop)
