@@ -16,10 +16,8 @@ enum Log_Level
     LOG_LEVEL_FATAL,
 };
 
-#define NOVO_MIN_LOG_LEVEL LOG_LEVEL_INFO
-#define NOVO_ERR_LOG_LEVEL LOG_LEVEL_WARN
-
-STATIC_ASSERT(NOVO_MIN_LOG_LEVEL < NOVO_ERR_LOG_LEVEL, "Min log level must be smaller than err log level");
+extern Log_Level g_min_log_level;
+extern Log_Level g_err_log_level;
 
 NAPI void log_message(Log_Level level, const char *fmt, ...);
 

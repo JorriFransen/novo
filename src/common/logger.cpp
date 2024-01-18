@@ -7,6 +7,9 @@
 
 namespace Novo {
 
+Log_Level g_min_log_level = LOG_LEVEL_INFO;
+Log_Level g_err_log_level = LOG_LEVEL_ERROR;
+
 static void log_message_va(Log_Level level, const char *fmt, va_list args)
 {
     const char *label = nullptr;
@@ -47,9 +50,9 @@ static void log_message_va(Log_Level level, const char *fmt, va_list args)
         };
     }
 
-    if (level < NOVO_MIN_LOG_LEVEL) {
+    if (level < g_min_log_level) {
         file = nullptr;
-    } else if (level >= NOVO_ERR_LOG_LEVEL) {
+    } else if (level >= g_err_log_level) {
         file = stderr;
     }
 

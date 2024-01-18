@@ -4,12 +4,14 @@
 
 #include "atom.h"
 #include "ast.h"
+#include "ast_print.h"
 #include "instance.h"
 #include "logger.h"
 #include "parser.h"
 #include "resolve.h"
 
 #include <cassert>
+#include <cstdio>
 
 namespace Novo {
 
@@ -42,7 +44,7 @@ bool task_execute(Instance *instance, Task *task)
         case Task_Kind::INVALID: assert(false); break;
 
         case Task_Kind::PARSE: {
-            log_trace("Parsing: %s\n", task->parse.full_path.data);
+            log_trace("Parsing: %s", task->parse.full_path.data);
 
             auto file = parse_file(instance, task->parse.full_path.data);
             if (!file) return false;
@@ -74,17 +76,19 @@ bool task_execute(Instance *instance, Task *task)
 
             }
 
-            // auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
-            // printf("%s\n", ast_str.data);
+            if (instance->options.print_ast) {
+                auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
+                printf("%s\n", ast_str.data);
+            }
             break;
         }
 
         case Task_Kind::RESOLVE: {
             auto name = atom_string(task->resolve.decl->ident->atom);
-            log_trace("Resolving: %s...\n", name.data);
+            log_trace("Resolving: %s...", name.data);
 
             bool result = resolve_declaration(instance, task->resolve.decl, task->resolve.scope);
-            log_trace("Resolving: %s...%s\n", name.data, result ? "success" : "fail");
+            log_trace("Resolving: %s...%s", name.data, result ? "success" : "fail");
 
             return result;
         };

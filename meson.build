@@ -1,7 +1,7 @@
 
 project('novo', 'cpp',
         version: 'dev',
-        default_options: ['unity=off', 'unity_size=8' ])
+        default_options: ['unity=on', 'unity_size=8' ])
 
 compiler = meson.get_compiler('cpp')
 compiler_id = compiler.get_id()
