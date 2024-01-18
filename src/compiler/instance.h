@@ -33,10 +33,10 @@ struct Instance
     Allocator ast_allocator;
     Allocator scope_allocator;
 
-    Temp_Allocator cycle_error_msg_allocator_data;
-    Allocator cycle_error_msg_allocator;
-    String_Builder cycle_error_sb;
-    DArray<String> cycle_errors;
+    // Temp_Allocator cycle_error_msg_allocator_data;
+    // Allocator cycle_error_msg_allocator;
+    // String_Builder cycle_error_sb;
+    // DArray<String> cycle_errors;
 
     DArray<Task> tasks;
     Scope *global_scope;
@@ -50,8 +50,8 @@ struct Instance
 NAPI void instance_init(Instance *inst, Options options);
 NAPI bool instance_start(Instance *inst, const String_Ref first_file_name);
 
-NAPI void instance_error(Instance *inst, Source_Pos sp, const char *fmt, ...);
-NAPI void instance_error(Instance *inst, u32 sp_id, const char *fmt, ...);
+NAPI void instance_error(Instance *inst, Source_Pos sp, const char* fmt, ...);
+NAPI void instance_error(Instance *inst, u32 sp_id, const char* fmt, ...);
 
 NAPI void instance_fatal_error(Instance *inst, Source_Pos sp, const char* fmt, ...);
 NAPI void instance_fatal_error(Instance *inst, u32 sp_id, const char* fmt, ...);

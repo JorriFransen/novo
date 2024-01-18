@@ -15,30 +15,35 @@
 
 namespace Novo {
 
-void create_task(Task *task, Task_Kind kind)
+void create_task(Instance *inst, Task *task, Task_Kind kind)
 {
     *task = {};
     task->kind = kind;
+    task->done = false;
 }
 
-void parse_task_create(Task *task, const String_Ref file_path)
+void parse_task_create(Instance *inst, Task *task, const String_Ref file_path)
 {
-    create_task(task, Task_Kind::PARSE);
+    create_task(inst, task, Task_Kind::PARSE);
     task->parse = {
         file_path,
     };
 }
 
-void resolve_task_create(Task *task, AST_Declaration *decl)
+void resolve_task_create(Instance *inst, Task *task, AST_Declaration *decl)
 {
-    create_task(task, Task_Kind::RESOLVE);
+    create_task(inst, task, Task_Kind::RESOLVE);
     task->resolve = {
-        decl,
+        .decl = decl,
+        .scope = nullptr,
+        .waiting_for = nullptr
     };
 }
 
-bool task_execute(Instance *instance, Task *task)
+bool task_execute(Instance *inst, Task *task)
 {
+    bool result = false;
+
     switch (task->kind) {
 
         case Task_Kind::INVALID: assert(false); break;
@@ -46,8 +51,12 @@ bool task_execute(Instance *instance, Task *task)
         case Task_Kind::PARSE: {
             log_trace("Parsing: %s", task->parse.full_path.data);
 
-            auto file = parse_file(instance, task->parse.full_path.data);
-            if (!file) return false;
+            auto file = parse_file(inst, task->parse.full_path.data);
+
+            if (!file) {
+                result = false;
+                break;
+            }
 
             for (s64 i = 0; i < file->nodes.count; i++) {
                 auto &node = file->nodes[i];
@@ -57,8 +66,8 @@ bool task_execute(Instance *instance, Task *task)
 
                     case AST_Node_Kind::DECLARATION: {
                         Task task;
-                        resolve_task_create(&task, node.declaration);
-                        darray_append(&instance->tasks, task);
+                        resolve_task_create(inst, &task, node.declaration);
+                        darray_append(&inst->tasks, task);
                         break;
                     }
 
@@ -66,8 +75,8 @@ bool task_execute(Instance *instance, Task *task)
                         assert(node.statement->kind == AST_Statement_Kind::IMPORT);
 
                         Task task;
-                        parse_task_create(&task, node.statement->import_path);
-                        darray_append(&instance->tasks, task);
+                        parse_task_create(inst, &task, node.statement->import_path);
+                        darray_append(&inst->tasks, task);
                         break;
                     }
 
@@ -76,10 +85,12 @@ bool task_execute(Instance *instance, Task *task)
 
             }
 
-            if (instance->options.print_ast) {
-                auto ast_str = ast_to_string(instance, file, &instance->temp_allocator);
+            if (inst->options.print_ast) {
+                auto ast_str = ast_to_string(inst, file, &inst->temp_allocator);
                 printf("%s\n", ast_str.data);
             }
+
+            result = true;
             break;
         }
 
@@ -87,14 +98,17 @@ bool task_execute(Instance *instance, Task *task)
             auto name = atom_string(task->resolve.decl->ident->atom);
             log_trace("Resolving: %s...", name.data);
 
-            bool result = resolve_declaration(instance, task->resolve.decl, task->resolve.scope);
+            result = resolve_declaration(inst, task, task->resolve.decl, task->resolve.scope);
             log_trace("Resolving: %s...%s", name.data, result ? "success" : "fail");
 
-            return result;
+            break;
         };
 
     }
-    return true;
+
+    if (result) task->done = true;
+
+    return result;
 }
 
 }

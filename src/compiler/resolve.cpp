@@ -9,12 +9,13 @@
 #include "logger.h"
 #include "scope.h"
 #include "source_pos.h"
+#include "task.h"
 
 #include <cassert>
 
 namespace Novo {
 
-bool resolve_declaration(Instance *instance, AST_Declaration *decl, Scope *scope)
+bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, Scope *scope)
 {
     switch (decl->kind) {
 
@@ -23,13 +24,13 @@ bool resolve_declaration(Instance *instance, AST_Declaration *decl, Scope *scope
         case AST_Declaration_Kind::VARIABLE: {
 
             if (decl->variable.ts) {
-                if (!resolve_ts(instance, decl->variable.ts, scope)) {
+                if (!resolve_ts(instance, task, decl->variable.ts, scope)) {
                     return false;
                 }
             }
 
             if (decl->variable.init_expr) {
-                if (!resolve_expression(instance, decl->variable.init_expr, scope)) {
+                if (!resolve_expression(instance, task, decl->variable.init_expr, scope)) {
                     return false;
                 }
             }
@@ -42,19 +43,19 @@ bool resolve_declaration(Instance *instance, AST_Declaration *decl, Scope *scope
             auto function_scope = decl->function.scope;
 
             for (s64 i = 0; i < decl->function.params.count; i++) {
-                if (!resolve_declaration(instance, decl->function.params[i], function_scope)) {
+                if (!resolve_declaration(instance, task, decl->function.params[i], function_scope)) {
                     return false;
                 }
             }
 
             if (decl->function.return_ts) {
-                if (!resolve_ts(instance, decl->function.return_ts, function_scope)) {
+                if (!resolve_ts(instance, task, decl->function.return_ts, function_scope)) {
                     return false;
                 }
             }
 
             for (s64 i = 0; i < decl->function.body.count; i++) {
-                if (!resolve_statement(instance, decl->function.body[i], function_scope)) {
+                if (!resolve_statement(instance, task, decl->function.body[i], function_scope)) {
                     return false;
                 }
             }
@@ -67,7 +68,7 @@ bool resolve_declaration(Instance *instance, AST_Declaration *decl, Scope *scope
     return false;
 }
 
-bool resolve_statement(Instance *instance, AST_Statement *stmt, Scope *scope)
+bool resolve_statement(Instance *instance, Task *task, AST_Statement *stmt, Scope *scope)
 {
     switch (stmt->kind) {
         case AST_Statement_Kind::INVALID: assert(false); break;
@@ -75,16 +76,16 @@ bool resolve_statement(Instance *instance, AST_Statement *stmt, Scope *scope)
         case AST_Statement_Kind::IMPORT: assert(false); break;
 
         case AST_Statement_Kind::DECLARATION: {
-            return resolve_declaration(instance, stmt->declaration, scope);
+            return resolve_declaration(instance, task, stmt->declaration, scope);
         }
 
         case AST_Statement_Kind::CALL: {
-            return resolve_expression(instance, stmt->call, scope);
+            return resolve_expression(instance, task, stmt->call, scope);
         }
 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
-                return resolve_expression(instance, stmt->return_expr, scope);
+                return resolve_expression(instance, task, stmt->return_expr, scope);
             }
             return true;
         }
@@ -94,25 +95,25 @@ bool resolve_statement(Instance *instance, AST_Statement *stmt, Scope *scope)
     return false;
 }
 
-bool resolve_expression(Instance *instance, AST_Expression *expr, Scope *scope)
+bool resolve_expression(Instance *instance, Task *task, AST_Expression *expr, Scope *scope)
 {
     switch (expr->kind) {
         case AST_Expression_Kind::INVALID: assert(false); break;
 
         case AST_Expression_Kind::IDENTIFIER: {
-            return resolve_ident(instance, expr->identifier, scope);
+            return resolve_ident(instance, task, expr->identifier, scope);
         }
 
         case AST_Expression_Kind::BINARY: assert(false); break;
 
         case AST_Expression_Kind::CALL: {
 
-            if (!resolve_expression(instance, expr->call.base, scope)) {
+            if (!resolve_expression(instance, task, expr->call.base, scope)) {
                 return false;
             }
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (!resolve_expression(instance, expr->call.args[i], scope)) {
+                if (!resolve_expression(instance, task, expr->call.args[i], scope)) {
                     return false;
                 }
             }
@@ -132,14 +133,14 @@ bool resolve_expression(Instance *instance, AST_Expression *expr, Scope *scope)
     return false;
 }
 
-bool resolve_ts(Instance *instance, AST_Type_Spec *ts, Scope *scope)
+bool resolve_ts(Instance *instance, Task *task, AST_Type_Spec *ts, Scope *scope)
 {
     switch (ts->kind) {
 
         case AST_Type_Spec_Kind::INVALID: assert(false); break;
 
         case AST_Type_Spec_Kind::IDENTIFIER: {
-            return resolve_ident(instance, ts->identifier, scope);
+            return resolve_ident(instance, task, ts->identifier, scope);
             break;
         }
     }
@@ -148,8 +149,10 @@ bool resolve_ts(Instance *instance, AST_Type_Spec *ts, Scope *scope)
     return false;
 }
 
-bool resolve_ident(Instance *instance, AST_Identifier *ident, Scope *scope)
+bool resolve_ident(Instance *instance, Task *task, AST_Identifier *ident, Scope *scope)
 {
+    task->resolve.waiting_for = nullptr;
+
     if (ident->decl) return true;
 
     if (auto found_decl = scope_find_symbol(scope, ident->atom)) {
@@ -161,11 +164,9 @@ bool resolve_ident(Instance *instance, AST_Identifier *ident, Scope *scope)
         return true;
     }
 
-    auto start_id = source_range_start(instance, ident->range_id);
+    task->resolve.waiting_for = ident;
     auto name = atom_string(ident->atom);
-    instance_error(instance, start_id, "Reference to undeclared identifier: '%s'", name.data);
     log_trace("Waiting for undeclared identifier: '%s'", name.data);
-
     return false;
 }
 

@@ -1,7 +1,7 @@
 
 main :: () -> int {
     abc();
-    // def();
+    def();
     return 0;
 }
 

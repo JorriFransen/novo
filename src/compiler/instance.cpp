@@ -1,7 +1,9 @@
 #include "instance.h"
 
 #include <filesystem.h>
+#include <logger.h>
 
+#include "ast.h"
 #include "atom.h"
 #include "keywords.h"
 #include "scope.h"
@@ -10,7 +12,7 @@
 
 #include <cassert>
 #include <cstdio>
-#include <logger.h>
+#include <cstdlib>
 #include <stdarg.h>
 
 namespace Novo {
@@ -34,10 +36,6 @@ void instance_init(Instance *inst, Options options)
     inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data, default_alloc, KIBIBYTE(16));
     inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(16));
     inst->scope_allocator = inst->ast_allocator;
-
-    inst->cycle_error_msg_allocator = temp_allocator_create(&inst->cycle_error_msg_allocator_data, default_alloc, KIBIBYTE(2));
-    string_builder_init(&inst->cycle_error_sb, inst->default_allocator);
-    darray_create(default_alloc, &inst->cycle_errors);
 
     darray_create(default_alloc, &inst->tasks);
 
@@ -79,7 +77,7 @@ bool instance_start(Instance *inst, const String_Ref first_file_name)
     }
 
     Task parse_task;
-    parse_task_create(&parse_task, first_file_path);
+    parse_task_create(inst, &parse_task, first_file_path);
     darray_append(&inst->tasks, parse_task);
 
     bool progress = true;
@@ -95,41 +93,43 @@ bool instance_start(Instance *inst, const String_Ref first_file_name)
 
             if (success) {
                 progress = true;
-                darray_remove_ordered(&inst->tasks, i);
-                i--;
-                max--;
             }
         }
 
         if (progress) {
-            temp_allocator_reset(&inst->cycle_error_msg_allocator_data);
-            inst->cycle_errors.count = 0;
-        }
-    }
 
-    if (inst->tasks.count) {
-        for (s64 i = 0; i < inst->cycle_errors.count; i++) {
-            fprintf(stderr, "%s\n", inst->cycle_errors[i].data);
-        }
+            // Remove finished tasks
+            s64 dest_idx = 0;
+            auto count = inst->tasks.count;
+            auto new_count = count;
+            for (s64 i = 0; i < count; i++) {
+                if (inst->tasks[i].done) {
+                    new_count--;
+                } else {
+                    inst->tasks[dest_idx++] = inst->tasks[i];
+                }
+            }
+            inst->tasks.count = new_count;
 
-        return false;
+        } else {
+            assert(inst->tasks.count);
+
+            for (s64 i = 0; i < inst->tasks.count; i++) {
+                auto &t = inst->tasks[i];
+                if (t.kind == Task_Kind::RESOLVE && t.resolve.waiting_for) {
+                    auto name = atom_string(t.resolve.waiting_for->atom);
+                    auto sp = source_range_start(inst, t.resolve.waiting_for->range_id);
+                    instance_error(inst, sp, "Reference to undeclared identifier: '%s'", name.data);
+                }
+            }
+            return false;
+        }
     }
 
     return true;
 }
 
 static void instance_error_va(Instance *inst, Source_Pos sp, const char *fmt, va_list args)
-{
-    string_builder_reset(&inst->cycle_error_sb);
-
-    string_builder_append(&inst->cycle_error_sb, "%s:%d:%d: error: ", sp.name, sp.line, sp.offset);
-    string_builder_append_va(&inst->cycle_error_sb, fmt, args);
-
-    String msg = string_builder_to_string(&inst->cycle_error_sb, &inst->cycle_error_msg_allocator);
-    darray_append(&inst->cycle_errors, msg);
-}
-
-static void instance_fatal_error_va(Instance *inst, Source_Pos sp, const char *fmt, va_list args)
 {
     inst->fatal_error = true;
 
@@ -138,7 +138,7 @@ static void instance_fatal_error_va(Instance *inst, Source_Pos sp, const char *f
     fprintf(stderr, "\n");
 }
 
-static void instance_fatal_error_note_va(Instance *inst, Source_Pos sp, const char *fmt, va_list args)
+static void instance_error_note_va(Instance *inst, Source_Pos sp, const char *fmt, va_list args)
 {
     inst->fatal_error = true;
 
@@ -147,7 +147,7 @@ static void instance_fatal_error_note_va(Instance *inst, Source_Pos sp, const ch
     fprintf(stderr, "\n");
 }
 
-void instance_error(Instance *inst, Source_Pos sp, const char *fmt, ...)
+void instance_error(Instance *inst, Source_Pos sp, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -157,7 +157,7 @@ void instance_error(Instance *inst, Source_Pos sp, const char *fmt, ...)
     va_end(args);
 }
 
-void instance_error(Instance *inst, u32 sp_id, const char *fmt, ...)
+void instance_error(Instance *inst, u32 sp_id, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -175,9 +175,11 @@ void instance_fatal_error(Instance *inst, Source_Pos sp, const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
 
-    instance_fatal_error_va(inst, sp, fmt, args);
+    instance_error_va(inst, sp, fmt, args);
 
     va_end(args);
+
+    exit(1);
 }
 
 void instance_fatal_error(Instance *inst, u32 sp_id, const char* fmt, ...)
@@ -188,9 +190,11 @@ void instance_fatal_error(Instance *inst, u32 sp_id, const char* fmt, ...)
     assert(sp_id > 0 && sp_id < inst->source_positions.count);
     auto sp = inst->source_positions[sp_id];
 
-    instance_fatal_error_va(inst, sp, fmt, args);
+    instance_error_va(inst, sp, fmt, args);
 
     va_end(args);
+
+    exit(1);
 }
 
 void instance_fatal_error_note(Instance *inst, Source_Pos sp, const char* fmt, ...)
@@ -198,7 +202,7 @@ void instance_fatal_error_note(Instance *inst, Source_Pos sp, const char* fmt, .
     va_list args;
     va_start(args, fmt);
 
-    instance_fatal_error_note_va(inst, sp, fmt, args);
+    instance_error_note_va(inst, sp, fmt, args);
 
     va_end(args);
 }
@@ -211,7 +215,7 @@ void instance_fatal_error_note(Instance *inst, u32 sp_id, const char* fmt, ...)
     assert(sp_id > 0 && sp_id < inst->source_positions.count);
     auto sp = inst->source_positions[sp_id];
 
-    instance_fatal_error_note_va(inst, sp, fmt, args);
+    instance_error_note_va(inst, sp, fmt, args);
 
     va_end(args);
 }
