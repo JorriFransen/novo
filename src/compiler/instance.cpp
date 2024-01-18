@@ -22,7 +22,7 @@ void instance_init(Instance *inst, Options options)
     inst->options = options;
 
     if (options.verbose) set_min_log_level(LOG_LEVEL_DEBUG);
-    if (options.trace) set_err_log_level(LOG_LEVEL_ERROR);
+    if (options.trace) set_min_log_level(LOG_LEVEL_TRACE);
 
     if (!fs_is_directory(inst->cwd)) {
         assert(false && "Invalid cwd!");
@@ -56,24 +56,26 @@ void instance_init(Instance *inst, Options options)
         initialize_keywords();
         g_atoms_initialized = true;
     }
+
+    // ast_declaration(inst, AST_Declaration_Kind::BUILTIN_TYPE, nullptr, 0);
 }
 
-bool instance_start(Instance *inst, const String_Ref first_file_name)
+bool instance_start(Instance *inst)
 {
+    auto first_file_name = String_Ref(inst->options.input_file);
     assert(first_file_name.length);
-    inst->first_file_name = first_file_name;
 
     String first_file_path;
 
-    if (!fs_is_file(inst->first_file_name)) {
-        fprintf(stderr, "Invalid file path: %s\n", inst->first_file_name.data);
+    if (!fs_is_file(first_file_name)) {
+        fprintf(stderr, "Invalid file path: %s\n", first_file_name.data);
         return false;
     }
 
-    if (!fs_is_realpath(inst->first_file_name)) {
-        first_file_path = fs_realpath(inst->default_allocator, inst->first_file_name);
+    if (!fs_is_realpath(first_file_name)) {
+        first_file_path = fs_realpath(inst->default_allocator, first_file_name);
     } else {
-        first_file_path = string_copy(inst->default_allocator, inst->first_file_name);
+        first_file_path = string_copy(inst->default_allocator, first_file_name);
     }
 
     Task parse_task;

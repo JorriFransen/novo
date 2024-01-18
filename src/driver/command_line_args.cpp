@@ -118,6 +118,10 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
         cop.arg_index++;
     }
 
+    if (!cop.result.input_file) {
+        command_line_error(&cop, "Expected input file");
+    }
+
     return cop.result;
 }
 
@@ -265,6 +269,8 @@ static void handle_short_option(Cmd_Opt_Parser *cop)
                     }
 
                 }
+
+                if (match) break;
             }
         }
 

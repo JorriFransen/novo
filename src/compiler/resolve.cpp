@@ -5,10 +5,8 @@
 
 #include "ast.h"
 #include "atom.h"
-#include "instance.h"
 #include "logger.h"
 #include "scope.h"
-#include "source_pos.h"
 #include "task.h"
 
 #include <cassert>
@@ -40,22 +38,22 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
 
         case AST_Declaration_Kind::FUNCTION: {
 
-            auto function_scope = decl->function.scope;
+            assert(scope != decl->function.scope);
 
             for (s64 i = 0; i < decl->function.params.count; i++) {
-                if (!resolve_declaration(instance, task, decl->function.params[i], function_scope)) {
+                if (!resolve_declaration(instance, task, decl->function.params[i], scope)) {
                     return false;
                 }
             }
 
             if (decl->function.return_ts) {
-                if (!resolve_ts(instance, task, decl->function.return_ts, function_scope)) {
+                if (!resolve_ts(instance, task, decl->function.return_ts, scope)) {
                     return false;
                 }
             }
 
             for (s64 i = 0; i < decl->function.body.count; i++) {
-                if (!resolve_statement(instance, task, decl->function.body[i], function_scope)) {
+                if (!resolve_statement(instance, task, decl->function.body[i], scope)) {
                     return false;
                 }
             }
