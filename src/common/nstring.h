@@ -34,6 +34,8 @@ NAPI bool string_equal(String &a, String &b);
 NAPI bool string_equal(const String_Ref &a, const String_Ref &b);
 NAPI bool string_equal(const char *a, const char *b);
 
+NAPI bool string_contains(const String_Ref &str, char c);
+
 NAPI bool string_starts_with(const String_Ref &str, const String_Ref &start);
 NAPI bool string_ends_with(const String_Ref &str, const String_Ref &end);
 

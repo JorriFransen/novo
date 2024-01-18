@@ -53,6 +53,14 @@ bool string_equal(const char *a, const char *b)
     return strcmp(a, b) == 0;
 }
 
+bool string_contains(const String_Ref &str, char c)
+{
+    for (s64 i = 0; i < str.length; i++) {
+        if (str[i] == c) return true;
+    }
+    return false;
+}
+
 bool string_starts_with(const String_Ref &str, const String_Ref &start)
 {
     if (start.length > str.length) return false;

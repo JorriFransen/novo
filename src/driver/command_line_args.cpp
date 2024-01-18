@@ -3,6 +3,7 @@
 #include <logger.h>
 #include <nstring.h>
 
+#include <cctype>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -12,16 +13,23 @@ namespace Novo {
 
 struct Cmd_Opt_Parser;
 
-static void handle_long_option(Options *result, const char *prog_name, int *p_i, char *argv[]);
+static void handle_long_option(Cmd_Opt_Parser *cop);
 static void handle_short_option(Cmd_Opt_Parser *cop);
 static char *next_arg(Cmd_Opt_Parser *cop);
-static void command_line_usage(FILE *file, const char *prog_name);
-static void command_line_error(const char *prog_name, const char *fmt, ...);
+static void command_line_usage(FILE *file, const char *prog_name, bool suggest_help);
+static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...);
+static void command_line_help(FILE *file, Cmd_Opt_Parser *cop);
+
+#define OPTION_CALLBACK_FN(n) void (n)(Cmd_Opt_Parser *cop)
+typedef OPTION_CALLBACK_FN(Option_Callback_FN);
+static OPTION_CALLBACK_FN(command_line_help_callback);
 
 enum class Option_Type
 {
     BOOL,
     STRING,
+
+    CALLBACK,
 };
 
 struct Option_Info
@@ -34,28 +42,31 @@ struct Option_Info
     union {
         bool bool_value;
         const char *string_value;
+        Option_Callback_FN *callback;
     };
+
+    const char *description;
+    const char *arg_info;
 };
 
 static Option_Info option_infos[] = {
-#define NOVO_BOOL_OPTION(s, l,  v) { s, #l, offsetof(Options, l), Option_Type::BOOL, { .bool_value = v }},
-#define NOVO_STRING_OPTION(s, l,  v) { s, #l, offsetof(Options, l), Option_Type::STRING, { .string_value = v }},
+#define NOVO_BOOL_OPTION(short_name, long_name, value, desc, arg_name) \
+    { short_name, #long_name, offsetof(Options, long_name), Option_Type::BOOL, { .bool_value = value }, (desc), #long_name " " arg_name },
+
+#define NOVO_STRING_OPTION(short_name, long_name,  value, desc, arg_name) \
+    { short_name, #long_name, offsetof(Options, long_name), Option_Type::STRING, { .string_value = value }, (desc), #long_name " " arg_name },
 
     ALL_NOVO_OPTIONS_X
 
 #undef NOVO_BOOL_OPTION
 #undef NOVO_STRING_OPTION
+
+    { 'h', "help", 0, Option_Type::CALLBACK, { .callback = command_line_help_callback }, "Print this help message", "help" },
 };
 
 #define SET_OPTION(opt, offset, type, val) \
     *(type *)(((u8 *)opt) + (offset)) = val;
 
-
-#define print_options(o) \
-    printf("verbose: %s\n", (o).verbose ? "true" : "false"); \
-    printf("output: %s\n", (o).output); \
-    printf("another: %s\n", (o).another); \
-    printf("\n");
 
 struct Cmd_Opt_Parser
 {
@@ -87,44 +98,35 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
         cop.result = default_options();
     }
 
-    printf("Default options:\n");
-    print_options(cop.result);
-
-
-    const char *input_file = nullptr;
-
     while (cop.arg_index < cop.arg_count) {
 
         if (string_starts_with(cop.args[cop.arg_index], "--")) {
-            handle_long_option(&cop.result, prog_name, &cop.arg_index, cop.args);
+            handle_long_option(&cop);
 
         } else if (string_starts_with(cop.args[cop.arg_index], "-")) {
             handle_short_option(&cop);
 
         } else {
-            if (!input_file) {
-                input_file = cop.args[cop.arg_index];
+            if (!cop.result.input_file) {
+                cop.result.input_file = cop.args[cop.arg_index];
             } else {
-                command_line_error(prog_name, "Input file already set to: '%s'", input_file);
+                command_line_error(&cop, "Input file already set to: '%s'", cop.result.input_file);
             }
         }
 
         cop.arg_index++;
     }
 
-    printf("Parsed options:\n");
-    print_options(cop.result);
-
     return cop.result;
 }
 
-static void handle_long_option(Options *result, const char *prog_name, int *p_i, char *argv[])
+static void handle_long_option(Cmd_Opt_Parser *cop)
 {
-    auto opt = argv[*p_i];
+    auto opt = cop->args[cop->arg_index];
     auto length = strlen(opt);
 
     if (length < 3) {
-        command_line_error(prog_name, "Invalid option: '%s'", opt);
+        command_line_error(cop, "Invalid option: '%s'", opt);
     }
 
     auto name = &opt[2];
@@ -134,20 +136,88 @@ static void handle_long_option(Options *result, const char *prog_name, int *p_i,
 
         auto &info = option_infos[i];
 
-        if (string_equal(name, info.long_name)) {
+        // 'name' may contain more characters then just the option name.
+        // EG. verbose=true
+        if (string_equal(name, info.long_name) || (string_contains(name, '=') && string_starts_with(name, info.long_name))) {
             match = true;
 
+            auto long_name_len = strlen(info.long_name);
+            char *str_val = nullptr;
+            bool no_argument = false;
+
+            // Look for '=' first
+            if (strlen(name) > long_name_len) {
+                if (name[long_name_len] == '=') {
+
+                    str_val = &name[long_name_len + 1];
+
+                } else {
+                    command_line_error(cop, "Expected '=' after --%s", info.long_name);
+                }
+
+            } else {
+
+                // Check if the next argument is an option, if not use it as value
+                if (cop->arg_index < cop->arg_count - 1 && cop->args[cop->arg_index + 1][0] != '-') {
+
+                    str_val = cop->args[cop->arg_index + 1];
+                    cop->arg_index += 1;
+
+                } else {
+                    no_argument = true;
+                }
+            }
+
             switch (info.type) {
+
                 case Option_Type::BOOL: {
 
+                    bool new_value = false;
+                    if (str_val) {
+                        for (auto p = str_val ; *p; ++p) *p = tolower(*p);
+                        if (string_equal(str_val, "true")) {
+                            new_value = true;
+                        } else if (string_equal(str_val, "false")) {
+                            new_value = false;
+                        } else {
+                            command_line_error(cop, "Invalid boolean value in option: '%s'", name);
+                        }
+                    } else {
+                        assert(no_argument);
+                        new_value = !info.bool_value;
+                    }
+
+
+                    SET_OPTION(&cop->result, info.offset_in_option_struct, bool, new_value);
+                    break;
                 }
-                case Option_Type::STRING: assert(false); break;
+
+                case Option_Type::STRING: {
+
+                    if (no_argument) {
+                        command_line_error(cop, "Expected argument after option: '%s'", name);
+                    }
+
+                    SET_OPTION(&cop->result, info.offset_in_option_struct, const char *, str_val);
+                    break;
+                }
+
+                case Option_Type::CALLBACK: {
+                    if (!no_argument) {
+                        command_line_error(cop, "Option '%s' does not accept any arguments", name);
+                    }
+
+                    info.callback(cop);
+                    break;
+                }
             }
+
+            break;
         }
     }
 
     if (!match) {
-        command_line_error(prog_name, "Invalid option: '%c'", opt[1]);
+        command_line_error(cop, "Invalid option: '%s'", name);
     }
 }
 
@@ -169,7 +239,7 @@ static void handle_short_option(Cmd_Opt_Parser *cop)
                 case Option_Type::BOOL: {
 
                     if (length > 2) {
-                        command_line_error(cop->prog_name, "Invalid length for short boolean option: '%s'", opt);
+                        command_line_error(cop, "Invalid length for short boolean option: '%s'", opt);
                     }
 
                     SET_OPTION(&cop->result, info.offset_in_option_struct, bool, !info.bool_value);
@@ -177,13 +247,20 @@ static void handle_short_option(Cmd_Opt_Parser *cop)
                 }
 
                 case Option_Type::STRING: {
-                    const char *value;
+                    const char *value = nullptr;
                     if (length > 2) {
                         value = &opt[2];
-                    } else {
+                    } else if (cop->arg_index < cop->arg_count - 1 && cop->args[cop->arg_index + 1][0] != '-'){
                         value = next_arg(cop);
+                    } else {
+                        command_line_error(cop, "Expected argument after option '%s'", opt);
                     }
                     SET_OPTION(&cop->result, info.offset_in_option_struct, const char *, value);
+                    break;
+                }
+
+                case Option_Type::CALLBACK: {
+                    info.callback(cop);
                     break;
                 }
             }
@@ -193,7 +270,7 @@ static void handle_short_option(Cmd_Opt_Parser *cop)
     }
 
     if (!match) {
-        command_line_error(cop->prog_name, "Invalid option: '%c'", opt[1]);
+        command_line_error(cop, "Invalid option: '%c'", opt[1]);
     }
 }
 
@@ -201,31 +278,59 @@ static char *next_arg(Cmd_Opt_Parser *cop)
 {
     cop->arg_index++;
     if (cop->arg_index >= cop->arg_count) {
-        command_line_error(cop->prog_name, "Unexpected end of arguments (after '%s')", cop->args[cop->arg_index - 1]);
+        command_line_error(cop, "Unexpected end of arguments (after '%s')", cop->args[cop->arg_index - 1]);
     }
 
     return cop->args[cop->arg_index];
 }
 
-static void command_line_usage(FILE *file, const char *prog_name)
+static void command_line_usage(FILE *file, const char *prog_name, bool suggest_help)
 {
-    fprintf(file, "usage: %s input_file [options]\n", prog_name);
+    fprintf(file, "Usage: %s input_file [options]\n", prog_name);
+
+    if (suggest_help) fprintf(file, "       %s -h\tto display all options\n" ,prog_name);
 }
 
-static void command_line_error(const char *prog_name, const char *fmt, ...)
+static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
 
-    fprintf(stderr, "%s: ", prog_name);
+    fprintf(stderr, "%s: ", cop->prog_name);
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n\n");
 
     va_end(args);
 
-    command_line_usage(stderr, prog_name);
+    command_line_usage(stderr, cop->prog_name, true);
 
     exit(1);
+}
+
+static OPTION_CALLBACK_FN(command_line_help_callback)
+{
+    command_line_help(stdout, cop);
+}
+
+static void command_line_help(FILE *file, Cmd_Opt_Parser *cop)
+{
+    command_line_usage(file, cop->prog_name, false);
+
+    fprintf(file, "\nOptions:\n");
+
+    for (size_t i = 0; i < sizeof(option_infos) / sizeof(option_infos[0]); i++) {
+        auto &info = option_infos[i];
+        fprintf(file, "  -%c, --%-18s", info.short_name, info.arg_info);
+
+
+        if (info.description) {
+            fprintf(file, "%s", info.description);
+        }
+
+        fprintf(file, "\n");
+    }
+
+    fprintf(file, "\n");
 }
 
 }
