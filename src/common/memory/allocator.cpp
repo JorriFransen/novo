@@ -1,7 +1,5 @@
 #include "allocator.h"
 
-#include <defines.h>
-
 #include <cassert>
 #include <cstdlib>
 #include <cstring>

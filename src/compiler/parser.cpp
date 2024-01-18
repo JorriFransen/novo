@@ -1,9 +1,7 @@
 #include "parser.h"
 
 #include <containers/darray.h>
-#include <defines.h>
 #include <memory/temp_allocator.h>
-#include <nstring.h>
 #include <platform.h>
 
 #include "ast.h"
@@ -11,7 +9,6 @@
 #include "filesystem.h"
 #include "instance.h"
 #include "keywords.h"
-#include "lexer.h"
 #include "scope.h"
 #include "source_pos.h"
 

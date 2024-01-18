@@ -1,7 +1,5 @@
 #include "temp_allocator.h"
 
-#include "memory/linear_allocator.h"
-
 #include <cassert>
 #include <cstring>
 

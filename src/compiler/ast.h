@@ -1,11 +1,10 @@
 #pragma once
 
+#include <containers/darray.h>
 #include <defines.h>
+#include <nstring.h>
 
 #include "atom.h"
-#include "parser.h"
-
-#include <containers/darray.h>
 
 namespace Novo {
 

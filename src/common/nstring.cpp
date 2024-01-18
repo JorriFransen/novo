@@ -2,7 +2,6 @@
 
 #include "memory/allocator.h"
 
-#include <cassert>
 #include <cstdio>
 #include <cstring>
 

@@ -8,6 +8,8 @@
 #include <nstring.h>
 #include <string_builder.h>
 
+#include "options.h"
+
 namespace Novo {
 
 struct Scope;
@@ -17,6 +19,8 @@ struct Task;
 
 struct Instance
 {
+    Options options;
+
     String_Ref cwd = "./";
     String_Ref first_file_name;
 
@@ -43,7 +47,7 @@ struct Instance
 
 };
 
-NAPI void instance_init(Instance *inst);
+NAPI void instance_init(Instance *inst, Options options);
 NAPI bool instance_start(Instance *inst, const String_Ref first_file_name);
 
 NAPI void instance_error(Instance *inst, Source_Pos sp, const char *fmt, ...);

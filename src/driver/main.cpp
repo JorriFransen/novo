@@ -8,10 +8,10 @@ using namespace Novo;
 
 int main(int argc, char *argv[])
 {
-    parse_command_line(argc, argv);
+    auto options = parse_command_line(argc, argv);
 
     Instance instance;
-    instance_init(&instance);
+    instance_init(&instance, options);
 
     if (!instance_start(&instance, "test/test.no")) {
         return 1;

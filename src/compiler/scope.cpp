@@ -1,11 +1,9 @@
 #include "scope.h"
 
+#include <memory/allocator.h>
+
 #include "atom.h"
 #include "instance.h"
-
-#include <containers/darray.h>
-#include <defines.h>
-#include <memory/allocator.h>
 
 namespace Novo {
 

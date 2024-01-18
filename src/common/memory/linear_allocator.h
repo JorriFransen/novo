@@ -1,7 +1,7 @@
 #pragma once
 
 #include "defines.h"
-#include "allocator.h"
+#include "memory/allocator.h"
 
 namespace Novo {
 

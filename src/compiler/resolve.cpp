@@ -1,6 +1,10 @@
 #include "resolve.h"
 
+#include <containers/darray.h>
+#include <nstring.h>
+
 #include "ast.h"
+#include "atom.h"
 #include "instance.h"
 #include "logger.h"
 #include "scope.h"

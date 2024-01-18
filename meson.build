@@ -1,7 +1,7 @@
 
 project('novo', 'cpp',
         version: 'dev',
-        default_options: ['unity=on', 'unity_size=8' ])
+        default_options: ['unity=off', 'unity_size=8' ])
 
 compiler = meson.get_compiler('cpp')
 compiler_id = compiler.get_id()
@@ -29,11 +29,16 @@ common_source = [
   'src/common/memory/temp_allocator.cpp', 'src/common/memory/temp_allocator.h',
 ]
 
-common_includes = include_directories('src/common/')
+common_include_dirs = ['src/common/']
+common_includes = include_directories(common_include_dirs)
 common_lib = library('novo_common', sources: common_source, include_directories: common_includes, cpp_args: '-DNEXPORT')
 
 
-compiler_includes = include_directories('src/compiler/')
+compiler_include_dirs = ['src/compiler']
+compiler_includes = [
+  include_directories(compiler_include_dirs),
+  include_directories(common_include_dirs, is_system: true)
+]
 
 compiler_source = [
   'src/compiler/ast.cpp', 'src/compiler/ast.h',
@@ -50,10 +55,15 @@ compiler_source = [
   'src/compiler/task.cpp', 'src/compiler/task.h',
 ]
 
-compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: common_includes, link_with: common_lib, cpp_args: '-DNEXPORT')
+compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT')
 
 
-driver_includes = [ common_includes, compiler_includes ]
+driver_include_dirs = ['src/driver/']
+driver_includes = [
+  include_directories(driver_include_dirs),
+  include_directories(compiler_include_dirs, is_system: true),
+  include_directories(common_include_dirs, is_system: true),
+ ]
 
 driver_source = [
   'src/driver/main.cpp',

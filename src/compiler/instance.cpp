@@ -1,12 +1,6 @@
 #include "instance.h"
 
-#include <containers/darray.h>
-#include <defines.h>
 #include <filesystem.h>
-#include <memory/allocator.h>
-#include <memory/linear_allocator.h>
-#include <memory/temp_allocator.h>
-#include <nstring.h>
 
 #include "atom.h"
 #include "keywords.h"
@@ -20,8 +14,10 @@
 
 namespace Novo {
 
-void instance_init(Instance *inst)
+void instance_init(Instance *inst, Options options)
 {
+    inst->options = options;
+
     if (!fs_is_directory(inst->cwd)) {
         assert(false && "Invalid cwd!");
     }

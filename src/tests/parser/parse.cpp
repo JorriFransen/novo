@@ -1,21 +1,22 @@
 
 #include <ast_print.h>
-#include <cstdio>
 #include <defines.h>
 #include <instance.h>
 #include <memory/allocator.h>
 #include <nstring.h>
+#include <options.h>
 #include <parser.h>
 
+#include <cstdio>
 #include <cassert>
-#include <string.h>
+#include <cstring>
 
 using namespace Novo;
 
 int main(int argc, char *argv[])
 {
     Instance instance;
-    instance_init(&instance);
+    instance_init(&instance, default_options());
 
     auto file = parse_file(&instance, "test.no");
     assert(file);

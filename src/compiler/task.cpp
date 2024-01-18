@@ -1,10 +1,7 @@
 #include "task.h"
 
 #include <containers/darray.h>
-#include <defines.h>
-#include <nstring.h>
 
-#include "ast_print.h"
 #include "atom.h"
 #include "ast.h"
 #include "instance.h"

@@ -1,9 +1,8 @@
 #include "source_pos.h"
 
-#include "instance.h"
-
 #include <containers/darray.h>
-#include <defines.h>
+
+#include "instance.h"
 
 #include <assert.h>
 
