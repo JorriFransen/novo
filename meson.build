@@ -1,14 +1,14 @@
 
 project('novo', 'cpp',
         version: 'dev',
-        default_options: ['unity=on', 'unity_size=8' ])
+        default_options: ['cpp_std=c++20', 'unity=on', 'unity_size=8' ])
 
 compiler = meson.get_compiler('cpp')
 compiler_id = compiler.get_id()
 
-if compiler_id == 'msvc'
-  add_global_arguments('/std:c++20', language: 'cpp')
-endif
+# if compiler_id == 'msvc'
+#   add_global_arguments('/std:c++20', language: 'cpp')
+# endif
 
 if compiler_id == 'clang-cl'
   add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')

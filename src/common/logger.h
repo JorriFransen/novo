@@ -16,8 +16,8 @@ enum Log_Level
     LOG_LEVEL_FATAL,
 };
 
-extern Log_Level g_min_log_level;
-extern Log_Level g_err_log_level;
+NAPI void set_min_log_level(Log_Level level);
+NAPI void set_err_log_level(Log_Level level);
 
 NAPI void log_message(Log_Level level, const char *fmt, ...);
 

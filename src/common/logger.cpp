@@ -7,8 +7,18 @@
 
 namespace Novo {
 
-Log_Level g_min_log_level = LOG_LEVEL_INFO;
-Log_Level g_err_log_level = LOG_LEVEL_ERROR;
+static Log_Level g_min_log_level = LOG_LEVEL_INFO;
+static Log_Level g_err_log_level = LOG_LEVEL_ERROR;
+
+void set_min_log_level(Log_Level level)
+{
+    g_min_log_level = level;
+}
+
+void set_err_log_level(Log_Level level)
+{
+    g_err_log_level = level;
+}
 
 static void log_message_va(Log_Level level, const char *fmt, va_list args)
 {

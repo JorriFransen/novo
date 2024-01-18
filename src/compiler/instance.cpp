@@ -21,8 +21,8 @@ void instance_init(Instance *inst, Options options)
 {
     inst->options = options;
 
-    if (options.verbose) g_min_log_level = LOG_LEVEL_DEBUG;
-    if (options.trace) g_min_log_level = LOG_LEVEL_TRACE;
+    if (options.verbose) set_min_log_level(LOG_LEVEL_DEBUG);
+    if (options.trace) set_err_log_level(LOG_LEVEL_ERROR);
 
     if (!fs_is_directory(inst->cwd)) {
         assert(false && "Invalid cwd!");
