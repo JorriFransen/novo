@@ -13,8 +13,9 @@ struct AST_Expression;
 struct AST_Identifier;
 struct AST_Statement;
 struct AST_Type_Spec;
-struct Scope;
 struct Instance;
+struct Scope;
+struct Type;
 
 enum class AST_Node_Kind
 {
@@ -46,6 +47,8 @@ enum class AST_Declaration_Kind
     INVALID,
     VARIABLE,
     FUNCTION,
+
+    BUILTIN_TYPE,
 };
 
 struct AST_Declaration
@@ -53,6 +56,7 @@ struct AST_Declaration
     AST_Declaration_Kind kind;
 
     AST_Identifier *ident;
+    Type *type;
 
     union {
 
@@ -175,6 +179,7 @@ NAPI AST_Node ast_node(AST_Expression *expr);
 NAPI AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes);
 
 NAPI AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, AST_Identifier *ident, u32 range_id);
+NAPI AST_Declaration *ast_builtin_type_decl(Instance *instance, Type *type, const char *name);
 NAPI AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *init, u32 range_id);
 NAPI AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, Scope *scope, u32 range_id);
 

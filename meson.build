@@ -50,6 +50,7 @@ compiler_source = [
   'src/compiler/size.cpp', 'src/compiler/size.h',
   'src/compiler/source_pos.cpp', 'src/compiler/source_pos.h',
   'src/compiler/task.cpp', 'src/compiler/task.h',
+  'src/compiler/type.cpp', 'src/compiler/type.h',
 ]
 
 compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT')

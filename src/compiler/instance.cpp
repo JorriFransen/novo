@@ -9,6 +9,7 @@
 #include "scope.h"
 #include "source_pos.h"
 #include "task.h"
+#include "type.h"
 
 #include <cassert>
 #include <cstdio>
@@ -57,7 +58,8 @@ void instance_init(Instance *inst, Options options)
         g_atoms_initialized = true;
     }
 
-    // ast_declaration(inst, AST_Declaration_Kind::BUILTIN_TYPE, nullptr, 0);
+    auto int_decl = ast_builtin_type_decl(inst, type_integer(inst, true, 64), "int");
+    scope_add_symbol(inst->global_scope, int_decl->ident->atom, int_decl);
 }
 
 bool instance_start(Instance *inst)

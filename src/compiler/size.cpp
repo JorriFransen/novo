@@ -32,6 +32,9 @@ bool size_declaration(Instance *inst, Task *task, AST_Declaration *decl, Scope *
             assert(false);
             break;
         }
+
+        case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
+
     }
 
     assert(false);
@@ -44,7 +47,7 @@ bool size_type_spec(Instance *inst, Task *task, AST_Type_Spec *ts, Scope *scope)
         case AST_Type_Spec_Kind::INVALID: assert(false); break;
 
         case AST_Type_Spec_Kind::IDENTIFIER: {
-            return size_identifier(inst, task, ts->identifier, scope); 
+            return size_identifier(inst, task, ts->identifier, scope);
         };
     }
 

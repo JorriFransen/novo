@@ -158,10 +158,6 @@ bool resolve_ident(Instance *instance, Task *task, AST_Identifier *ident, Scope 
         return true;
     }
 
-    if (ident->atom == atom_get("int")) {
-        return true;
-    }
-
     task->resolve.waiting_for = ident;
     auto name = atom_string(ident->atom);
     log_trace("Waiting for undeclared identifier: '%s'", name.data);

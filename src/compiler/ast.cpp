@@ -37,7 +37,16 @@ AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, 
     auto result = allocate<AST_Declaration>(&instance->ast_allocator);
     result->kind = kind;
     result->ident = ident;
+    result->type = nullptr;
     result->range_id = range_id;
+    return result;
+}
+
+AST_Declaration *ast_builtin_type_decl(Instance *instance, Type *type, const char *name)
+{
+    auto ident = ast_identifier(instance, atom_get(name), 0);
+    auto result = ast_declaration(instance, AST_Declaration_Kind::BUILTIN_TYPE, ident, 0);
+    result->type = type;
     return result;
 }
 
