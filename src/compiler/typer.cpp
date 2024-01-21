@@ -124,6 +124,29 @@ bool type_statement(Instance *inst, Task *task, AST_Statement *stmt, Scope *scop
             return type_declaration(inst, task, stmt->declaration, scope);
         }
 
+        case AST_Statement_Kind::ASSIGNMENT: {
+            if (!type_expression(inst, task, stmt->assignment.lvalue, scope)) {
+                return false;
+            }
+
+            if (!type_expression(inst, task, stmt->assignment.rvalue, scope)) {
+                return false;
+            }
+
+            auto ltype = stmt->assignment.lvalue->resolved_type;
+            auto rtype = stmt->assignment.rvalue->resolved_type;
+
+            if (ltype != rtype) {
+
+                auto sp_id = source_range_start(inst, stmt->range_id);
+                instance_fatal_error(inst, sp_id, "Mismatching types in assignment, expected: '%s', got: '%s'",
+                        temp_type_string(inst, ltype).data,
+                        temp_type_string(inst, rtype).data);
+            }
+
+            return true;
+        }
+
         case AST_Statement_Kind::CALL: {
             return type_expression(inst, task, stmt->call, scope);
         }

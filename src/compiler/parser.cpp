@@ -372,6 +372,16 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope)
         auto decl = parse_declaration(parser, expr->identifier, scope,true);
         if (!decl) return nullptr;
         return ast_declaration_statement(parser->instance, decl, decl->range_id);
+
+    } else if (match_token(parser, '=')) {
+        auto value = parse_expression(parser);
+
+        auto end = parser->lexer->token.source_pos_id;
+        expect_token(parser, ';');
+
+        auto sr_id = source_range(parser->instance, source_range_start(parser->instance, expr->range_id), end);
+        return ast_assignment_statement(parser->instance, expr, value, sr_id);
+
     } else {
         assert(false);
     }

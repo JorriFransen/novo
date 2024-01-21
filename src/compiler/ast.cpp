@@ -107,6 +107,14 @@ AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaration *de
     return result;
 }
 
+AST_Statement *ast_assignment_statement(Instance *inst, AST_Expression *lvalue, AST_Expression *rvalue, u32 range_id)
+{
+    auto result = ast_statement(inst, AST_Statement_Kind::ASSIGNMENT, range_id);
+    result->assignment.lvalue = lvalue;
+    result->assignment.rvalue = rvalue;
+    return result;
+}
+
 AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call)
 {
     assert(call->kind == AST_Expression_Kind::CALL);

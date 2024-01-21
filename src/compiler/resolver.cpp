@@ -79,6 +79,18 @@ bool resolve_statement(Instance *instance, Task *task, AST_Statement *stmt, Scop
             return resolve_declaration(instance, task, stmt->declaration, scope);
         }
 
+        case AST_Statement_Kind::ASSIGNMENT: {
+            if (!resolve_expression(instance, task, stmt->assignment.lvalue, scope)) {
+                return false;
+            }
+
+            if (!resolve_expression(instance, task, stmt->assignment.rvalue, scope)) {
+                return false;
+            }
+
+            return true;
+        }
+
         case AST_Statement_Kind::CALL: {
             return resolve_expression(instance, task, stmt->call, scope);
         }

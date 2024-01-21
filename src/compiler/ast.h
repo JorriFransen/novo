@@ -85,6 +85,7 @@ enum class AST_Statement_Kind
     INVALID,
     IMPORT,
     DECLARATION,
+    ASSIGNMENT,
     CALL,
     RETURN,
 };
@@ -99,6 +100,11 @@ struct AST_Statement
         AST_Declaration *declaration;
         AST_Expression *call;
         AST_Expression *return_expr;
+
+        struct {
+            AST_Expression *lvalue;
+            AST_Expression *rvalue;
+        } assignment;
     };
 
     u32 range_id;
@@ -189,6 +195,7 @@ NAPI AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifie
 NAPI AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u32 range_id);
 NAPI AST_Statement *ast_import_statement(Instance *instance, String_Ref path, u32 range_id);
 NAPI AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaration *decl, u32 range_id);
+NAPI AST_Statement *ast_assignment_statement(Instance *inst, AST_Expression *lvalue, AST_Expression *rvalue, u32 range_id);
 NAPI AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call);
 NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id);
 
