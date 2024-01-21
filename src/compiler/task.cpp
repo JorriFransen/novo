@@ -9,8 +9,9 @@
 #include "logger.h"
 #include "options.h"
 #include "parser.h"
-#include "resolve.h"
-#include "size.h"
+#include "resolver.h"
+#include "sizer.h"
+#include "typer.h"
 
 #include <cassert>
 #include <cstdio>
@@ -51,6 +52,17 @@ void size_task_create(Instance *inst, Task *task, AST_Declaration *decl, Scope *
     };
 }
 
+void type_task_create(Instance *inst, Task *task, AST_Declaration *decl, Scope *scope)
+{
+    create_task(inst, task, Task_Kind::TYPE);
+    task->type = {
+        .decl = decl,
+        .scope = scope,
+        .waiting_for = nullptr,
+        .current_function_type = nullptr,
+    };
+}
+
 bool task_execute(Instance *inst, Task *task)
 {
     bool result = false;
@@ -79,6 +91,15 @@ bool task_execute(Instance *inst, Task *task)
 
         case Task_Kind::SIZE: {
             result = size_task_execute(inst, task);
+
+            if (result) {
+                queue_type_tasks(inst, task->size.decl, task->size.scope);
+            }
+            break;
+        }
+
+        case Task_Kind::TYPE: {
+            result = type_task_execute(inst, task);
             break;
         }
     }
@@ -137,6 +158,20 @@ bool size_task_execute(Instance *inst, Task *task)
     return result;
 }
 
+bool type_task_execute(Instance *inst, Task *task)
+{
+    assert(task->kind == Task_Kind::TYPE);
+
+    auto name = atom_string(task->resolve.decl->ident->atom);
+    log_trace("Typeing: %s...", name.data);
+
+    bool result = type_declaration(inst, task, task->type.decl, task->type.scope);
+
+    log_trace("Typeing: %s...%s", name.data, result ? "success" : "fail");
+
+    return result;
+}
+
 void queue_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
 {
     for (s64 i = 0; i < file->nodes.count; i++) {
@@ -175,6 +210,15 @@ void queue_size_tasks(Instance *inst, AST_Declaration *decl, Scope *scope)
 
     Task task;
     size_task_create(inst, &task, decl, scope);
+    darray_append(&inst->tasks, task);
+}
+
+void queue_type_tasks(Instance *inst, AST_Declaration *decl, Scope *scope)
+{
+    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+
+    Task task;
+    type_task_create(inst, &task, decl, scope);
     darray_append(&inst->tasks, task);
 }
 

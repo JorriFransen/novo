@@ -1,4 +1,4 @@
 
-abc :: () -> int {
+abc :: () -> s64 {
     return 5;
 }

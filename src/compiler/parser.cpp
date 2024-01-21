@@ -157,7 +157,7 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
         assert(ex_decl->ident);
         auto ex_start = source_range_start(parser->instance, ex_decl->ident->range_id);
 
-        instance_fatal_error(parser->instance, start, "Redeclaration of symbol: '%s'", name.data);
+        instance_error(parser->instance, start, "Redeclaration of symbol: '%s'", name.data);
         instance_fatal_error_note(parser->instance, ex_start, "Previous declaration was here");
         return nullptr;
     }

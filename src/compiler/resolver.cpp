@@ -1,4 +1,4 @@
-#include "resolve.h"
+#include "resolver.h"
 
 #include <containers/darray.h>
 #include <nstring.h>
@@ -18,6 +18,7 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
     switch (decl->kind) {
 
         case AST_Declaration_Kind::INVALID: assert(false); break;
+        case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
 
         case AST_Declaration_Kind::VARIABLE: {
 
@@ -39,9 +40,10 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
         case AST_Declaration_Kind::FUNCTION: {
 
             assert(scope != decl->function.scope);
+            auto fn_scope = decl->function.scope;
 
             for (s64 i = 0; i < decl->function.params.count; i++) {
-                if (!resolve_declaration(instance, task, decl->function.params[i], scope)) {
+                if (!resolve_declaration(instance, task, decl->function.params[i], fn_scope)) {
                     return false;
                 }
             }
@@ -53,7 +55,7 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
             }
 
             for (s64 i = 0; i < decl->function.body.count; i++) {
-                if (!resolve_statement(instance, task, decl->function.body[i], scope)) {
+                if (!resolve_statement(instance, task, decl->function.body[i], fn_scope)) {
                     return false;
                 }
             }

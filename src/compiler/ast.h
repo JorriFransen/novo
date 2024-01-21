@@ -56,7 +56,7 @@ struct AST_Declaration
     AST_Declaration_Kind kind;
 
     AST_Identifier *ident;
-    Type *type;
+    Type *resolved_type;
 
     union {
 
@@ -122,6 +122,8 @@ struct AST_Expression
 {
     AST_Expression_Kind kind;
 
+    Type *resolved_type;
+
     union {
         AST_Identifier *identifier;
 
@@ -156,6 +158,7 @@ enum class AST_Type_Spec_Kind
 struct AST_Type_Spec
 {
     AST_Type_Spec_Kind kind;
+    Type *resolved_type;
 
     union {
         AST_Identifier *identifier;

@@ -15,6 +15,7 @@ struct Scope;
 struct Source_Pos;
 struct Source_Range;
 struct Task;
+struct Type;
 
 struct Instance
 {
@@ -34,9 +35,15 @@ struct Instance
     DArray<Task> tasks;
     Scope *global_scope;
 
+    DArray<Type *> function_types;
+
     bool fatal_error;
     DArray<Source_Pos> source_positions;
     DArray<Source_Range> source_ranges;
+
+    Type *builtin_type_void;
+    Type *builtin_type_s64;
+    Type *builtin_type_bool;
 
 };
 

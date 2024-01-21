@@ -38,17 +38,19 @@ void instance_init(Instance *inst, Options options)
     inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(16));
     inst->scope_allocator = inst->ast_allocator;
 
-    darray_create(default_alloc, &inst->tasks);
+    darray_init(default_alloc, &inst->tasks);
 
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
+    darray_init(&inst->ast_allocator, &inst->function_types);
+
     inst->fatal_error = false;
 
-    darray_create(default_alloc, &inst->source_positions);
+    darray_init(default_alloc, &inst->source_positions);
     // push dummy because index zero is invalid
     darray_append(&inst->source_positions, {});
 
-    darray_create(default_alloc, &inst->source_ranges);
+    darray_init(default_alloc, &inst->source_ranges);
     // push dummy because index zero is invalid
     darray_append(&inst->source_ranges, {});
 
@@ -58,8 +60,17 @@ void instance_init(Instance *inst, Options options)
         g_atoms_initialized = true;
     }
 
-    auto int_decl = ast_builtin_type_decl(inst, type_integer(inst, true, 64), "int");
+    inst->builtin_type_void = void_type_new(inst);
+    auto void_decl = ast_builtin_type_decl(inst, inst->builtin_type_void, "void");
+    scope_add_symbol(inst->global_scope, void_decl->ident->atom, void_decl);
+
+    inst->builtin_type_s64 = integer_type_new(inst, true, 64);
+    auto int_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
     scope_add_symbol(inst->global_scope, int_decl->ident->atom, int_decl);
+
+    inst->builtin_type_bool = boolean_type_new(inst, 8);
+    auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");
+    scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
 }
 
 bool instance_start(Instance *inst)
@@ -209,6 +220,8 @@ void instance_fatal_error_note(Instance *inst, Source_Pos sp, const char* fmt, .
     instance_error_note_va(inst, sp, fmt, args);
 
     va_end(args);
+
+    exit(1);
 }
 
 void instance_fatal_error_note(Instance *inst, u32 sp_id, const char* fmt, ...)
@@ -222,6 +235,8 @@ void instance_fatal_error_note(Instance *inst, u32 sp_id, const char* fmt, ...)
     instance_error_note_va(inst, sp, fmt, args);
 
     va_end(args);
+
+    exit(1);
 }
 
 }

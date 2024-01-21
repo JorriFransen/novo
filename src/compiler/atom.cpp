@@ -19,7 +19,7 @@ void initialize_atoms(Allocator *allocator, s64 capacity)
     g_atoms.hashes = (u64 *)allocate(allocator, capacity * (sizeof(g_atoms.hashes[0]) + sizeof(g_atoms.ids[0])));
     g_atoms.ids = (u32 *)&g_atoms.hashes[capacity];
 
-    darray_create(allocator, &g_atoms.strings);
+    darray_init(allocator, &g_atoms.strings);
 
     auto string_block_buffer_size = NOVO_ATOM_TABLE_DEFAULT_STRING_BLOCK_SIZE;
     g_atoms.next_block_size = string_block_buffer_size;

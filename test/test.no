@@ -1,9 +1,14 @@
 
-main :: () -> int {
+#import "another.no"
+
+main :: () -> s64 {
     abc();
-    // def();
     return 0;
 }
 
-#import "another.no"
+// add :: (a: s64, b: s64) -> s64 {
+//     return a;
+// }
+
+
 

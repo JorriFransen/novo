@@ -111,6 +111,7 @@ static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Decla
 
     switch (decl->kind) {
         case AST_Declaration_Kind::INVALID: assert(false); break;
+        case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
 
         case AST_Declaration_Kind::VARIABLE: {
             string_builder_append(sb, "VAR_DECL: '%s'\n", name.data);
@@ -154,7 +155,6 @@ static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Decla
             }
             break;
         }
-
     }
 }
 

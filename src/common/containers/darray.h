@@ -62,7 +62,7 @@ struct Array_Ref
 };
 
 template <typename Element_Type>
-void darray_create(Allocator *backing_allocator, DArray<Element_Type> *out_array, s64 capacity = NOVO_DARRAY_DEFAULT_CAPACITY)
+void darray_init(Allocator *backing_allocator, DArray<Element_Type> *out_array, s64 capacity = NOVO_DARRAY_DEFAULT_CAPACITY)
 {
     assert(backing_allocator && out_array);
     assert(capacity >= 0);
@@ -150,7 +150,7 @@ DArray<Element_Type> darray_copy(const Array_Ref<Element_Type> &source, Allocato
     if (source.count == 0) return {};
 
     DArray<Element_Type> result;
-    darray_create(allocator, &result, source.count);
+    darray_init(allocator, &result, source.count);
 
     memcpy(result.data, source.data, sizeof(Element_Type) * source.count);
     result.count = source.count;
@@ -218,7 +218,7 @@ static Temp_Array<T> temp_array_create(Allocator *allocator, s64 cap = 0)
     assert(tas);
 
     result.mark = temp_allocator_get_mark(tas);
-    darray_create(allocator, &result.array, cap);
+    darray_init(allocator, &result.array, cap);
     return result;
 }
 

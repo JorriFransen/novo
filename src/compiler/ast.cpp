@@ -37,7 +37,7 @@ AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, 
     auto result = allocate<AST_Declaration>(&instance->ast_allocator);
     result->kind = kind;
     result->ident = ident;
-    result->type = nullptr;
+    result->resolved_type = nullptr;
     result->range_id = range_id;
     return result;
 }
@@ -46,7 +46,7 @@ AST_Declaration *ast_builtin_type_decl(Instance *instance, Type *type, const cha
 {
     auto ident = ast_identifier(instance, atom_get(name), 0);
     auto result = ast_declaration(instance, AST_Declaration_Kind::BUILTIN_TYPE, ident, 0);
-    result->type = type;
+    result->resolved_type = type;
     return result;
 }
 
@@ -127,6 +127,7 @@ AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32
 {
     auto result = allocate<AST_Expression>(&instance->ast_allocator);
     result->kind = kind;
+    result->resolved_type = nullptr;
     result->range_id = range_id;
     return result;
 }
@@ -187,6 +188,7 @@ AST_Type_Spec *ast_type_spec(Instance *instance, AST_Type_Spec_Kind kind, u32 ra
 {
     auto result = allocate<AST_Type_Spec>(&instance->ast_allocator);
     result->kind = kind;
+    result->resolved_type = nullptr;
     result->range_id = range_id;
     return result;
 }

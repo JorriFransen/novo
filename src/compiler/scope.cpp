@@ -13,7 +13,7 @@ Scope *scope_new(Instance *instance, Scope_Kind kind, Scope *parent/*=nullptr*/)
     result->kind = kind;
     result->parent = parent;
 
-    darray_create(&instance->scope_allocator, &result->symbols, 0);
+    darray_init(&instance->scope_allocator, &result->symbols, 0);
 
     return result;
 }
