@@ -61,7 +61,7 @@ struct AST_Declaration
     union {
 
         struct {
-            AST_Type_Spec *ts;
+            AST_Type_Spec *type_spec;
             AST_Expression *init_expr;
         } variable, constant;
 

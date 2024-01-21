@@ -53,7 +53,7 @@ AST_Declaration *ast_builtin_type_decl(Instance *instance, Type *type, const cha
 AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *init, u32 range_id)
 {
     auto result = ast_declaration(instance, AST_Declaration_Kind::VARIABLE, ident, range_id);
-    result->variable.ts = ts;
+    result->variable.type_spec = ts;
     result->variable.init_expr = init;
     return result;
 }

@@ -116,8 +116,8 @@ static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Decla
         case AST_Declaration_Kind::VARIABLE: {
             string_builder_append(sb, "VAR_DECL: '%s'\n", name.data);
 
-            if (decl->variable.ts) {
-                ast_ts_to_string(instance, sb, decl->variable.ts, indent + 1);
+            if (decl->variable.type_spec) {
+                ast_ts_to_string(instance, sb, decl->variable.type_spec, indent + 1);
             }
 
             if (decl->variable.init_expr) {

@@ -19,7 +19,45 @@ bool type_declaration(Instance *inst, Task *task, AST_Declaration *decl, Scope *
         case AST_Declaration_Kind::INVALID: assert(false); break;
         case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
 
-        case AST_Declaration_Kind::VARIABLE: assert(false); break;
+        case AST_Declaration_Kind::VARIABLE: {
+
+            Type *type = nullptr;
+            if (decl->variable.type_spec) {
+                if (!type_type_spec(inst, task, decl->variable.type_spec, scope)) {
+                    return false;
+                }
+
+                type = decl->variable.type_spec->resolved_type;
+            }
+
+            if (decl->variable.init_expr) {
+                if (!type_expression(inst, task, decl->variable.init_expr, scope)) {
+                    return false;
+                }
+
+                if (!type) {
+                    type = decl->variable.init_expr->resolved_type;
+                }
+            }
+
+            assert(type);
+            assert(decl->variable.type_spec || decl->variable.init_expr);
+
+            if (decl->variable.type_spec && decl->variable.init_expr) {
+                if (decl->variable.type_spec->resolved_type != decl->variable.init_expr->resolved_type) {
+
+                    auto sp_id = source_range_start(inst, decl->variable.init_expr->range_id);
+                    instance_fatal_error(inst, sp_id, "Mismatching type in variable declaration, expected: '%s', got: '%s'",
+                            temp_type_string(inst, decl->variable.type_spec->resolved_type).data,
+                            temp_type_string(inst, decl->variable.init_expr->resolved_type).data);
+                }
+
+            }
+
+            decl->resolved_type = type;
+
+            return true;
+        }
 
         case AST_Declaration_Kind::FUNCTION: {
 
@@ -81,7 +119,10 @@ bool type_statement(Instance *inst, Task *task, AST_Statement *stmt, Scope *scop
 
         case AST_Statement_Kind::INVALID: assert(false); break;
         case AST_Statement_Kind::IMPORT: assert(false); break;
-        case AST_Statement_Kind::DECLARATION: assert(false); break;
+
+        case AST_Statement_Kind::DECLARATION: {
+            return type_declaration(inst, task, stmt->declaration, scope);
+        }
 
         case AST_Statement_Kind::CALL: {
             return type_expression(inst, task, stmt->call, scope);
@@ -137,7 +178,29 @@ bool type_expression(Instance *inst, Task *task, AST_Expression *expr, Scope *sc
             return true;
         }
 
-        case AST_Expression_Kind::BINARY: assert(false); break;
+        case AST_Expression_Kind::BINARY: {
+
+            if (!type_expression(inst, task, expr->binary.lhs, scope)) {
+                return false;
+            }
+
+            if (!type_expression(inst, task, expr->binary.rhs, scope)) {
+                return false;
+            }
+
+            auto lhs_type = expr->binary.lhs->resolved_type;
+            auto rhs_type = expr->binary.rhs->resolved_type;
+
+            if (lhs_type != rhs_type) {
+                auto sp_id = source_range_start(inst, expr->range_id);
+                instance_fatal_error(inst, sp_id, "Mismatching types in binary expression, left: '%s', right: '%s'",
+                        temp_type_string(inst, lhs_type).data, temp_type_string(inst, rhs_type).data);
+
+            }
+
+            expr->resolved_type = lhs_type;
+            return true;
+        }
 
         case AST_Expression_Kind::CALL: {
 
@@ -146,14 +209,32 @@ bool type_expression(Instance *inst, Task *task, AST_Expression *expr, Scope *sc
                 return false;
             }
 
-            for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (!type_expression(inst, task, expr->call.args[i], scope)) {
-                    return false;
-                }
+            auto fn_type = base->resolved_type;
+            if (fn_type->kind != Type_Kind::FUNCTION) {
+                auto sp_id = source_range_start(inst, base->range_id);
+                instance_fatal_error(inst, sp_id, "Base expression of call is not of function type");
             }
 
-            auto fn_type = base->resolved_type;
-            assert(fn_type->kind == Type_Kind::FUNCTION);
+            for (s64 i = 0; i < expr->call.args.count; i++) {
+
+                auto arg = expr->call.args[i];
+
+                if (!type_expression(inst, task, arg, scope)) {
+                    return false;
+                }
+
+                auto param_type = fn_type->function.param_types[i];
+
+                if (arg->resolved_type != param_type) {
+                    auto sp_id = source_range_start(inst, arg->range_id);
+                    instance_fatal_error(inst, sp_id, "Mismatching type for argument %d, expected: '%s', got: '%s'",
+                            i + 1,
+                            temp_type_string(inst, param_type).data,
+                            temp_type_string(inst, arg->resolved_type).data);
+                }
+
+            }
+
             expr->resolved_type = fn_type->function.return_type;
 
             return true;

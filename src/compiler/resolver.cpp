@@ -22,8 +22,8 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
 
         case AST_Declaration_Kind::VARIABLE: {
 
-            if (decl->variable.ts) {
-                if (!resolve_ts(instance, task, decl->variable.ts, scope)) {
+            if (decl->variable.type_spec) {
+                if (!resolve_ts(instance, task, decl->variable.type_spec, scope)) {
                     return false;
                 }
             }
@@ -104,7 +104,18 @@ bool resolve_expression(Instance *instance, Task *task, AST_Expression *expr, Sc
             return resolve_ident(instance, task, expr->identifier, scope);
         }
 
-        case AST_Expression_Kind::BINARY: assert(false); break;
+        case AST_Expression_Kind::BINARY: {
+
+            if (!resolve_expression(instance, task, expr->binary.lhs, scope)) {
+                return false;
+            }
+
+            if (!resolve_expression(instance, task, expr->binary.rhs, scope)) {
+                return false;
+            }
+
+            return true;
+        }
 
         case AST_Expression_Kind::CALL: {
 
