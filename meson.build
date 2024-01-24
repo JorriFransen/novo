@@ -1,7 +1,7 @@
 
 project('novo', 'cpp',
         version: 'dev',
-        default_options: ['cpp_std=c++20', 'unity=off', 'unity_size=8' ])
+        default_options: ['cpp_std=c++20', 'werror=true', 'unity=off', 'unity_size=8' ])
 
 compiler = meson.get_compiler('cpp')
 compiler_id = compiler.get_id()
@@ -40,6 +40,7 @@ compiler_source = [
   'src/compiler/ast.cpp', 'src/compiler/ast.h',
   'src/compiler/ast_print.cpp', 'src/compiler/ast_print.h',
   'src/compiler/atom.cpp', 'src/compiler/atom.h',
+  'src/compiler/bytecode.cpp', 'src/compiler/bytecode.h',
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
   'src/compiler/keywords.cpp', 'src/compiler/keywords.h',
   'src/compiler/lexer.cpp', 'src/compiler/lexer.h',
@@ -52,6 +53,7 @@ compiler_source = [
   'src/compiler/task.cpp', 'src/compiler/task.h',
   'src/compiler/type.cpp', 'src/compiler/type.h',
   'src/compiler/typer.cpp', 'src/compiler/typer.h',
+  'src/compiler/vm.cpp', 'src/compiler/vm.h',
 ]
 
 compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT')

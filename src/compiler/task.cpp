@@ -63,6 +63,14 @@ void type_task_create(Instance *inst, Task *task, AST_Declaration *decl, Scope *
     };
 }
 
+void bytecode_task_create(Instance *inst, Task *task, AST_Declaration *decl)
+{
+    create_task(inst, task, Task_Kind::BYTECODE);
+    task->bytecode = {
+        .decl = decl,
+    };
+}
+
 bool task_execute(Instance *inst, Task *task)
 {
     bool result = false;
@@ -100,7 +108,15 @@ bool task_execute(Instance *inst, Task *task)
 
         case Task_Kind::TYPE: {
             result = type_task_execute(inst, task);
+
+            if (result) {
+                queue_bytecode_tasks(inst, task->type.decl);
+            }
             break;
+        }
+
+        case Task_Kind::BYTECODE: {
+            result = bytecode_task_execute(inst, task);
         }
     }
 
@@ -172,6 +188,20 @@ bool type_task_execute(Instance *inst, Task *task)
     return result;
 }
 
+bool bytecode_task_execute(Instance *inst, Task *task)
+{
+    assert(task->kind == Task_Kind::BYTECODE);
+
+    auto name = atom_string(task->resolve.decl->ident->atom);
+    log_trace("Emitting bytecode: %s...", name.data);
+
+    bool result = bytecode_emit_function(&inst->bytecode_program, task->bytecode.decl);
+
+    log_trace("Emitting bytecode: %s...%s", name.data, result ? "success" : "fail");
+
+    return result;
+}
+
 void queue_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
 {
     for (s64 i = 0; i < file->nodes.count; i++) {
@@ -219,6 +249,15 @@ void queue_type_tasks(Instance *inst, AST_Declaration *decl, Scope *scope)
 
     Task task;
     type_task_create(inst, &task, decl, scope);
+    darray_append(&inst->tasks, task);
+}
+
+void queue_bytecode_tasks(Instance *inst, AST_Declaration *decl)
+{
+    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+
+    Task task;
+    bytecode_task_create(inst, &task, decl);
     darray_append(&inst->tasks, task);
 }
 

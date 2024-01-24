@@ -18,6 +18,7 @@ enum class Task_Kind {
     RESOLVE,
     SIZE,
     TYPE,
+    BYTECODE,
 };
 
 struct Parse_Task {
@@ -46,6 +47,10 @@ struct Type_Task {
     Type *current_function_type;
 };
 
+struct Bytecode_Task {
+    AST_Declaration *decl;
+};
+
 struct Task {
     Task_Kind kind = Task_Kind::INVALID;
 
@@ -56,6 +61,7 @@ struct Task {
         Resolve_Task resolve;
         Size_Task size;
         Type_Task type;
+        Bytecode_Task bytecode;
     };
 
     Task() : kind(Task_Kind::INVALID) {}
@@ -66,15 +72,18 @@ NAPI void parse_task_create(Instance *inst, Task *task, const String_Ref file_pa
 NAPI void resolve_task_create(Instance *inst, Task *task, AST_Declaration *decl, Scope *scope);
 NAPI void size_task_create(Instance *inst, Task *task, AST_Declaration *decl, Scope *scope);
 NAPI void type_task_create(Instance *inst, Task *task, AST_Declaration *decl, Scope *scope);
+NAPI void bytecode_task_create(Instance *inst, Task *task, AST_Declaration *decl);
 
 NAPI bool task_execute(Instance *inst, Task *task);
 NAPI bool parse_task_execute(Instance *inst, Task *task);
 NAPI bool resolve_task_execute(Instance *inst, Task *task);
 NAPI bool size_task_execute(Instance *inst, Task *task);
 NAPI bool type_task_execute(Instance *inst, Task *task);
+NAPI bool bytecode_task_execute(Instance *inst, Task *task);
 
 NAPI void queue_resolve_tasks(Instance *inst, AST_File *file, Scope *scope);
 NAPI void queue_size_tasks(Instance *inst, AST_Declaration *decl, Scope *scope);
 NAPI void queue_type_tasks(Instance *inst, AST_Declaration *decl, Scope *scope);
+NAPI void queue_bytecode_tasks(Instance *inst, AST_Declaration *decl);
 
 }
