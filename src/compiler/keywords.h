@@ -28,8 +28,12 @@ namespace Novo {
     NOVO_KEYWORD(null)
 
 
-#define NOVO_KEYWORD(kw) NAPI extern Atom g_atom_##kw;
+#define NOVO_KEYWORD(kw) \
+    NAPI extern Atom g_atom_##kw; \
+    NAPI extern Atom g_keyword_##kw;
+
 ALL_NOVO_KEYWORDS
+
 #undef NOVO_KEYWORD
 
 NAPI extern Atom g_first_keyword_atom;

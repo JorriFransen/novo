@@ -59,6 +59,23 @@ AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *id
     return result;
 }
 
+AST_Declaration *ast_struct_member_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *default_val, u32 range_id)
+{
+    auto result = ast_declaration(instance, AST_Declaration_Kind::STRUCT_MEMBER, ident, range_id);
+    result->variable.type_spec = ts;
+    result->variable.init_expr = default_val;
+    result->variable.index = -1;
+    return result;
+}
+
+AST_Declaration *ast_struct_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> fields, Scope *scope, u32 range_id)
+{
+    auto result = ast_declaration(instance, AST_Declaration_Kind::STRUCT, ident, range_id);
+    result->struct_decl.scope = scope;
+    result->struct_decl.fields = fields;
+    return result;
+}
+
 AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> param_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, Scope *scope, u32 range_id)
 {
     auto result = ast_declaration(instance, AST_Declaration_Kind::FUNCTION, ident, range_id);

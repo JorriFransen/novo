@@ -124,7 +124,12 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
             // TODO: report error
             assert(false);
         }
-        result = parse_function_declaration(parser, ident, scope);
+
+        if (match_keyword(parser, g_keyword_struct)) {
+            result = parse_struct_declaration(parser, ident, scope);
+        } else {
+            result = parse_function_declaration(parser, ident, scope);
+        }
 
     } else {
 
@@ -162,6 +167,62 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
         return nullptr;
     }
     return result;
+}
+
+AST_Declaration *parse_struct_declaration(Parser *parser, AST_Identifier *ident, Scope *scope)
+{
+    expect_token(parser, '{');
+
+    auto fields = temp_array_create<AST_Declaration *>(&parser->instance->temp_allocator, 8);
+    Scope *struct_scope = scope_new(parser->instance, Scope_Kind::STRUCT, scope);
+
+    while (!is_token(parser, '}')) {
+
+        AST_Identifier *name = parse_identifier(parser);
+        expect_token(parser, ':');
+        AST_Type_Spec *ts = parse_type_spec(parser);
+
+        AST_Expression* default_value = nullptr;
+        if (match_token(parser, '=')) {
+            default_value = parse_expression(parser);
+        }
+
+        auto member_end = parser->lexer->token.source_pos_id;
+        expect_token(parser, ';');
+
+        auto member_range_id = source_range(parser->instance,
+                source_range_start(parser->instance, name->range_id),
+                member_end);
+
+        auto mem_decl = ast_struct_member_declaration(parser->instance, name, ts, default_value, member_range_id);
+
+        if (!scope_add_symbol(struct_scope, name->atom, mem_decl)) {
+            auto new_name = atom_string(name->atom);
+            auto start = source_range_start(parser->instance, name->range_id);
+
+            auto ex_decl = scope_find_symbol(struct_scope, name->atom);
+            assert(ex_decl);
+            assert(ex_decl->ident);
+            auto ex_start = source_range_start(parser->instance, ex_decl->ident->range_id);
+
+            instance_error(parser->instance, start, "Redeclaration of symbol: '%s'", new_name.data);
+            instance_fatal_error_note(parser->instance, ex_start, "Previous declaration was here");
+            return nullptr;
+        }
+
+        darray_append(&fields, mem_decl);
+    }
+
+    auto range_end = parser->lexer->token.source_pos_id;
+    expect_token(parser, '}');
+
+    auto fields_array = temp_array_finalize(&parser->instance->ast_allocator, &fields);
+
+
+    auto range_id = source_range(parser->instance,
+            source_range_start(parser->instance, ident->range_id),
+            range_end);
+    return ast_struct_declaration(parser->instance, ident, fields_array, struct_scope, range_id);
 }
 
 AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *ident, Scope *scope)
@@ -397,12 +458,8 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope)
 AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
 {
     auto ct = parser->lexer->token;
-    assert(ct.kind == TOK_KEYWORD);
-    next_token(parser->lexer);
 
-
-    if (ct.atom == g_atom_return) {
-
+    if (match_keyword(parser, g_keyword_return)) {
 
         AST_Expression *expr = nullptr;
         if (!is_token(parser, ';')) {
@@ -476,6 +533,16 @@ bool match_token(Parser *parser, char c)
 bool match_name(Parser *parser, const char *name)
 {
     if (parser->lexer->token.kind == TOK_NAME && parser->lexer->token.atom == atom_get(name)) {
+        next_token(parser->lexer);
+        return true;
+    }
+
+    return false;
+}
+
+bool match_keyword(Parser *parser, Atom kw_atom)
+{
+    if (parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom) {
         next_token(parser->lexer);
         return true;
     }

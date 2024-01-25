@@ -43,6 +43,16 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
             return true;
         }
 
+        case AST_Declaration_Kind::STRUCT_MEMBER: {
+            assert(false);
+            return false;
+        }
+
+        case AST_Declaration_Kind::STRUCT: {
+            assert(false);
+            return false;
+        }
+
         case AST_Declaration_Kind::FUNCTION: {
 
             assert(variables == nullptr);

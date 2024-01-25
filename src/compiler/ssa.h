@@ -53,6 +53,7 @@ struct SSA_Function
     u32 param_count;
     DArray<SSA_Block> blocks;
 
+    // TODO: Use hash table if this gets too big?
     DArray<SSA_Local_Variable> variables;
 };
 

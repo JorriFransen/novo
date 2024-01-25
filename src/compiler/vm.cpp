@@ -27,22 +27,22 @@ void vm_init(VM *vm, Allocator *allocator)
 }
 
 template <typename T>
-NINLINE static T vm_fetch(SSA_Block *block, s64 *ip)
+NINLINE T vm_fetch(SSA_Block *block, s64 *ip)
 {
-    assert(*ip + sizeof(T) - 1 < block->bytes.count);
+    assert(*ip + (s64)sizeof(T) - 1 < block->bytes.count);
     T result = *(T *)&block->bytes[*ip];
     *ip += sizeof(T);
     return result;
 }
 
-NINLINE static void vm_stack_push(VM *vm, u64 value)
+NINLINE void vm_stack_push(VM *vm, u64 value)
 {
     assert(vm->sp < vm->stack_size);
     vm->stack[vm->sp] = value;
     vm->sp += 1;
 }
 
-NINLINE static u64 vm_stack_pop(VM *vm)
+NINLINE u64 vm_stack_pop(VM *vm)
 {
     assert(vm->sp >= 1);
     u64 result = vm->stack[vm->sp - 1];
@@ -50,14 +50,14 @@ NINLINE static u64 vm_stack_pop(VM *vm)
     return result;
 }
 
-NINLINE static void vm_set_register(VM *vm, u32 reg, u64 value)
+NINLINE void vm_set_register(VM *vm, u32 reg, u64 value)
 {
     auto index = vm->register_offset + reg;
     assert(index < vm->register_count);
     vm->registers[index] = value;
 }
 
-NINLINE static u64 vm_get_register(VM *vm, u32 reg)
+NINLINE u64 vm_get_register(VM *vm, u32 reg)
 {
     auto index = vm->register_offset + reg;
     assert(index < vm->register_count);

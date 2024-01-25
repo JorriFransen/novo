@@ -4,8 +4,12 @@
 
 namespace Novo {
 
-#define NOVO_KEYWORD(kw) Atom g_atom_##kw;
+#define NOVO_KEYWORD(kw) \
+    Atom g_atom_##kw; \
+    Atom g_keyword_##kw;
+
 ALL_NOVO_KEYWORDS
+
 #undef NOVO_KEYWORD
 
 Atom g_first_keyword_atom;
@@ -23,6 +27,7 @@ void initialize_keywords()
 
 #define NOVO_KEYWORD(kw) \
     g_atom_##kw = atom_get(#kw); \
+    g_keyword_##kw = g_atom_##kw; \
     g_kw_atoms[index++] = g_atom_##kw;
 
     ALL_NOVO_KEYWORDS

@@ -126,6 +126,16 @@ static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Decla
             break;
         }
 
+        case AST_Declaration_Kind::STRUCT_MEMBER: {
+            assert(false);
+            break;
+        };
+
+        case AST_Declaration_Kind::STRUCT: {
+            assert(false);
+            break;
+        };
+
         case AST_Declaration_Kind::FUNCTION: {
             string_builder_append(sb, "FUNC_DECL: '%s'\n", name.data);
 

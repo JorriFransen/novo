@@ -212,7 +212,8 @@ void queue_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
             case AST_Node_Kind::INVALID: assert(false); break;
 
             case AST_Node_Kind::DECLARATION: {
-                assert(node.declaration->kind == AST_Declaration_Kind::FUNCTION);
+                assert(node.declaration->kind == AST_Declaration_Kind::FUNCTION ||
+                       node.declaration->kind == AST_Declaration_Kind::STRUCT);
 
                 Task task;
                 resolve_task_create(inst, &task, node.declaration, scope);

@@ -20,6 +20,7 @@ enum Scope_Kind : u32
 {
     INVALID,
     GLOBAL,
+    STRUCT,
     FUNCTION_LOCAL,
 };
 

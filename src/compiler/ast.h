@@ -46,6 +46,8 @@ enum class AST_Declaration_Kind : u32
 {
     INVALID,
     VARIABLE,
+    STRUCT_MEMBER,
+    STRUCT,
     FUNCTION,
 
     BUILTIN_TYPE,
@@ -73,6 +75,11 @@ struct AST_Declaration
             AST_Expression *init_expr;
             s64 index;
         } variable, constant;
+
+        struct {
+            Scope *scope;
+            DArray<AST_Declaration *> fields;
+        } struct_decl;
 
         struct {
             DArray<AST_Declaration *> params;
@@ -200,6 +207,8 @@ NAPI AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes);
 NAPI AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, AST_Identifier *ident, u32 range_id);
 NAPI AST_Declaration *ast_builtin_type_decl(Instance *instance, Type *type, const char *name);
 NAPI AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *init, u32 range_id);
+NAPI AST_Declaration *ast_struct_member_declaration(Instance *instance, AST_Identifier *ident, AST_Type_Spec *ts, AST_Expression *default_val, u32 range_id);
+NAPI AST_Declaration *ast_struct_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> fields, Scope *scope, u32 range_id);
 NAPI AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec *return_ts, Scope *scope, u32 range_id);
 
 NAPI AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u32 range_id);

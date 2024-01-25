@@ -59,6 +59,9 @@ bool type_declaration(Instance *inst, Task *task, AST_Declaration *decl, Scope *
             return true;
         }
 
+        case AST_Declaration_Kind::STRUCT_MEMBER: assert(false); break;
+        case AST_Declaration_Kind::STRUCT: assert(false); break;
+
         case AST_Declaration_Kind::FUNCTION: {
 
             auto func_scope = decl->function.scope;
