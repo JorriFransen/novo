@@ -172,6 +172,8 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
 
     Scope *fn_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
+    u32 arg_index = 0;
+
     expect_token(parser, '(');
     while (!is_token(parser, ')')) {
         if (params.array.count) {
@@ -183,6 +185,8 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
 
         // TODO: report error
         assert(param_decl->kind == AST_Declaration_Kind::VARIABLE);
+        param_decl->flags |= AST_DECL_FLAG_PARAM;
+        param_decl->variable.index = arg_index++;
 
         darray_append(&params, param_decl);
     }

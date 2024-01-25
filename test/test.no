@@ -4,7 +4,8 @@
 main :: () -> s64 {
     // return 72623859790382856; // 0x102030405060708
     // return 1 + 2;
-    return add(11, 22) + add(1, 2);
+    return add(11, 22);
+    // return add(11, 22) + add(1, 2);
 }
 
 add :: (a: s64, b: s64) -> s64 {
@@ -14,6 +15,3 @@ add :: (a: s64, b: s64) -> s64 {
     // return result;
     return a + b;
 }
-
-
-

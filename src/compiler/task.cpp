@@ -63,10 +63,10 @@ void type_task_create(Instance *inst, Task *task, AST_Declaration *decl, Scope *
     };
 }
 
-void bytecode_task_create(Instance *inst, Task *task, AST_Declaration *decl)
+void ssa_task_create(Instance *inst, Task *task, AST_Declaration *decl)
 {
-    create_task(inst, task, Task_Kind::BYTECODE);
-    task->bytecode = {
+    create_task(inst, task, Task_Kind::SSA);
+    task->ssa = {
         .decl = decl,
     };
 }
@@ -110,13 +110,13 @@ bool task_execute(Instance *inst, Task *task)
             result = type_task_execute(inst, task);
 
             if (result) {
-                queue_bytecode_tasks(inst, task->type.decl);
+                queue_ssa_tasks(inst, task->type.decl);
             }
             break;
         }
 
-        case Task_Kind::BYTECODE: {
-            result = bytecode_task_execute(inst, task);
+        case Task_Kind::SSA: {
+            result = ssa_task_execute(inst, task);
         }
     }
 
@@ -188,14 +188,15 @@ bool type_task_execute(Instance *inst, Task *task)
     return result;
 }
 
-bool bytecode_task_execute(Instance *inst, Task *task)
+bool ssa_task_execute(Instance *inst, Task *task)
 {
-    assert(task->kind == Task_Kind::BYTECODE);
+    assert(task->kind == Task_Kind::SSA);
 
     auto name = atom_string(task->resolve.decl->ident->atom);
     log_trace("Emitting bytecode: %s...", name.data);
 
-    bool result = bytecode_emit_function(&inst->bytecode_program, task->bytecode.decl);
+    // bool result = bytecode_emit_function(&inst->bytecode_program, task->bytecode.decl);
+    bool result = ssa_emit_function(&inst->ssa_program, task->ssa.decl);
 
     log_trace("Emitting bytecode: %s...%s", name.data, result ? "success" : "fail");
 
@@ -252,12 +253,12 @@ void queue_type_tasks(Instance *inst, AST_Declaration *decl, Scope *scope)
     darray_append(&inst->tasks, task);
 }
 
-void queue_bytecode_tasks(Instance *inst, AST_Declaration *decl)
+void queue_ssa_tasks(Instance *inst, AST_Declaration *decl)
 {
     assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
     Task task;
-    bytecode_task_create(inst, &task, decl);
+    ssa_task_create(inst, &task, decl);
     darray_append(&inst->tasks, task);
 }
 

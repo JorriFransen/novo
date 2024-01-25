@@ -60,6 +60,9 @@ void instance_init(Instance *inst, Options options)
         g_atoms_initialized = true;
     }
 
+    // TODO: Custom allocator
+    ssa_program_init(&inst->ssa_program, c_allocator());
+
     inst->builtin_type_void = void_type_new(inst);
     auto void_decl = ast_builtin_type_decl(inst, inst->builtin_type_void, "void");
     scope_add_symbol(inst->global_scope, void_decl->ident->atom, void_decl);

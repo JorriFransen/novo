@@ -40,7 +40,7 @@ compiler_source = [
   'src/compiler/ast.cpp', 'src/compiler/ast.h',
   'src/compiler/ast_print.cpp', 'src/compiler/ast_print.h',
   'src/compiler/atom.cpp', 'src/compiler/atom.h',
-  'src/compiler/bytecode.cpp', 'src/compiler/bytecode.h',
+  'src/compiler/ssa.cpp', 'src/compiler/ssa.h',
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
   'src/compiler/keywords.cpp', 'src/compiler/keywords.h',
   'src/compiler/lexer.cpp', 'src/compiler/lexer.h',

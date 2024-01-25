@@ -42,7 +42,7 @@ struct AST_File
     DArray<AST_Node> nodes;
 };
 
-enum class AST_Declaration_Kind
+enum class AST_Declaration_Kind : u32
 {
     INVALID,
     VARIABLE,
@@ -51,9 +51,17 @@ enum class AST_Declaration_Kind
     BUILTIN_TYPE,
 };
 
+typedef u32 AST_Declaration_Flags;
+enum AST_Declaration_Flag : AST_Declaration_Flags
+{
+    AST_DECL_FLAG_NONE  = 0x00,
+    AST_DECL_FLAG_PARAM = 0x01,
+};
+
 struct AST_Declaration
 {
     AST_Declaration_Kind kind;
+    AST_Declaration_Flags flags;
 
     AST_Identifier *ident;
     Type *resolved_type;
@@ -63,6 +71,7 @@ struct AST_Declaration
         struct {
             AST_Type_Spec *type_spec;
             AST_Expression *init_expr;
+            s64 index;
         } variable, constant;
 
         struct {

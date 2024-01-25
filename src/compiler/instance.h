@@ -8,6 +8,7 @@
 #include <nstring.h>
 
 #include "options.h"
+#include "ssa.h"
 
 namespace Novo {
 
@@ -40,6 +41,8 @@ struct Instance
     bool fatal_error;
     DArray<Source_Pos> source_positions;
     DArray<Source_Range> source_ranges;
+
+    SSA_Program ssa_program;
 
     Type *builtin_type_void;
     Type *builtin_type_s64;

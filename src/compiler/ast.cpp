@@ -55,6 +55,7 @@ AST_Declaration *ast_variable_declaration(Instance *instance, AST_Identifier *id
     auto result = ast_declaration(instance, AST_Declaration_Kind::VARIABLE, ident, range_id);
     result->variable.type_spec = ts;
     result->variable.init_expr = init;
+    result->variable.index = -1;
     return result;
 }
 
