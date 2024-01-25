@@ -20,6 +20,9 @@ struct VM
 
     u64 *registers;
     u64 *stack;
+
+    u32 register_count;
+    u32 stack_size;
 };
 
 NAPI void vm_init(VM *vm, Allocator *allocator);

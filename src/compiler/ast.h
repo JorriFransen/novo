@@ -78,6 +78,7 @@ struct AST_Declaration
             DArray<AST_Declaration *> params;
             AST_Type_Spec *return_ts;
             DArray<AST_Statement *> body;
+            DArray<AST_Declaration *> variables;
 
             Scope *scope;
 

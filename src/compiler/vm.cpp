@@ -18,12 +18,16 @@ void vm_init(VM *vm, Allocator *allocator)
     vm->sp = 0;
     vm->bp = 0;
 
-    vm->registers = allocate_array<u64>(allocator, 32);
-    vm->stack = allocate_array<u64>(allocator, 32);
+
+    vm->register_count = 32;
+    vm->stack_size = 32;
+
+    vm->registers = allocate_array<u64>(allocator, vm->register_count);
+    vm->stack = allocate_array<u64>(allocator, vm->stack_size);
 }
 
 template <typename T>
-static T vm_fetch(SSA_Block *block, s64 *ip)
+NINLINE static T vm_fetch(SSA_Block *block, s64 *ip)
 {
     assert(*ip + sizeof(T) - 1 < block->bytes.count);
     T result = *(T *)&block->bytes[*ip];
@@ -31,18 +35,33 @@ static T vm_fetch(SSA_Block *block, s64 *ip)
     return result;
 }
 
-static void vm_stack_push(VM *vm, u64 value)
+NINLINE static void vm_stack_push(VM *vm, u64 value)
 {
+    assert(vm->sp < vm->stack_size);
     vm->stack[vm->sp] = value;
     vm->sp += 1;
 }
 
-static u64 vm_stack_pop(VM *vm)
+NINLINE static u64 vm_stack_pop(VM *vm)
 {
     assert(vm->sp >= 1);
     u64 result = vm->stack[vm->sp - 1];
     vm->sp -= 1;
     return result;
+}
+
+NINLINE static void vm_set_register(VM *vm, u32 reg, u64 value)
+{
+    auto index = vm->register_offset + reg;
+    assert(index < vm->register_count);
+    vm->registers[index] = value;
+}
+
+NINLINE static u64 vm_get_register(VM *vm, u32 reg)
+{
+    auto index = vm->register_offset + reg;
+    assert(index < vm->register_count);
+    return vm->registers[vm->register_offset + reg];
 }
 
 u64 vm_run(VM *vm, SSA_Program *program)
@@ -78,37 +97,50 @@ u64 vm_run(VM *vm)
 
             case SSA_OP_NOP: assert(false); break;
 
-            case SSA_OP_LOAD_IM: {
-                u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u64 value = vm_fetch<u64>(block, &ip);
-
-                vm->registers[vm->register_offset + dest_reg] = value;
-                break;
-            }
-
             case SSA_OP_ADD: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 left_reg = vm_fetch<u32>(block, &ip);
                 u32 right_reg = vm_fetch<u32>(block, &ip);
 
-                u64 left_value = vm->registers[vm->register_offset + left_reg];
-                u64 right_value = vm->registers[vm->register_offset + right_reg];
-                vm->registers[vm->register_offset + dest_reg] = left_value + right_value;
+                u64 left_value = vm_get_register(vm, left_reg);
+                u64 right_value = vm_get_register(vm, right_reg);
+                vm_set_register(vm, dest_reg, left_value + right_value);
                 break;
             }
 
-            case SSA_OP_PUSH: {
+            case SSA_OP_ALLOC: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 size = vm_fetch<u32>(block, &ip);
+
+                assert(size <= 8);
+                auto ptr = allocate(vm->allocator, size);
+                vm_set_register(vm, dest_reg, (u64)ptr);
+                break;
+            }
+
+            case SSA_OP_STORE_ALLOC: {
+                u32 alloc_reg = vm_fetch<u32>(block, &ip);
                 u32 value_reg = vm_fetch<u32>(block, &ip);
 
-                u64 value = vm->registers[vm->register_offset + value_reg];
-
-                vm_stack_push(vm, value);
+                auto ptr = (u64 *)vm_get_register(vm, alloc_reg);
+                *ptr = vm_get_register(vm, value_reg);
                 break;
             }
 
-            case SSA_OP_POP_N: {
-                u32 n = vm_fetch<u32>(block, &ip);
-                vm->sp -= n;
+            case SSA_OP_LOAD_ALLOC: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 alloc_reg = vm_fetch<u32>(block, &ip);
+
+                auto ptr = (u64 *)vm_get_register(vm, alloc_reg);
+                vm_set_register(vm, dest_reg, *ptr);
+                break;
+            }
+
+            case SSA_OP_LOAD_IM: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u64 value = vm_fetch<u64>(block, &ip);
+
+                vm_set_register(vm, dest_reg, value);
                 break;
             }
 
@@ -118,7 +150,22 @@ u64 vm_run(VM *vm)
 
                 u64 value = vm->stack[vm->bp - fn->param_count + param_index];
 
-                vm->registers[vm->register_offset + dest_reg] = value;
+                vm_set_register(vm, dest_reg, value);
+                break;
+            }
+
+            case SSA_OP_PUSH: {
+                u32 value_reg = vm_fetch<u32>(block, &ip);
+
+                u64 value = vm_get_register(vm, value_reg);
+
+                vm_stack_push(vm, value);
+                break;
+            }
+
+            case SSA_OP_POP_N: {
+                u32 n = vm_fetch<u32>(block, &ip);
+                vm->sp -= n;
                 break;
             }
 
@@ -153,7 +200,7 @@ u64 vm_run(VM *vm)
             case SSA_OP_RET: {
                 u32 value_reg = vm_fetch<u32>(block, &ip);
 
-                u64 value = vm->registers[vm->register_offset + value_reg];
+                u64 value = vm_get_register(vm, value_reg);
 
                 vm->register_offset = vm_stack_pop(vm);
                 vm->block_index = vm_stack_pop(vm);

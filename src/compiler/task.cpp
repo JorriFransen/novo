@@ -154,7 +154,7 @@ bool resolve_task_execute(Instance *inst, Task *task)
     auto name = atom_string(task->resolve.decl->ident->atom);
     log_trace("Resolving: %s...", name.data);
 
-    bool result = resolve_declaration(inst, task, task->resolve.decl, task->resolve.scope);
+    bool result = resolve_declaration(inst, task, task->resolve.decl, task->resolve.scope, nullptr);
     log_trace("Resolving: %s...%s", name.data, result ? "success" : "fail");
 
     return result;

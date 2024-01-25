@@ -66,6 +66,7 @@ AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *id
     result->function.body = body_stmts;
     result->function.return_ts = return_ts;
     result->function.scope = scope;
+    darray_init(&instance->ast_allocator, &result->function.variables, 0);
 
     if (param_decls.count) {
         auto start = source_range_start(instance, param_decls[0]->range_id);

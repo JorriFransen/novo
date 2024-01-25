@@ -10,8 +10,9 @@ main :: () -> s64 {
 
 add :: (a: s64, b: s64) -> s64 {
 
-    // result : s64;
-    // result = a + b;
-    // return result;
-    return a + b;
+    // a = 1;
+    // b = 1;
+    result : s64;
+    result = a + b;
+    return result;
 }

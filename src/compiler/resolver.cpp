@@ -13,7 +13,7 @@
 
 namespace Novo {
 
-bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, Scope *scope)
+bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, Scope *scope, DArray<AST_Declaration *> *variables)
 {
     switch (decl->kind) {
 
@@ -34,16 +34,24 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
                 }
             }
 
+            if (variables) {
+                assert(scope->kind == Scope_Kind::FUNCTION_LOCAL);
+                assert(!(decl->flags & AST_DECL_FLAG_PARAM));
+                darray_append(variables, decl);
+            }
+
             return true;
         }
 
         case AST_Declaration_Kind::FUNCTION: {
 
+            assert(variables == nullptr);
+
             assert(scope != decl->function.scope);
             auto fn_scope = decl->function.scope;
 
             for (s64 i = 0; i < decl->function.params.count; i++) {
-                if (!resolve_declaration(instance, task, decl->function.params[i], fn_scope)) {
+                if (!resolve_declaration(instance, task, decl->function.params[i], fn_scope, nullptr)) {
                     return false;
                 }
             }
@@ -55,7 +63,7 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
             }
 
             for (s64 i = 0; i < decl->function.body.count; i++) {
-                if (!resolve_statement(instance, task, decl->function.body[i], fn_scope)) {
+                if (!resolve_statement(instance, task, decl->function.body[i], fn_scope, &decl->function.variables)) {
                     return false;
                 }
             }
@@ -68,7 +76,7 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
     return false;
 }
 
-bool resolve_statement(Instance *instance, Task *task, AST_Statement *stmt, Scope *scope)
+bool resolve_statement(Instance *instance, Task *task, AST_Statement *stmt, Scope *scope, DArray<AST_Declaration*> *variables)
 {
     switch (stmt->kind) {
         case AST_Statement_Kind::INVALID: assert(false); break;
@@ -76,7 +84,7 @@ bool resolve_statement(Instance *instance, Task *task, AST_Statement *stmt, Scop
         case AST_Statement_Kind::IMPORT: assert(false); break;
 
         case AST_Statement_Kind::DECLARATION: {
-            return resolve_declaration(instance, task, stmt->declaration, scope);
+            return resolve_declaration(instance, task, stmt->declaration, scope, variables);
         }
 
         case AST_Statement_Kind::ASSIGNMENT: {
