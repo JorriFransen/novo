@@ -1,8 +1,11 @@
 #include "type.h"
 
+#include <memory/allocator.h>
 #include <string_builder.h>
 
 #include "instance.h"
+
+#include <assert.h>
 
 namespace Novo {
 

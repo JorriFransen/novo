@@ -1,8 +1,5 @@
 #include "sizer.h"
 
-#include "ast.h"
-#include "scope.h"
-
 namespace Novo {
 
 bool size_declaration(Instance *inst, Task *task, AST_Declaration *decl, Scope *scope)

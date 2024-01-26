@@ -1,9 +1,11 @@
 #include "vm.h"
 
+#include <containers/darray.h>
+#include <memory/allocator.h>
+
 #include "ssa.h"
 
-#include <logger.h>
-#include <memory/allocator.h>
+#include <assert.h>
 
 namespace Novo {
 

@@ -11,6 +11,7 @@
 #include "parser.h"
 #include "resolver.h"
 #include "sizer.h"
+#include "ssa.h"
 #include "typer.h"
 
 #include <cassert>

@@ -6,11 +6,8 @@
 
 namespace Novo {
 
-struct AST_Declaration;
 struct Instance;
-struct Scope;
 struct String_Builder;
-struct Task;
 
 enum class Type_Kind : u32
 {

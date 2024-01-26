@@ -1,8 +1,10 @@
 #pragma once
 
-#include <defines.h>
-
 #include "atom.h"
+
+#include <containers/darray.h>
+#include <defines.h>
+#include <nstring.h>
 
 namespace Novo {
 

@@ -3,6 +3,7 @@
 #include <defines.h>
 #include <nstring.h>
 
+#include "atom.h"
 #include "lexer.h" // IWYU pragma: keep
 
 namespace Novo {

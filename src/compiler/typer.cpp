@@ -1,5 +1,8 @@
 #include "typer.h"
 
+#include <containers/darray.h>
+#include <nstring.h>
+
 #include "ast.h"
 #include "instance.h"
 #include "source_pos.h"

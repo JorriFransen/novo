@@ -1,9 +1,11 @@
 #include "ssa.h"
 
+#include <string_builder.h>
+
 #include "ast.h"
 #include "type.h"
 
-#include <string_builder.h>
+#include <assert.h>
 
 namespace Novo {
 
