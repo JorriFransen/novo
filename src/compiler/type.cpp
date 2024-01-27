@@ -44,6 +44,31 @@ Type *function_type_new(Instance *inst, DArray<Type *> param_types, Type *return
     return result;
 }
 
+Type *struct_type_new(Instance *inst, Array_Ref<Type *> member_types)
+{
+    DArray<Type_Struct_Member> members;
+    darray_init(&inst->ast_allocator, &members, member_types.count);
+
+    s64 total_size = 0;
+    u32 current_offset = 0;
+
+    for (s64 i = 0; i < member_types.count; i++) {
+        total_size += member_types[i]->bit_size;
+
+        Type_Struct_Member member;
+        member.type = member_types[i];
+        member.offset = current_offset;
+
+        darray_append(&members, member);
+
+        current_offset += member_types[i]->bit_size;
+    }
+
+    auto result = type_new(inst, Type_Kind::STRUCT, total_size);
+    result->structure.members = members;
+    return result;
+}
+
 Type *function_type_get(Instance *inst, Temp_Array<Type *> param_types, Type *return_type)
 {
     for (s64 i = 0; i < inst->function_types.count; i++) {
@@ -101,6 +126,7 @@ void type_to_string(String_Builder *sb, Type *type)
         }
 
         case Type_Kind::FUNCTION: assert(false); break;
+        case Type_Kind::STRUCT: assert(false); break;
     }
 }
 

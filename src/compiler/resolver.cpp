@@ -44,13 +44,31 @@ bool resolve_declaration(Instance *instance, Task *task, AST_Declaration *decl, 
         }
 
         case AST_Declaration_Kind::STRUCT_MEMBER: {
-            assert(false);
-            return false;
+
+            if (!resolve_ts(instance, task, decl->variable.type_spec, scope)) {
+                return false;
+            }
+
+            if (decl->variable.init_expr && !resolve_expression(instance, task, decl->variable.init_expr, scope)) {
+                return false;
+            }
+
+            return true;
         }
 
         case AST_Declaration_Kind::STRUCT: {
-            assert(false);
-            return false;
+
+            auto struct_scope = decl->structure.scope;
+            assert(struct_scope->kind == Scope_Kind::STRUCT);
+
+            for (s64  i = 0; i < decl->structure.fields.count; i++) {
+                auto field = decl->structure.fields[i];
+                if (!resolve_declaration(instance, task, field, struct_scope, nullptr)) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         case AST_Declaration_Kind::FUNCTION: {

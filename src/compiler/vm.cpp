@@ -114,7 +114,6 @@ u64 vm_run(VM *vm)
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 size = vm_fetch<u32>(block, &ip);
 
-                assert(size <= 8);
                 auto ptr = allocate(vm->allocator, size);
                 vm_set_register(vm, dest_reg, (u64)ptr);
                 break;

@@ -71,8 +71,8 @@ AST_Declaration *ast_struct_member_declaration(Instance *instance, AST_Identifie
 AST_Declaration *ast_struct_declaration(Instance *instance, AST_Identifier *ident, DArray<AST_Declaration *> fields, Scope *scope, u32 range_id)
 {
     auto result = ast_declaration(instance, AST_Declaration_Kind::STRUCT, ident, range_id);
-    result->struct_decl.scope = scope;
-    result->struct_decl.fields = fields;
+    result->structure.scope = scope;
+    result->structure.fields = fields;
     return result;
 }
 

@@ -79,7 +79,7 @@ struct AST_Declaration
         struct {
             Scope *scope;
             DArray<AST_Declaration *> fields;
-        } struct_decl;
+        } structure;
 
         struct {
             DArray<AST_Declaration *> params;

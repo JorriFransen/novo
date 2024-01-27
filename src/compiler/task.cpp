@@ -111,7 +111,10 @@ bool task_execute(Instance *inst, Task *task)
             result = type_task_execute(inst, task);
 
             if (result) {
-                queue_ssa_tasks(inst, task->type.decl);
+
+                if (task->type.decl->kind == AST_Declaration_Kind::FUNCTION) {
+                    queue_ssa_tasks(inst, task->type.decl);
+                }
             }
             break;
         }
@@ -239,7 +242,8 @@ void queue_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
 
 void queue_size_tasks(Instance *inst, AST_Declaration *decl, Scope *scope)
 {
-    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+    assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
+           decl->kind == AST_Declaration_Kind::STRUCT);
 
     Task task;
     size_task_create(inst, &task, decl, scope);
@@ -248,7 +252,8 @@ void queue_size_tasks(Instance *inst, AST_Declaration *decl, Scope *scope)
 
 void queue_type_tasks(Instance *inst, AST_Declaration *decl, Scope *scope)
 {
-    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+    assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
+           decl->kind == AST_Declaration_Kind::STRUCT);
 
     Task task;
     type_task_create(inst, &task, decl, scope);

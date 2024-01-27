@@ -62,8 +62,51 @@ bool type_declaration(Instance *inst, Task *task, AST_Declaration *decl, Scope *
             return true;
         }
 
-        case AST_Declaration_Kind::STRUCT_MEMBER: assert(false); break;
-        case AST_Declaration_Kind::STRUCT: assert(false); break;
+        case AST_Declaration_Kind::STRUCT_MEMBER: {
+
+            if (!type_type_spec(inst, task, decl->variable.type_spec, scope)) {
+                return false;
+            }
+
+            if (decl->variable.init_expr) {
+                if (!type_expression(inst, task, decl->variable.init_expr, scope)) {
+                    return false;
+                }
+
+                assert(decl->variable.type_spec->resolved_type == decl->variable.init_expr->resolved_type);
+            }
+
+            decl->resolved_type = decl->variable.type_spec->resolved_type;
+
+            return true;
+        }
+
+        case AST_Declaration_Kind::STRUCT: {
+
+            auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+
+            for (s64 i = 0; i < decl->structure.fields.count; i++) {
+
+                auto field = decl->structure.fields[i];
+                auto struct_scope = decl->structure.scope;
+
+                if (!type_declaration(inst, task, field, struct_scope)) {
+                    return false;
+                }
+
+                field->variable.index = i;
+            }
+
+            auto member_types = temp_array_create<Type *>(&inst->temp_allocator, decl->structure.fields.count);
+            for (s64 i = 0; i < decl->structure.fields.count; i++) {
+                darray_append(&member_types, decl->structure.fields[i]->resolved_type);
+            }
+
+            decl->resolved_type = struct_type_new(inst, member_types);
+            temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+            return true;
+        }
 
         case AST_Declaration_Kind::FUNCTION: {
 

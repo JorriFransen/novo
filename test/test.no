@@ -13,6 +13,8 @@ main :: () -> s64 {
     // return add(11, 22);
     // return add(11, 22) + add(1, 2);
 
+    p : Vec;
+
     return 0;
 }
 
