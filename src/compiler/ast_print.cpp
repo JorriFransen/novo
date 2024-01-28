@@ -44,6 +44,7 @@ String ast_to_string(Instance *instance, AST_File *file, String_Builder *sb)
             }
 
             case AST_Node_Kind::EXPRESSION: assert(false); break;
+            case AST_Node_Kind::TYPE_SPEC: assert(false); break;
         }
 
         string_builder_append(sb, "\n");
@@ -244,6 +245,8 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
             ast_expr_to_string(instance, sb, expr->binary.rhs, indent + 1);
             break;
         }
+
+        case AST_Expression_Kind::MEMBER: assert(false); break;
 
         case AST_Expression_Kind::CALL: {
             string_builder_append(sb, "EXPR_CALL:\n");

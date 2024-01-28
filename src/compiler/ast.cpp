@@ -24,6 +24,11 @@ AST_Node ast_node(AST_Expression *expr)
     return AST_Node { AST_Node_Kind::EXPRESSION, { .expression = expr } };
 }
 
+AST_Node ast_node(AST_Type_Spec *expr)
+{
+    return AST_Node { AST_Node_Kind::TYPE_SPEC, { .ts = expr } };
+}
+
 AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes)
 {
     auto result = allocate<AST_File>(&instance->ast_allocator);
@@ -36,6 +41,7 @@ AST_Declaration *ast_declaration(Instance *instance, AST_Declaration_Kind kind, 
 {
     auto result = allocate<AST_Declaration>(&instance->ast_allocator);
     result->kind = kind;
+    result->flags = AST_DECL_FLAG_NONE;
     result->ident = ident;
     result->resolved_type = nullptr;
     result->range_id = range_id;
@@ -108,6 +114,7 @@ AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u32 ra
 {
     auto result = allocate<AST_Statement>(&instance->ast_allocator);
     result->kind = kind;
+    result->flags = AST_STMT_FLAG_NONE;
     result->range_id = range_id;
     return result;
 }
@@ -154,6 +161,7 @@ AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32
 {
     auto result = allocate<AST_Expression>(&instance->ast_allocator);
     result->kind = kind;
+    result->flags = AST_EXPR_FLAG_NONE;
     result->resolved_type = nullptr;
     result->range_id = range_id;
     return result;
@@ -172,6 +180,14 @@ NAPI AST_Expression *ast_binary_expression(Instance *instance, char op, AST_Expr
     result->binary.op = op;
     result->binary.lhs = lhs;
     result->binary.rhs = rhs;
+    return result;
+}
+
+AST_Expression *ast_member_expression(Instance *inst, AST_Expression *base, AST_Identifier *member_name, u32 range_id)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::MEMBER, range_id);
+    result->member.base = base;
+    result->member.member_name = member_name;
     return result;
 }
 

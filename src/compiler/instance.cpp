@@ -8,7 +8,6 @@
 #include "keywords.h"
 #include "scope.h"
 #include "source_pos.h"
-#include "task.h"
 #include "type.h"
 
 #include <cassert>
@@ -38,7 +37,7 @@ void instance_init(Instance *inst, Options options)
     inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(16));
     inst->scope_allocator = inst->ast_allocator;
 
-    darray_init(default_alloc, &inst->tasks);
+    // darray_init(default_alloc, &inst->tasks);
 
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
@@ -94,55 +93,7 @@ bool instance_start(Instance *inst)
         first_file_path = string_copy(inst->default_allocator, first_file_name);
     }
 
-    Task parse_task;
-    parse_task_create(inst, &parse_task, first_file_path);
-    darray_append(&inst->tasks, parse_task);
-
-    bool progress = true;
-
-    while (inst->tasks.count && progress && !inst->fatal_error) {
-
-        progress = false;
-
-        auto max = inst->tasks.count;
-
-        for (s64 i = 0; i < max; i++) {
-            bool success = task_execute(inst, &inst->tasks[i]);
-
-            if (success) {
-                progress = true;
-            }
-        }
-
-        if (progress) {
-
-            // Remove finished tasks
-            s64 dest_idx = 0;
-            auto count = inst->tasks.count;
-            auto new_count = count;
-            for (s64 i = 0; i < count; i++) {
-                if (inst->tasks[i].done) {
-                    new_count--;
-                } else {
-                    inst->tasks[dest_idx++] = inst->tasks[i];
-                }
-            }
-            inst->tasks.count = new_count;
-
-        } else {
-            assert(inst->tasks.count);
-
-            for (s64 i = 0; i < inst->tasks.count; i++) {
-                auto &t = inst->tasks[i];
-                if (t.kind == Task_Kind::RESOLVE && t.resolve.waiting_for) {
-                    auto name = atom_string(t.resolve.waiting_for->atom);
-                    auto sp = source_range_start(inst, t.resolve.waiting_for->range_id);
-                    instance_error(inst, sp, "Reference to undeclared identifier: '%s'", name.data);
-                }
-            }
-            return false;
-        }
-    }
+    assert(false);
 
     return true;
 }

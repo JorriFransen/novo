@@ -189,6 +189,7 @@ SSA_LValue ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_i
         }
 
         case AST_Expression_Kind::BINARY: assert(false); break;
+        case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
@@ -254,6 +255,8 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
 
             break;
         }
+
+        case AST_Expression_Kind::MEMBER: assert(false); break;
 
         case AST_Expression_Kind::CALL: {
 

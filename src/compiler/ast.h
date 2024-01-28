@@ -23,6 +23,7 @@ enum class AST_Node_Kind
     DECLARATION,
     STATEMENT,
     EXPRESSION,
+    TYPE_SPEC,
 };
 
 struct AST_Node
@@ -34,6 +35,7 @@ struct AST_Node
         AST_Declaration *declaration;
         AST_Statement *statement;
         AST_Expression *expression;
+        AST_Type_Spec *ts;
     };
 };
 
@@ -58,6 +60,11 @@ enum AST_Declaration_Flag : AST_Declaration_Flags
 {
     AST_DECL_FLAG_NONE  = 0x00,
     AST_DECL_FLAG_PARAM = 0x01,
+
+    AST_DECL_FLAG_RESOLVED = 0x02,
+    AST_DECL_FLAG_SIZED    = 0x04,
+    AST_DECL_FLAG_TYPED    = 0x08,
+    // Last = 0x80000000
 };
 
 struct AST_Declaration
@@ -97,7 +104,7 @@ struct AST_Declaration
     u32 range_id;
 };
 
-enum class AST_Statement_Kind
+enum class AST_Statement_Kind : u32
 {
     INVALID,
     IMPORT,
@@ -107,9 +114,20 @@ enum class AST_Statement_Kind
     RETURN,
 };
 
+typedef u32 AST_Statement_Flags;
+enum AST_Statement_Flag
+{
+    AST_STMT_FLAG_NONE = 0x00,
+    AST_STMT_FLAG_RESOLVED = 0x01,
+    AST_STMT_FLAG_SIZED    = 0x02,
+    AST_STMT_FLAG_TYPED    = 0x04,
+
+};
+
 struct AST_Statement
 {
     AST_Statement_Kind kind;
+    AST_Statement_Flags flags;
 
     union
     {
@@ -127,12 +145,13 @@ struct AST_Statement
     u32 range_id;
 };
 
-enum class AST_Expression_Kind
+enum class AST_Expression_Kind : u32
 {
     INVALID,
 
     IDENTIFIER,
     BINARY,
+    MEMBER,
     CALL,
 
     INTEGER_LITERAL,
@@ -141,9 +160,19 @@ enum class AST_Expression_Kind
     STRING_LITERAL,
 };
 
+typedef u32 AST_Expression_Flags;
+enum AST_Expression_Flag
+{
+    AST_EXPR_FLAG_NONE     = 0x00,
+    AST_EXPR_FLAG_RESOLVED = 0x01,
+    AST_EXPR_FLAG_SIZED    = 0x02,
+    AST_EXPR_FLAG_TYPED    = 0x04,
+};
+
 struct AST_Expression
 {
     AST_Expression_Kind kind;
+    AST_Expression_Flags flags;
 
     Type *resolved_type;
 
@@ -156,6 +185,12 @@ struct AST_Expression
             AST_Expression *lhs;
             AST_Expression *rhs;
         } binary;
+
+        struct
+        {
+            AST_Expression *base;
+            AST_Identifier *member_name;
+        } member;
 
         struct
         {
@@ -201,6 +236,7 @@ struct AST_Identifier
 NAPI AST_Node ast_node(AST_Declaration *decl);
 NAPI AST_Node ast_node(AST_Statement *stmt);
 NAPI AST_Node ast_node(AST_Expression *expr);
+NAPI AST_Node ast_node(AST_Type_Spec *expr);
 
 NAPI AST_File *ast_file(Instance *instance, DArray<AST_Node> nodes);
 
@@ -221,6 +257,7 @@ NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *exp
 NAPI AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32 range_id);
 NAPI AST_Expression *ast_identifier_expression(Instance *instance, AST_Identifier *ident, u32 range_id);
 NAPI AST_Expression *ast_binary_expression(Instance *instance, char op, AST_Expression *lhs, AST_Expression *rhs, u32 range_id);
+NAPI AST_Expression *ast_member_expression(Instance *inst, AST_Expression *base, AST_Identifier *member_name, u32 range_id);
 NAPI AST_Expression *ast_call_expression(Instance *instance, AST_Expression *base_expr, DArray<AST_Expression *> args, u32 range_id);
 NAPI AST_Expression *ast_integer_literal_expression(Instance *instance, u64 i, u32 range_id);
 NAPI AST_Expression *ast_real_literal_expression(Instance *instance, Real_Value rv, u32 range_id);

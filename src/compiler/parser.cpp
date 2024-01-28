@@ -323,7 +323,7 @@ AST_Expression *parse_leaf_expression(Parser *parser)
 
     if (!result) return nullptr;
 
-    while (is_token(parser, '(')) {
+    while (is_token(parser, '(') || is_token(parser, '.')) {
 
         if (match_token(parser, '(')) {
 
@@ -346,6 +346,15 @@ AST_Expression *parse_leaf_expression(Parser *parser)
             auto call_range = source_range(parser->instance, range_start, end);
 
             result = ast_call_expression(parser->instance, result, args, call_range);
+
+        } else if (match_token(parser, '.')) {
+
+            auto end = parser->lexer->token.source_pos_id;
+            AST_Identifier *member_name = parse_identifier(parser);
+
+            auto member_range = source_range(parser->instance, range_start, end);
+
+            result = ast_member_expression(parser->instance, result, member_name, member_range);
         }
     }
 

@@ -33,7 +33,7 @@ struct Instance
     Allocator ast_allocator;
     Allocator scope_allocator;
 
-    DArray<Task> tasks;
+    // DArray<Task> tasks;
     Scope *global_scope;
 
     DArray<Type *> function_types;
