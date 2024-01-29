@@ -1,6 +1,7 @@
 #include "task.h"
 
 #include "instance.h"
+#include <logger.h>
 
 namespace Novo {
 
@@ -41,31 +42,10 @@ void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_
 
         case AST_Declaration_Kind::INVALID: assert(false); break;
 
-        case AST_Declaration_Kind::VARIABLE: {
-
-            Resolve_Task var_task = {
-                .node = ast_node(decl),
-                .scope = scope,
-                .fn_decl = fn,
-            };
-            darray_append(&inst->resolve_tasks, var_task);
-
-            break;
-        }
-
         case AST_Declaration_Kind::STRUCT_MEMBER: assert(false); break;
 
-        case AST_Declaration_Kind::STRUCT: {
-
-            Resolve_Task struct_task = {
-                .node = ast_node(decl),
-                .scope = scope,
-                .fn_decl = fn,
-            };
-            darray_append(&inst->resolve_tasks, struct_task);
-
-            break;
-        }
+        case AST_Declaration_Kind::STRUCT: break;
+        case AST_Declaration_Kind::VARIABLE: break;
 
         case AST_Declaration_Kind::FUNCTION: {
 
@@ -89,13 +69,13 @@ void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_
         case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
     }
 
-    Resolve_Task fn_task = {
+    Resolve_Task decl_task = {
         .node = ast_node(decl),
         .scope = scope,
         .fn_decl = fn,
+        .waiting_for = nullptr,
     };
-    darray_append(&inst->resolve_tasks, fn_task);
-
+    darray_append(&inst->resolve_tasks, decl_task);
 }
 
 void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_Declaration *fn)
@@ -113,6 +93,7 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
                 .node = ast_node(stmt),
                 .scope = scope,
                 .fn_decl = fn,
+                .waiting_for = nullptr,
             };
             darray_append(&inst->resolve_tasks, task);
         }
@@ -125,6 +106,7 @@ void add_resolve_tasks(Instance *inst, AST_Type_Spec *ts, Scope *scope)
         .node = ast_node(ts),
         .scope = scope,
         .fn_decl = nullptr,
+        .waiting_for = nullptr,
     };
     darray_append(&inst->resolve_tasks, task);
 }

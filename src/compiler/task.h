@@ -20,6 +20,7 @@ struct Resolve_Task
     Scope *scope;
 
     AST_Declaration *fn_decl;
+    AST_Identifier *waiting_for;
 };
 
 struct Type_Task

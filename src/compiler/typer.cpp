@@ -115,7 +115,7 @@ bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
 
             for (s64 i = 0; i < decl->function.body.count; i++) {
                 if (!(decl->function.body[i]->flags & AST_STMT_FLAG_TYPED)) {
-                    return true;
+                    return false;
                 }
             }
 

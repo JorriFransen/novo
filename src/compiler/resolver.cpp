@@ -256,12 +256,16 @@ bool resolve_ts(Instance *inst, Resolve_Task *task, AST_Type_Spec *ts, Scope *sc
 
 bool resolve_identifier(Instance *inst, Resolve_Task *task, AST_Identifier *ident, Scope *scope)
 {
+    task->waiting_for = nullptr;
+
     if (ident->decl) return true;
 
     if (AST_Declaration *found_decl = scope_find_symbol(scope, ident->atom)) {
         ident->decl = found_decl;
         return true;
     }
+
+    task->waiting_for = ident;
 
     auto name = atom_string(ident->atom);
     log_trace("Waiting for undeclared identifier: '%s'", name.data);

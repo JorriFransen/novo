@@ -133,9 +133,10 @@ bool instance_start(Instance *inst)
         }
 
         for (s64 i = 0; i < inst->resolve_tasks.count; i++) {
-            Resolve_Task task = inst->resolve_tasks[i];
+            Resolve_Task *task_ptr = &inst->resolve_tasks[i];
+            auto task = *task_ptr;
 
-            bool success = resolve_node(inst, &task, &task.node, task.scope);
+            bool success = resolve_node(inst, task_ptr, &task_ptr->node, task_ptr->scope);
 
             if (success) {
                 progress = true;
@@ -207,7 +208,22 @@ bool instance_start(Instance *inst)
                     inst->ssa_tasks.count == 0;
 
     if (!progress && !all_done) {
-        assert(false); // report errors
+
+        bool error_reported = false;
+
+        for (s64 i = 0; i < inst->resolve_tasks.count; i++) {
+            auto t = &inst->resolve_tasks[i];
+
+            if (t->waiting_for) {
+                auto sp_id = source_range_start(inst, t->waiting_for->range_id);
+                auto name = atom_string(t->waiting_for->atom);
+                instance_error(inst, sp_id, "Reference to undecared identifier: '%s'", name.data);
+                error_reported = true;
+            }
+        }
+
+        assert(error_reported);
+        return false;
     }
 
     return true;
