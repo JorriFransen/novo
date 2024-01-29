@@ -63,8 +63,41 @@ bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
             break;
         }
 
-        case AST_Declaration_Kind::STRUCT_MEMBER: assert(false); break;
-        case AST_Declaration_Kind::STRUCT: assert(false); break;
+        case AST_Declaration_Kind::STRUCT_MEMBER: {
+            if (!type_type_spec(inst, decl->variable.type_spec, scope)) {
+                return false;
+            }
+
+            assert(!decl->variable.init_expr);
+            decl->resolved_type = decl->variable.type_spec->resolved_type;
+            break;
+        }
+
+        case AST_Declaration_Kind::STRUCT: {
+
+            Scope *struct_scope = decl->structure.scope;
+            auto &fields = decl->structure.fields;
+
+            for (s64 i = 0; i < fields.count; i++) {
+                auto field = fields[i];
+
+                if (!type_declaration(inst, field, struct_scope)) {
+                    return false;
+                }
+            }
+
+            auto member_types = temp_array_create<Type *>(&inst->temp_allocator, fields.count);
+
+            for (s64 i = 0; i < fields.count; i++) {
+                auto field = fields[i];
+                darray_append(&member_types, field->resolved_type);
+            }
+
+            decl->resolved_type = struct_type_new(inst, member_types);
+
+            temp_array_destroy(&member_types);
+            break;
+        }
 
         case AST_Declaration_Kind::FUNCTION: {
 

@@ -54,7 +54,18 @@ void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_
         }
 
         case AST_Declaration_Kind::STRUCT_MEMBER: assert(false); break;
-        case AST_Declaration_Kind::STRUCT: assert(false); break;
+
+        case AST_Declaration_Kind::STRUCT: {
+
+            Resolve_Task struct_task = {
+                .node = ast_node(decl),
+                .scope = scope,
+                .fn_decl = fn,
+            };
+            darray_append(&inst->resolve_tasks, struct_task);
+
+            break;
+        }
 
         case AST_Declaration_Kind::FUNCTION: {
 

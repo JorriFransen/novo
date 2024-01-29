@@ -60,8 +60,29 @@ bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *de
             break;
         }
 
-        case AST_Declaration_Kind::STRUCT_MEMBER: assert(false); break;
-        case AST_Declaration_Kind::STRUCT: assert(false); break;
+        case AST_Declaration_Kind::STRUCT_MEMBER: {
+            if (!resolve_ts(inst, task, decl->variable.type_spec, scope)) {
+                return false;
+            }
+
+            assert(!decl->variable.init_expr);
+
+            break;
+        }
+
+        case AST_Declaration_Kind::STRUCT: {
+
+            Scope *struct_scope = decl->structure.scope;
+
+            for (s64 i = 0; i < decl->structure.fields.count; i++) {
+                auto field = decl->structure.fields[i];
+                if (!resolve_declaration(inst, task, field, struct_scope)) {
+                    return false;
+                }
+            }
+
+            break;
+        }
 
         case AST_Declaration_Kind::FUNCTION: {
 

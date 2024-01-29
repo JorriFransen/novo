@@ -201,7 +201,10 @@ bool instance_start(Instance *inst)
         }
     }
 
-    bool all_done = inst->parse_tasks.count == 0 && inst->resolve_tasks.count == 0;
+    bool all_done = inst->parse_tasks.count == 0 &&
+                    inst->resolve_tasks.count == 0 &&
+                    inst->type_tasks.count == 0 &&
+                    inst->ssa_tasks.count == 0;
 
     if (!progress && !all_done) {
         assert(false); // report errors
