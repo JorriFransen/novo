@@ -269,7 +269,12 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
             break;
         }
 
-        case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::MEMBER: {
+            u32 base = ssa_emit_expression(program, func, block_index, expr->member.base, scope);
+            assert(base);
+            assert(false);
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
 

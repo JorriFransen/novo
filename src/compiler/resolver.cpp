@@ -6,6 +6,8 @@
 #include "parser.h"
 #include "scope.h"
 #include "task.h"
+#include "type.h"
+#include "typer.h"
 
 namespace Novo {
 
@@ -79,6 +81,7 @@ bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *de
                 if (!resolve_declaration(inst, task, field, struct_scope)) {
                     return false;
                 }
+                field->variable.index = i;
             }
 
             break;
@@ -191,7 +194,29 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
             break;
         }
 
-        case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::MEMBER: {
+            if (!resolve_expression(inst, task, expr->member.base, scope)) {
+                return false;
+            }
+
+            if (!(expr->member.base->flags & AST_EXPR_FLAG_TYPED)) {
+
+                if (!type_expression(inst, expr->member.base, scope)) {
+                    return false;
+                }
+            }
+
+            Type *struct_type = expr->member.base->resolved_type;
+            assert(struct_type->kind == Type_Kind::STRUCT);
+
+            Scope *struct_scope = struct_type->structure.scope;
+
+            if (!resolve_identifier(inst, task, expr->member.member_name, struct_scope)) {
+                return false;
+            }
+
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
 

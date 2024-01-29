@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "instance.h"
+#include "scope.h"
 #include "type.h"
 
 namespace Novo {
@@ -93,7 +94,7 @@ bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
                 darray_append(&member_types, field->resolved_type);
             }
 
-            decl->resolved_type = struct_type_new(inst, member_types);
+            decl->resolved_type = struct_type_new(inst, member_types, struct_scope);
 
             temp_array_destroy(&member_types);
             break;
@@ -227,7 +228,24 @@ bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
             break;
         }
 
-        case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::MEMBER: {
+
+            if (!type_expression(inst, expr->member.base, scope)) {
+                return false;
+            }
+
+            Type *struct_type = expr->member.base->resolved_type;
+            assert(struct_type->kind == Type_Kind::STRUCT);
+
+            AST_Declaration * field = scope_find_symbol(struct_type->structure.scope, expr->member.member_name->atom);
+            u32 index = field->variable.index;
+            assert(index >= 0 && index < struct_type->structure.members.count);
+
+            Type *mem_type = struct_type->structure.members[index].type;
+
+            expr->resolved_type = mem_type;
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
 

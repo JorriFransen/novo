@@ -44,7 +44,7 @@ Type *function_type_new(Instance *inst, DArray<Type *> param_types, Type *return
     return result;
 }
 
-Type *struct_type_new(Instance *inst, Array_Ref<Type *> member_types)
+Type *struct_type_new(Instance *inst, Array_Ref<Type *> member_types, Scope *scope)
 {
     DArray<Type_Struct_Member> members;
     darray_init(&inst->ast_allocator, &members, member_types.count);
@@ -66,6 +66,7 @@ Type *struct_type_new(Instance *inst, Array_Ref<Type *> member_types)
 
     auto result = type_new(inst, Type_Kind::STRUCT, total_size);
     result->structure.members = members;
+    result->structure.scope = scope;
     return result;
 }
 
