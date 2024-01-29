@@ -18,7 +18,13 @@ main :: () -> s64 {
     p.y = 02;
     p.z = 20;
 
-    return add(add(p.x, p.y), p.z);
+    p2 := p;
+    p2 = p;
+
+    p2.x = p2.z / 2;
+    p2.y = p2.y + 1;
+
+    return add(add(p.x, p.y), p.z) + add(add(p2.x, p2.y), p2.z);
 }
 
 add :: (a: s64, b: s64) -> s64 {

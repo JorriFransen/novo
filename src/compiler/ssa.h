@@ -20,8 +20,11 @@ enum SSA_Op : u8
     SSA_OP_NOP,
 
     SSA_OP_ADD,         // ADD [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_DIV,         // DIV [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
     SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size]
+
+    SSA_OP_MEMCPY,      // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [32-bit size]
 
     SSA_OP_STORE_PTR,   // STORE_PTR [32-bit ptr reg] [32-bit value reg]
 

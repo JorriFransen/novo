@@ -11,6 +11,7 @@
 #include "resolver.h"
 #include "scope.h"
 #include "source_pos.h"
+#include "ssa.h"
 #include "task.h"
 #include "type.h"
 #include "typer.h"
@@ -68,7 +69,8 @@ void instance_init(Instance *inst, Options options)
     }
 
     // TODO: Custom allocator
-    ssa_program_init(&inst->ssa_program, c_allocator());
+    inst->ssa_program = allocate<SSA_Program>(c_allocator());
+    ssa_program_init(inst->ssa_program, c_allocator());
 
     inst->builtin_type_void = void_type_new(inst);
     auto void_decl = ast_builtin_type_decl(inst, inst->builtin_type_void, "void");
@@ -181,7 +183,7 @@ bool instance_start(Instance *inst)
                 assert(decl->kind = AST_Declaration_Kind::FUNCTION);
                 assert(decl->ident);
 
-                if (ssa_find_function(&inst->ssa_program, decl->ident->atom, nullptr)) {
+                if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
                     darray_remove_ordered(wait_for, i);
                     i--;
                 }
@@ -191,7 +193,7 @@ bool instance_start(Instance *inst)
 
             if (success) {
 
-                success = ssa_emit_function(&inst->ssa_program, task.func_decl);
+                success = ssa_emit_function(inst->ssa_program, task.func_decl);
                 assert(success);
 
                 progress = true;

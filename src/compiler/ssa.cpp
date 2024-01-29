@@ -109,7 +109,8 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
         case AST_Statement_Kind::DECLARATION: {
             if (stmt->declaration->kind == AST_Declaration_Kind::VARIABLE) {
 
-                if (stmt->declaration->variable.init_expr) {
+                AST_Expression *init_expr = stmt->declaration->variable.init_expr;
+                if (init_expr) {
 
                     u32 alloc_reg;
                     bool found = false;
@@ -122,11 +123,37 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
                     }
                     assert(found);
 
-                    u32 value_reg = ssa_emit_expression(program, func, block_index, stmt->declaration->variable.init_expr, scope);
+                    switch (init_expr->resolved_type->kind) {
 
-                    ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
-                    ssa_emit_32(program, func, block_index, alloc_reg);
-                    ssa_emit_32(program, func, block_index, value_reg);
+                        case Type_Kind::INVALID: assert(false); break;
+                        case Type_Kind::VOID: assert(false); break;
+
+                        case Type_Kind::INTEGER: {
+                            u32 value_reg = ssa_emit_expression(program, func, block_index, init_expr, scope);
+                            ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
+                            ssa_emit_32(program, func, block_index, alloc_reg);
+                            ssa_emit_32(program, func, block_index, value_reg);
+                            break;
+                        }
+
+                        case Type_Kind::BOOLEAN: assert(false); break;
+                        case Type_Kind::FUNCTION: assert(false); break;
+
+                        case Type_Kind::STRUCT: {
+                            u32 value_reg = ssa_emit_lvalue(program, func, block_index, init_expr, scope);
+                            ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
+                            ssa_emit_32(program, func, block_index, alloc_reg);
+                            ssa_emit_32(program, func, block_index, value_reg);
+
+                            s64 size = init_expr->resolved_type->bit_size;
+                            assert(size % 8 == 0);
+                            size /= 8;
+                            assert(size >= 0 && size < U32_MAX);
+
+                            ssa_emit_32(program, func, block_index, size);
+                            break;
+                        }
+                    }
                 }
 
             } else {
@@ -136,12 +163,42 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
         }
 
         case AST_Statement_Kind::ASSIGNMENT: {
-            u32 rvalue = ssa_emit_expression(program, func, block_index, stmt->assignment.rvalue, scope);
-            auto lvalue = ssa_emit_lvalue(program, func, block_index, stmt->assignment.lvalue, scope);
 
-            ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
-            ssa_emit_32(program, func, block_index, lvalue);
-            ssa_emit_32(program, func, block_index, rvalue);
+            switch (stmt->assignment.lvalue->resolved_type->kind) {
+
+                case Type_Kind::INVALID: assert(false); break;
+                case Type_Kind::VOID: assert(false); break;
+
+                case Type_Kind::INTEGER: {
+                    u32 rvalue = ssa_emit_expression(program, func, block_index, stmt->assignment.rvalue, scope);
+                    auto lvalue = ssa_emit_lvalue(program, func, block_index, stmt->assignment.lvalue, scope);
+
+                    ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
+                    ssa_emit_32(program, func, block_index, lvalue);
+                    ssa_emit_32(program, func, block_index, rvalue);
+
+                    break;
+                }
+
+                case Type_Kind::BOOLEAN: assert(false); break;
+                case Type_Kind::FUNCTION: assert(false); break;
+
+                case Type_Kind::STRUCT: {
+                    u32 rvalue = ssa_emit_lvalue(program, func, block_index, stmt->assignment.rvalue, scope);
+                    u32 lvalue = ssa_emit_lvalue(program, func, block_index, stmt->assignment.lvalue, scope);
+                    ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
+                    ssa_emit_32(program, func, block_index, lvalue);
+                    ssa_emit_32(program, func, block_index, rvalue);
+
+                    s64 size = stmt->assignment.rvalue->resolved_type->bit_size;
+                    assert(size % 8 == 0);
+                    size /= 8;
+                    assert(size >= 0 && size < U32_MAX);
+
+                    ssa_emit_32(program, func, block_index, size);
+                    break;
+                }
+            }
             break;
         }
 
@@ -280,9 +337,18 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
             u32 left = ssa_emit_expression(program, func, block_index, expr->binary.lhs, scope);
             u32 right = ssa_emit_expression(program, func, block_index, expr->binary.rhs, scope);
 
-            assert(expr->binary.op == '+');
+            switch (expr->binary.op) {
+                case '+': {
+                    ssa_emit_op(program, func, block_index, SSA_OP_ADD);
+                    break;
+                }
 
-            ssa_emit_op(program, func, block_index, SSA_OP_ADD);
+                case '/': {
+                    ssa_emit_op(program, func, block_index, SSA_OP_DIV);
+                    break;
+                }
+            }
+
 
             result = ssa_register_create(func);
             ssa_emit_32(program, func, block_index, result);
@@ -461,6 +527,20 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, s64 ip, Arra
             break;
         }
 
+        case SSA_OP_DIV: {
+            u32 dest_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 left = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 right = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = DIV %%%u %%%u\n", dest_reg, left, right);
+            break;
+        }
+
         case SSA_OP_ALLOC: {
             u32 dest_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
@@ -469,6 +549,20 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, s64 ip, Arra
             ip += sizeof(u32);
 
             string_builder_append(sb, "  %%%u = ALLOC %u\n", dest_reg, size);
+            break;
+        }
+
+        case SSA_OP_MEMCPY: {
+            u32 dest_ptr_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 source_ptr_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 size = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  MEMCPY %%%u %%%u %u\n", dest_ptr_reg, source_ptr_reg, size);
             break;
         }
 

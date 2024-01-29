@@ -21,7 +21,7 @@ void vm_init(VM *vm, Allocator *allocator)
     vm->bp = 0;
 
 
-    vm->register_count = 32;
+    vm->register_count = 64;
     vm->stack_size = 32;
 
     vm->registers = allocate_array<u64>(allocator, vm->register_count);
@@ -107,6 +107,29 @@ u64 vm_run(VM *vm)
                 u64 left_value = vm_get_register(vm, left_reg);
                 u64 right_value = vm_get_register(vm, right_reg);
                 vm_set_register(vm, dest_reg, left_value + right_value);
+                break;
+            }
+
+            case SSA_OP_DIV: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 left_reg = vm_fetch<u32>(block, &ip);
+                u32 right_reg = vm_fetch<u32>(block, &ip);
+
+                u64 left_value = vm_get_register(vm, left_reg);
+                u64 right_value = vm_get_register(vm, right_reg);
+                vm_set_register(vm, dest_reg, left_value / right_value);
+                break;
+            }
+
+            case SSA_OP_MEMCPY: {
+                u32 dest_ptr_reg = vm_fetch<u32>(block, &ip);
+                u32 src_ptr_reg = vm_fetch<u32>(block, &ip);
+                u32 size = vm_fetch<u32>(block, &ip);
+
+                auto dest = (void *)vm_get_register(vm, dest_ptr_reg);
+                auto src = (void *)vm_get_register(vm, src_ptr_reg);
+
+                memcpy(dest, src, size);
                 break;
             }
 
