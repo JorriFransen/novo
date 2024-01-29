@@ -23,10 +23,8 @@ enum SSA_Op : u8
 
     SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size]
 
-    SSA_OP_STORE_ALLOC, // STORE_ALLOC [32-bit alloc reg] [32-bit value reg]
     SSA_OP_STORE_PTR,   // STORE_PTR [32-bit ptr reg] [32-bit value reg]
 
-    SSA_OP_LOAD_ALLOC,  // LOAD_ALLOC [32-bit dest reg] [32-bit alloc reg]
     SSA_OP_LOAD_IM,     // LOAD_IM [32-bit dest reg] [64-bit immediate]
     SSA_OP_LOAD_PARAM,  // LOAD_PARAM [32-bit dest reg] [32-bit param index]
     SSA_OP_LOAD_PTR,    // LOAD_PTR [32-bit dest reg] [32-bit ptr_reg]
@@ -71,18 +69,6 @@ struct SSA_Program
     DArray<SSA_Function> functions;
 };
 
-enum SSA_LValue_Kind : u32
-{
-    SSA_LVALUE_LOCAL,
-    SSA_LVALUE_PTR,
-};
-
-struct SSA_LValue
-{
-    SSA_LValue_Kind kind;
-    u32 reg;
-};
-
 NAPI void ssa_program_init(SSA_Program *program, Allocator *allocator);
 NAPI void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 param_count);
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, Atom name);
@@ -93,7 +79,7 @@ NAPI bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index);
 NAPI u32 ssa_register_create(SSA_Function *function);
 
 NAPI void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Statement *stmt, Scope *scope);
-NAPI SSA_LValue ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Expression *lvalue_expr, Scope *scope);
+NAPI u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Expression *lvalue_expr, Scope *scope);
 NAPI s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Expression *expr, Scope *scope);
 
 NAPI void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 block_index, SSA_Op op);

@@ -119,30 +119,12 @@ u64 vm_run(VM *vm)
                 break;
             }
 
-            case SSA_OP_STORE_ALLOC: {
-                u32 alloc_reg = vm_fetch<u32>(block, &ip);
-                u32 value_reg = vm_fetch<u32>(block, &ip);
-
-                auto ptr = (u64 *)vm_get_register(vm, alloc_reg);
-                *ptr = vm_get_register(vm, value_reg);
-                break;
-            }
-
             case SSA_OP_STORE_PTR: {
                 u32 ptr_reg = vm_fetch<u32>(block, &ip);
                 u32 value_reg = vm_fetch<u32>(block, &ip);
 
                 auto ptr = (u64 *)vm_get_register(vm, ptr_reg);
                 *ptr = vm_get_register(vm, value_reg);
-                break;
-            }
-
-            case SSA_OP_LOAD_ALLOC: {
-                u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u32 alloc_reg = vm_fetch<u32>(block, &ip);
-
-                auto ptr = (u64 *)vm_get_register(vm, alloc_reg);
-                vm_set_register(vm, dest_reg, *ptr);
                 break;
             }
 
