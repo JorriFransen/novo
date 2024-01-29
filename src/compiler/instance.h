@@ -12,11 +12,14 @@
 
 namespace Novo {
 
+struct Parse_Task;
+struct Resolve_Task;
 struct Scope;
 struct Source_Pos;
 struct Source_Range;
-struct Task;
+struct SSA_Task;
 struct Type;
+struct Type_Task;
 
 struct Instance
 {
@@ -33,7 +36,11 @@ struct Instance
     Allocator ast_allocator;
     Allocator scope_allocator;
 
-    // DArray<Task> tasks;
+    DArray<Parse_Task> parse_tasks;
+    DArray<Resolve_Task> resolve_tasks;
+    DArray<Type_Task> type_tasks;
+    DArray<SSA_Task> ssa_tasks;
+
     Scope *global_scope;
 
     DArray<Type *> function_types;

@@ -46,13 +46,12 @@ compiler_source = [
   'src/compiler/lexer.cpp', 'src/compiler/lexer.h',
   'src/compiler/options.cpp', 'src/compiler/options.h',
   'src/compiler/parser.cpp', 'src/compiler/parser.h',
-  # 'src/compiler/resolver.cpp', 'src/compiler/resolver.h',
+  'src/compiler/resolver.cpp', 'src/compiler/resolver.h',
   'src/compiler/scope.cpp', 'src/compiler/scope.h',
-  # 'src/compiler/sizer.cpp', 'src/compiler/sizer.h',
   'src/compiler/source_pos.cpp', 'src/compiler/source_pos.h',
-  # 'src/compiler/task.cpp', 'src/compiler/task.h',
+  'src/compiler/task.cpp', 'src/compiler/task.h',
   'src/compiler/type.cpp', 'src/compiler/type.h',
-  # 'src/compiler/typer.cpp', 'src/compiler/typer.h',
+  'src/compiler/typer.cpp', 'src/compiler/typer.h',
   'src/compiler/vm.cpp', 'src/compiler/vm.h',
 ]
 

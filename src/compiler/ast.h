@@ -62,8 +62,7 @@ enum AST_Declaration_Flag : AST_Declaration_Flags
     AST_DECL_FLAG_PARAM = 0x01,
 
     AST_DECL_FLAG_RESOLVED = 0x02,
-    AST_DECL_FLAG_SIZED    = 0x04,
-    AST_DECL_FLAG_TYPED    = 0x08,
+    AST_DECL_FLAG_TYPED    = 0x04,
     // Last = 0x80000000
 };
 
@@ -93,6 +92,7 @@ struct AST_Declaration
             AST_Type_Spec *return_ts;
             DArray<AST_Statement *> body;
             DArray<AST_Declaration *> variables;
+            DArray<AST_Node> wait_for_bytecode;
 
             Scope *scope;
 
@@ -119,9 +119,7 @@ enum AST_Statement_Flag
 {
     AST_STMT_FLAG_NONE = 0x00,
     AST_STMT_FLAG_RESOLVED = 0x01,
-    AST_STMT_FLAG_SIZED    = 0x02,
-    AST_STMT_FLAG_TYPED    = 0x04,
-
+    AST_STMT_FLAG_TYPED    = 0x02,
 };
 
 struct AST_Statement
@@ -165,8 +163,7 @@ enum AST_Expression_Flag
 {
     AST_EXPR_FLAG_NONE     = 0x00,
     AST_EXPR_FLAG_RESOLVED = 0x01,
-    AST_EXPR_FLAG_SIZED    = 0x02,
-    AST_EXPR_FLAG_TYPED    = 0x04,
+    AST_EXPR_FLAG_TYPED    = 0x02,
 };
 
 struct AST_Expression
@@ -207,15 +204,25 @@ struct AST_Expression
     u32 range_id;
 };
 
-enum class AST_Type_Spec_Kind
+enum class AST_Type_Spec_Kind : u32
 {
     INVALID,
     IDENTIFIER,
 };
 
+typedef u32 AST_Type_Spec_Flags;
+enum AST_Type_Spec_Flag
+{
+    AST_TS_FLAG_NONE     = 0x00,
+    AST_TS_FLAG_RESOLVED = 0x01,
+    AST_TS_FLAG_TYPED    = 0x02,
+};
+
 struct AST_Type_Spec
 {
     AST_Type_Spec_Kind kind;
+    AST_Type_Spec_Flags flags;
+
     Type *resolved_type;
 
     union {

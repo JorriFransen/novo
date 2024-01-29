@@ -80,6 +80,19 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
     return true;
 }
 
+bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index)
+{
+    bool found = false;
+    for (s64 i = 0; i < program->functions.count; i++) {
+        if (program->functions[i].name == atom) {
+            found = true;
+            if (index) *index = i;
+            break;
+        }
+    }
+    return found;
+}
+
 u32 ssa_register_create(SSA_Function *function)
 {
     assert(function->register_count != U32_MAX);
@@ -264,15 +277,8 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
             assert(expr->call.base->kind == AST_Expression_Kind::IDENTIFIER);
             auto name = expr->call.base->identifier->atom;
 
-            bool found = false;
             u32 fn_index;
-            for (s64 i = 0; i < program->functions.count; i++) {
-                if (program->functions[i].name == name) {
-                    found = true;
-                    fn_index = i;
-                    break;
-                }
-            }
+            bool found = ssa_find_function(program, name, &fn_index);
             assert(found);
 
             for (s64 i = 0; i < expr->call.args.count; i++) {

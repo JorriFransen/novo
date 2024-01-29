@@ -90,6 +90,7 @@ AST_Declaration *ast_function_declaration(Instance *instance, AST_Identifier *id
     result->function.return_ts = return_ts;
     result->function.scope = scope;
     darray_init(&instance->ast_allocator, &result->function.variables, 0);
+    darray_init(&instance->ast_allocator, &result->function.wait_for_bytecode, 0);
 
     if (param_decls.count) {
         auto start = source_range_start(instance, param_decls[0]->range_id);
@@ -231,6 +232,7 @@ AST_Type_Spec *ast_type_spec(Instance *instance, AST_Type_Spec_Kind kind, u32 ra
 {
     auto result = allocate<AST_Type_Spec>(&instance->ast_allocator);
     result->kind = kind;
+    result->flags = AST_TS_FLAG_NONE;
     result->resolved_type = nullptr;
     result->range_id = range_id;
     return result;

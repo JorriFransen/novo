@@ -4,11 +4,16 @@
 #include <logger.h>
 
 #include "ast.h"
+#include "ast_print.h"
 #include "atom.h"
 #include "keywords.h"
+#include "parser.h"
+#include "resolver.h"
 #include "scope.h"
 #include "source_pos.h"
+#include "task.h"
 #include "type.h"
+#include "typer.h"
 
 #include <cassert>
 #include <cstdio>
@@ -37,7 +42,10 @@ void instance_init(Instance *inst, Options options)
     inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(16));
     inst->scope_allocator = inst->ast_allocator;
 
-    // darray_init(default_alloc, &inst->tasks);
+    darray_init(default_alloc, &inst->parse_tasks);
+    darray_init(default_alloc, &inst->resolve_tasks);
+    darray_init(default_alloc, &inst->type_tasks);
+    darray_init(default_alloc, &inst->ssa_tasks);
 
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
@@ -93,7 +101,111 @@ bool instance_start(Instance *inst)
         first_file_path = string_copy(inst->default_allocator, first_file_name);
     }
 
-    assert(false);
+    add_parse_task(inst, first_file_name);
+
+    bool progress = true;
+
+    while (progress) {
+
+        progress = false;
+
+        for (s64 i = 0; i < inst->parse_tasks.count; i++) {
+            Parse_Task task = inst->parse_tasks[i];
+
+            AST_File *parsed_file = parse_file(inst, task.file_name);
+            if (parsed_file)
+            {
+                darray_remove_unordered(&inst->parse_tasks, i);
+                i--;
+
+            } else {
+                assert(false); // Parser should have exited with a fatal error
+            }
+
+            progress = true;
+
+            if (inst->options.print_ast) {
+                String ast_str = ast_to_string(inst, parsed_file, &inst->temp_allocator);
+                printf("\n%s\n", ast_str.data);
+            }
+
+            add_resolve_tasks(inst, parsed_file, inst->global_scope);
+        }
+
+        for (s64 i = 0; i < inst->resolve_tasks.count; i++) {
+            Resolve_Task task = inst->resolve_tasks[i];
+
+            bool success = resolve_node(inst, &task, &task.node, task.scope);
+
+            if (success) {
+                progress = true;
+
+                darray_remove_unordered(&inst->resolve_tasks, i);
+                i--;
+
+                add_type_task(inst, task.node, task.scope);
+            }
+        }
+
+        for (s64 i = 0; i < inst->type_tasks.count; i++) {
+            Type_Task task = inst->type_tasks[i];
+
+            bool success = type_node(inst, &task.node, task.scope);
+
+            if (success) {
+                progress = true;
+
+                darray_remove_unordered(&inst->type_tasks, i);
+                i--;
+
+                if (task.node.kind == AST_Node_Kind::DECLARATION &&
+                    task.node.declaration->kind == AST_Declaration_Kind::FUNCTION) {
+
+                    add_ssa_task(inst, task.node);
+
+                }
+            }
+        }
+
+        for (s64 i = 0; i < inst->ssa_tasks.count; i++) {
+            SSA_Task task = inst->ssa_tasks[i];
+
+            bool success;
+
+            auto wait_for = &task.func_decl->function.wait_for_bytecode;
+            for (s64 i = 0; i < wait_for->count; i++) {
+                auto wait_node = (*wait_for)[i];
+                assert(wait_node.kind == AST_Node_Kind::DECLARATION);
+                auto decl = wait_node.declaration;
+                assert(decl->kind = AST_Declaration_Kind::FUNCTION);
+                assert(decl->ident);
+
+                if (ssa_find_function(&inst->ssa_program, decl->ident->atom, nullptr)) {
+                    darray_remove_ordered(wait_for, i);
+                    i--;
+                }
+            }
+
+            success = wait_for->count == 0;
+
+            if (success) {
+
+                success = ssa_emit_function(&inst->ssa_program, task.func_decl);
+                assert(success);
+
+                progress = true;
+
+                darray_remove_unordered(&inst->ssa_tasks, i);
+                i--;
+            }
+        }
+    }
+
+    bool all_done = inst->parse_tasks.count == 0 && inst->resolve_tasks.count == 0;
+
+    if (!progress && !all_done) {
+        assert(false); // report errors
+    }
 
     return true;
 }
