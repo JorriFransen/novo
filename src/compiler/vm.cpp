@@ -128,6 +128,15 @@ u64 vm_run(VM *vm)
                 break;
             }
 
+            case SSA_OP_STORE_PTR: {
+                u32 ptr_reg = vm_fetch<u32>(block, &ip);
+                u32 value_reg = vm_fetch<u32>(block, &ip);
+
+                auto ptr = (u64 *)vm_get_register(vm, ptr_reg);
+                *ptr = vm_get_register(vm, value_reg);
+                break;
+            }
+
             case SSA_OP_LOAD_ALLOC: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 alloc_reg = vm_fetch<u32>(block, &ip);
@@ -152,6 +161,29 @@ u64 vm_run(VM *vm)
                 u64 value = vm->stack[vm->bp - fn->param_count + param_index];
 
                 vm_set_register(vm, dest_reg, value);
+                break;
+            }
+
+            case SSA_OP_LOAD_PTR: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 ptr_reg = vm_fetch<u32>(block, &ip);
+
+                u64 *ptr = (u64 *)vm_get_register(vm, ptr_reg);
+                vm_set_register(vm, dest_reg, *ptr);
+                break;
+            }
+
+            case SSA_OP_STRUCT_OFFSET: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 ptr_reg = vm_fetch<u32>(block, &ip);
+                u32 offset = vm_fetch<u32>(block, &ip);
+                /*u16 index =*/ vm_fetch<u16>(block, &ip);
+
+                u8 *ptr = (u8 *)vm_get_register(vm, ptr_reg);
+
+                u8 *result = ptr + offset;
+
+                vm_set_register(vm, dest_reg, (u64)result);
                 break;
             }
 

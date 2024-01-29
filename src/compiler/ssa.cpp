@@ -145,10 +145,17 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
 
                 case SSA_LVALUE_LOCAL: {
                     ssa_emit_op(program, func, block_index, SSA_OP_STORE_ALLOC);
-                    ssa_emit_32(program, func, block_index, lvalue.reg);
-                    ssa_emit_32(program, func, block_index, rvalue);
+                    break;
+                }
+
+                case SSA_LVALUE_PTR: {
+                    ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
+                    break;
                 }
             }
+
+            ssa_emit_32(program, func, block_index, lvalue.reg);
+            ssa_emit_32(program, func, block_index, rvalue);
             break;
         }
 
@@ -202,7 +209,39 @@ SSA_LValue ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_i
         }
 
         case AST_Expression_Kind::BINARY: assert(false); break;
-        case AST_Expression_Kind::MEMBER: assert(false); break;
+
+        case AST_Expression_Kind::MEMBER: {
+            auto base_lvalue = ssa_emit_lvalue(program, func, block_index, lvalue_expr->member.base, scope);
+
+            u32 result_reg = ssa_register_create(func);
+            ssa_emit_op(program, func, block_index, SSA_OP_STRUCT_OFFSET);
+            ssa_emit_32(program, func, block_index, result_reg);
+            ssa_emit_32(program, func, block_index, base_lvalue.reg);
+
+
+            auto field = lvalue_expr->member.member_name->decl;
+            assert(field);
+            assert(field->kind == AST_Declaration_Kind::STRUCT_MEMBER);
+
+            auto index = field->variable.index;
+            assert(index >= 0 && index < U16_MAX);
+
+
+            Type *struct_type = lvalue_expr->member.base->resolved_type;
+            assert(struct_type->kind == Type_Kind::STRUCT);
+
+            auto offset = struct_type->structure.members[index].offset;
+            assert(offset % 8 == 0);
+            offset = offset / 8;
+            assert(offset >= 0 && offset < U32_MAX);
+
+
+            ssa_emit_32(program, func, block_index, (u32)offset);
+            ssa_emit_16(program, func, block_index, (u16)index);
+
+            return { SSA_LVALUE_PTR, result_reg };
+        }
+
         case AST_Expression_Kind::CALL: assert(false); break;
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
@@ -240,13 +279,23 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
             } else {
 
                 auto lvalue = ssa_emit_lvalue(program, func, block_index, expr, scope);
-                assert(lvalue.kind == SSA_LVALUE_LOCAL);
-
-                ssa_emit_op(program, func, block_index, SSA_OP_LOAD_ALLOC);
 
                 result = ssa_register_create(func);
-                ssa_emit_32(program, func, block_index, result);
 
+                switch (lvalue.kind) {
+
+                    case SSA_LVALUE_LOCAL: {
+                        ssa_emit_op(program, func, block_index, SSA_OP_LOAD_ALLOC);
+                        break;
+                    }
+
+                    case SSA_LVALUE_PTR: {
+                        ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
+                        break;
+                    }
+                }
+
+                ssa_emit_32(program, func, block_index, result);
                 ssa_emit_32(program, func, block_index, lvalue.reg);
             }
             break;
@@ -270,9 +319,13 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
         }
 
         case AST_Expression_Kind::MEMBER: {
-            u32 base = ssa_emit_expression(program, func, block_index, expr->member.base, scope);
-            assert(base);
-            assert(false);
+            auto lvalue = ssa_emit_lvalue(program, func, block_index, expr, scope);
+            assert(lvalue.kind == SSA_LVALUE_PTR);
+
+            result = ssa_register_create(func);
+            ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
+            ssa_emit_32(program, func, block_index, result);
+            ssa_emit_32(program, func, block_index, lvalue.reg);
             break;
         }
 
@@ -328,6 +381,22 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
 void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 block_index, SSA_Op op)
 {
     darray_append(&func->blocks[block_index].bytes, (u8)op);
+}
+
+void ssa_emit_8(SSA_Program *program, SSA_Function *func, s64 block_index, u8 value)
+{
+    auto bytes = &func->blocks[block_index].bytes;
+
+    darray_append(bytes, value);
+}
+
+void ssa_emit_16(SSA_Program *program, SSA_Function *func, s64 block_index, u16 value)
+{
+    auto bytes = &func->blocks[block_index].bytes;
+
+    // Little endian
+    darray_append(bytes, (u8)(value & 0xFF));
+    darray_append(bytes, (u8)((value >> 8) & 0xFF));
 }
 
 void ssa_emit_32(SSA_Program *program, SSA_Function *func, s64 block_index, u32 value)
@@ -440,6 +509,17 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, s64 ip, Arra
             break;
         }
 
+        case SSA_OP_STORE_PTR: {
+            u32 ptr_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 value_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  STORE_PTR %%%u %%%u\n", ptr_reg, value_reg);
+            break;
+        }
+
         case SSA_OP_LOAD_ALLOC: {
             u32 dest_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
@@ -471,6 +551,34 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, s64 ip, Arra
             ip += sizeof(u32);
 
             string_builder_append(sb, "  %%%u = LOAD_PARAM %u\n", dest_reg, index);
+            break;
+        }
+
+        case SSA_OP_LOAD_PTR: {
+            u32 dest_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 ptr_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = LOAD_PTR %%%u\n", dest_reg, ptr_reg);
+            break;
+        }
+
+        case SSA_OP_STRUCT_OFFSET: {
+            u32 dest_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 ptr_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 offset = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u16 index = *(u16 *)&bytes[ip];
+            ip += sizeof(u16);
+
+            string_builder_append(sb, "  %%%u = STRUCT_OFFSET %%%u %u %hu\n", dest_reg, ptr_reg, offset, index);
             break;
         }
 

@@ -19,21 +19,25 @@ enum SSA_Op : u8
 {
     SSA_OP_NOP,
 
-    SSA_OP_ADD, // ADD [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_ADD,         // ADD [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
-    SSA_OP_ALLOC, // ALLOC [32-bit dest reg] [32-bit size]
+    SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size]
 
     SSA_OP_STORE_ALLOC, // STORE_ALLOC [32-bit alloc reg] [32-bit value reg]
+    SSA_OP_STORE_PTR,   // STORE_PTR [32-bit ptr reg] [32-bit value reg]
 
-    SSA_OP_LOAD_ALLOC, // LOAD_ALLOC [32-bit dest reg] [32-bit alloc reg]
-    SSA_OP_LOAD_IM, // LOAD_IM [32-bit dest reg] [64-bit immediate]
-    SSA_OP_LOAD_PARAM, // LOAD_PARAM [32-bit dest_reg] [32-bit param index]
+    SSA_OP_LOAD_ALLOC,  // LOAD_ALLOC [32-bit dest reg] [32-bit alloc reg]
+    SSA_OP_LOAD_IM,     // LOAD_IM [32-bit dest reg] [64-bit immediate]
+    SSA_OP_LOAD_PARAM,  // LOAD_PARAM [32-bit dest reg] [32-bit param index]
+    SSA_OP_LOAD_PTR,    // LOAD_PTR [32-bit dest reg] [32-bit ptr_reg]
 
-    SSA_OP_PUSH, // PUSH [32-bit value reg]
-    SSA_OP_POP_N, // POP_N [32-bit count]
+    SSA_OP_STRUCT_OFFSET, // STRUCT_OFFSET [32-bit dest reg] [32-bit base ptr reg] [32-bit offset] [16-bit index]
 
-    SSA_OP_CALL, // CALL [32-bit dest reg] [32-bit function index]
-    SSA_OP_RET, // RET [32-bit value reg]
+    SSA_OP_PUSH,        // PUSH [32-bit value reg]
+    SSA_OP_POP_N,       // POP_N [32-bit count]
+
+    SSA_OP_CALL,        // CALL [32-bit dest reg] [32-bit function index]
+    SSA_OP_RET,         // RET [32-bit value reg]
 };
 
 struct SSA_Block
@@ -70,6 +74,7 @@ struct SSA_Program
 enum SSA_LValue_Kind : u32
 {
     SSA_LVALUE_LOCAL,
+    SSA_LVALUE_PTR,
 };
 
 struct SSA_LValue
@@ -92,6 +97,8 @@ NAPI SSA_LValue ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 bl
 NAPI s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Expression *expr, Scope *scope);
 
 NAPI void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 block_index, SSA_Op op);
+NAPI void ssa_emit_8(SSA_Program *program, SSA_Function *func, s64 block_index, u8 value);
+NAPI void ssa_emit_16(SSA_Program *program, SSA_Function *func, s64 block_index, u16 value);
 NAPI void ssa_emit_32(SSA_Program *program, SSA_Function *func, s64 block_index, u32 value);
 NAPI void ssa_emit_64(SSA_Program *program, SSA_Function *func, s64 block_index, u64 value);
 

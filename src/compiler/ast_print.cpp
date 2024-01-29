@@ -128,12 +128,20 @@ static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Decla
         }
 
         case AST_Declaration_Kind::STRUCT_MEMBER: {
-            assert(false);
+            string_builder_append(sb, "STRUCT_MEMBER: '%s'\n", name.data);
+            assert(decl->variable.type_spec);
+            ast_ts_to_string(instance, sb, decl->variable.type_spec, indent + 1);
+            if (decl->variable.init_expr) {
+                ast_expr_to_string(instance, sb, decl->variable.init_expr, indent + 1);
+            }
             break;
         };
 
         case AST_Declaration_Kind::STRUCT: {
-            assert(false);
+            string_builder_append(sb, "STRUCT_DECL: '%s'\n", name.data);
+            for (s64 i = 0; i < decl->structure.fields.count; i++) {
+                ast_decl_to_string(instance, sb, decl->structure.fields[i], indent + 1);
+            }
             break;
         };
 

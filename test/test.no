@@ -14,15 +14,16 @@ main :: () -> s64 {
     // return add(11, 22) + add(1, 2);
 
     p : Vec;
+    p.x = 11;
+    p.y = 02;
+    p.z = 20;
 
-    return p.y;
-
-    return 42;
+    return add(add(p.x, p.y), p.z);
 }
 
-// add :: (a: s64, b: s64) -> s64 {
-//     result : s64;
-//     result = a + b;
-//     return result;
-//     // return a + b;
-// }
+add :: (a: s64, b: s64) -> s64 {
+    result : s64;
+    result = a + b;
+    return result;
+    // return a + b;
+}
