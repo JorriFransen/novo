@@ -297,7 +297,11 @@ bool type_type_spec(Instance *inst, AST_Type_Spec *ts, Scope *scope)
         case AST_Type_Spec_Kind::IDENTIFIER: {
             auto decl = ts->identifier->decl;
             assert(decl);
-            assert(decl->resolved_type);
+
+            if (!decl->resolved_type) {
+                return false;
+            }
+
             ts->resolved_type = decl->resolved_type;
             break;
         }

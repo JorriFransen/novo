@@ -4,7 +4,11 @@
 Vec :: struct {
     x: s64;
     y: s64;
-    z: s64;
+}
+
+AABB :: struct {
+    pos: Vec;
+    size: Vec;
 }
 
 main :: () -> s64 {
@@ -15,18 +19,15 @@ main :: () -> s64 {
 
     p : Vec;
     p.x = 11;
-    p.y = 02;
-    p.z = 20;
+    p.y = 22;
 
-    p2 := p;
-    p2 = p;
+    r : AABB;
+    r.pos = p;
+    // p.x = 22;
+    // p.y = 11;
+    // r.size = p;
 
-    p2.x = p2.z / 2;
-    p2.y = p2.y + 1;
-
-    // return vec_y(p);
-
-    return add(add(p.x, p.y), p.z) + add(add(p2.x, p2.y), p2.z);
+    return add(add(r.pos.x, r.pos.y), add(r.size.x, r.size.y));
 }
 
 // vec_y :: (v: Vec) -> s64 {
