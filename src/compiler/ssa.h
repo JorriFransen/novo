@@ -79,6 +79,7 @@ NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *bl
 
 NAPI bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl);
 NAPI bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index);
+NAPI bool ssa_find_local(SSA_Function *func, AST_Declaration *decl, u32 *result);
 NAPI u32 ssa_register_create(SSA_Function *function);
 
 NAPI void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Statement *stmt, Scope *scope);

@@ -135,8 +135,15 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
         }
 
         case AST_Statement_Kind::ASSIGNMENT: {
-            if (!resolve_expression(inst, task, stmt->assignment.lvalue, scope)) {
+            AST_Expression *lvalue = stmt->assignment.lvalue;
+
+            if (!resolve_expression(inst, task, lvalue, scope)) {
                 return false;
+            }
+
+            if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
+                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE) {
+                lvalue->identifier->decl->flags |= AST_DECL_FLAG_STORAGE_REQUIRED;
             }
 
             if (!resolve_expression(inst, task, stmt->assignment.rvalue, scope)) {

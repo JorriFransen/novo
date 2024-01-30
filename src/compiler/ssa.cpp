@@ -53,15 +53,18 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
     for (s64 i = 0; i < decl->function.params.count; i++) {
 
         auto param_decl = decl->function.params[i];
-        assert(param_decl->resolved_type->bit_size % 8 == 0);
-        auto byte_size = param_decl->resolved_type->bit_size / 8;
 
-        ssa_emit_op(program, &func, 0, SSA_OP_ALLOC);
-        u32 dest_reg = ssa_register_create(&func);
-        ssa_emit_32(program, &func, 0, dest_reg);
-        ssa_emit_32(program, &func, 0, byte_size);
+        if (param_decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
+            assert(param_decl->resolved_type->bit_size % 8 == 0);
+            auto byte_size = param_decl->resolved_type->bit_size / 8;
 
-        darray_append(&func.variables, { param_decl, dest_reg });
+            ssa_emit_op(program, &func, 0, SSA_OP_ALLOC);
+            u32 dest_reg = ssa_register_create(&func);
+            ssa_emit_32(program, &func, 0, dest_reg);
+            ssa_emit_32(program, &func, 0, byte_size);
+
+            darray_append(&func.variables, { param_decl, dest_reg });
+        }
     }
 
     // Emit storage for local variables
@@ -80,16 +83,21 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
     }
 
     // Copy parameters into local storage
+    u32 param_storage_index = 0;
     for (s64 i = 0; i < decl->function.params.count; i++) {
-        u32 val_reg = ssa_register_create(&func);
-        ssa_emit_op(program, &func, 0, SSA_OP_LOAD_PARAM);
-        ssa_emit_32(program, &func, 0, val_reg);
-        assert(i <= U32_MAX);
-        ssa_emit_32(program, &func, 0, i);
+        AST_Declaration *param_decl = decl->function.params[i];
 
-        ssa_emit_op(program, &func, 0, SSA_OP_STORE_PTR);
-        ssa_emit_32(program, &func, 0, func.variables[i].alloc_reg);
-        ssa_emit_32(program, &func, 0, val_reg);
+        if (param_decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
+            u32 val_reg = ssa_register_create(&func);
+            ssa_emit_op(program, &func, 0, SSA_OP_LOAD_PARAM);
+            ssa_emit_32(program, &func, 0, val_reg);
+            assert(i <= U32_MAX);
+            ssa_emit_32(program, &func, 0, i);
+
+            ssa_emit_op(program, &func, 0, SSA_OP_STORE_PTR);
+            ssa_emit_32(program, &func, 0, param_storage_index++);
+            ssa_emit_32(program, &func, 0, val_reg);
+        }
     }
 
     // Emit the body
@@ -121,6 +129,20 @@ bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index)
     return found;
 }
 
+bool ssa_find_local(SSA_Function *func, AST_Declaration *decl, u32 *result)
+{
+    assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+
+    for (s64 i = 0; i < func->variables.count; i++) {
+        if (func->variables[i].decl == decl) {
+            *result = func->variables[i].alloc_reg;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 u32 ssa_register_create(SSA_Function *function)
 {
     assert(function->register_count != U32_MAX);
@@ -141,14 +163,7 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
                 if (init_expr) {
 
                     u32 alloc_reg;
-                    bool found = false;
-                    for (s64 i = 0; i < func->variables.count; i++) {
-                        if (func->variables[i].decl == stmt->declaration) {
-                            alloc_reg = func->variables[i].alloc_reg;
-                            found = true;
-                            break;
-                        }
-                    }
+                    bool found = ssa_find_local(func, stmt->declaration, &alloc_reg);
                     assert(found);
 
                     switch (init_expr->resolved_type->kind) {
@@ -258,26 +273,14 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, A
             assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
             if (decl->flags & AST_DECL_FLAG_PARAM) {
-
-                // Consider allowing this for loads
-                assert(false && "Copy arguments into locals if we want to modify them...");
-
-            } else {
-
-                u32 alloc_reg;
-                bool found = false;
-                for (s64 i = 0; i < func->variables.count; i++) {
-                    if (func->variables[i].decl == decl) {
-                        alloc_reg = func->variables[i].alloc_reg;
-                        found = true;
-                        break;
-                    }
-                }
-                assert(found);
-
-                return alloc_reg;
+                assert(decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED);
             }
-            break;
+
+            u32 alloc_reg;
+            bool found = ssa_find_local(func, decl, &alloc_reg);
+            assert(found);
+
+            return alloc_reg;
         }
 
         case AST_Expression_Kind::BINARY: assert(false); break;
@@ -339,11 +342,25 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
 
             if (decl->flags & AST_DECL_FLAG_PARAM) {
 
-                assert(decl->variable.index >= 0 && decl->variable.index < func->param_count);
-                result = ssa_register_create(func);
-                ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
-                ssa_emit_32(program, func, block_index, result);
-                ssa_emit_32(program, func, block_index, func->variables[decl->variable.index].alloc_reg);
+                if (decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
+
+                    assert(decl->variable.index >= 0 && decl->variable.index < func->param_count);
+                    result = ssa_register_create(func);
+                    ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
+                    ssa_emit_32(program, func, block_index, result);
+
+                    u32 alloc_reg;
+                    bool found = ssa_find_local(func, decl, &alloc_reg);
+                    assert(found);
+
+                    ssa_emit_32(program, func, block_index, alloc_reg);
+                } else {
+
+                    result = ssa_register_create(func);
+                    ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
+                    ssa_emit_32(program, func, block_index, result);
+                    ssa_emit_32(program, func, block_index, decl->variable.index);
+                }
 
             } else {
 
