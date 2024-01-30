@@ -24,12 +24,18 @@ main :: () -> s64 {
     p2.x = p2.z / 2;
     p2.y = p2.y + 1;
 
+    // return vec_y(p);
+
     return add(add(p.x, p.y), p.z) + add(add(p2.x, p2.y), p2.z);
 }
 
+// vec_y :: (v: Vec) -> s64 {
+//     return v.y;
+// }
+
 add :: (a: s64, b: s64) -> s64 {
-    result : s64;
-    result = a + b;
-    return result;
-    // return a + b;
+    // result : s64;
+    // result = a + b;
+    // return result;
+    return a + b;
 }
