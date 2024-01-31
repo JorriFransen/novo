@@ -59,6 +59,8 @@ struct SSA_Function
 
     // TODO: Use hash table if this gets too big?
     DArray<SSA_Alloc> allocs;
+
+    bool sret;
 };
 
 struct SSA_Program
@@ -70,7 +72,7 @@ struct SSA_Program
 };
 
 NAPI void ssa_program_init(SSA_Program *program, Allocator *allocator);
-NAPI void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 param_count);
+NAPI void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 param_count, bool sret);
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, Atom name);
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, const char *name);
 

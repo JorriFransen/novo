@@ -184,7 +184,13 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             break;
         }
 
-        case AST_Statement_Kind::CALL: assert(false); break;
+        case AST_Statement_Kind::CALL: {
+            if (!type_expression(inst, task, stmt->call, scope)) {
+                return false;
+            }
+
+            break;
+        }
 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
@@ -301,6 +307,11 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
                 if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT) {
                     darray_append(&task->fn_decl->function.temp_structs, expr->call.args[i]);
                 }
+            }
+
+            if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+                assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
+                darray_append(&task->fn_decl->function.temp_structs, expr);
             }
             break;
         }

@@ -13,6 +13,8 @@ vec :: (x: s64, y: s64) -> Vec {
 
 main :: () -> s64 {
 
-    return vec(11, 22).y;
+    p := vec(11, 22);
+
+    return p.x + p.y;
 }
 

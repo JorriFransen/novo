@@ -161,7 +161,13 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
             break;
         }
 
-        case AST_Statement_Kind::CALL: assert(false); break;
+        case AST_Statement_Kind::CALL: {
+            if (!resolve_expression(inst, task, stmt->call, scope)) {
+                return false;
+            }
+
+            break;
+        }
 
         case AST_Statement_Kind::RETURN: {
 

@@ -22,7 +22,7 @@ void ssa_program_init(SSA_Program *program, Allocator *allocator)
     darray_init(allocator, &program->functions);
 }
 
-void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 param_count)
+void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 param_count, bool sret)
 {
     func->name = name;
     func->register_count = 0;
@@ -33,6 +33,9 @@ void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 
     SSA_Block first_block;
     ssa_block_init(program, func, &first_block, "entry");
     darray_append(&func->blocks, first_block);
+
+    func->sret = sret;
+    if (sret) func->param_count++;
 }
 
 void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, Atom name)
@@ -51,7 +54,9 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
     SSA_Function func;
     assert(decl->ident);
 
-    ssa_function_init(program, &func, decl->ident->atom, decl->function.params.count);
+    bool sret = decl->resolved_type->function.return_type->kind == Type_Kind::STRUCT;
+
+    ssa_function_init(program, &func, decl->ident->atom, decl->function.params.count, sret);
 
     auto scope = decl->function.scope;
 
@@ -114,7 +119,10 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
             ssa_emit_op(program, &func, 0, SSA_OP_LOAD_PARAM);
             ssa_emit_32(program, &func, 0, val_reg);
             assert(i <= U32_MAX);
-            ssa_emit_32(program, &func, 0, i);
+
+            u32 param_index = i;
+            if (sret) param_index++;
+            ssa_emit_32(program, &func, 0, param_index);
 
             ssa_emit_op(program, &func, 0, SSA_OP_STORE_PTR);
             ssa_emit_32(program, &func, 0, param_storage_index++);
@@ -278,14 +286,41 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
             break;
         }
 
-        case AST_Statement_Kind::CALL: assert(false); break;
+        case AST_Statement_Kind::CALL: {
+            ssa_emit_expression(program, func, block_index, stmt->call, scope);
+            break;
+        }
 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
-                u32 value_reg = ssa_emit_expression(program, func, block_index, stmt->return_expr, scope);
+                if (func->sret) {
+                    u32 src_ptr_reg = ssa_emit_lvalue(program, func, block_index, stmt->return_expr, scope);
 
-                ssa_emit_op(program, func, block_index, SSA_OP_RET);
-                ssa_emit_32(program, func, block_index, value_reg);
+                    u32 dest_ptr_reg = ssa_register_create(func);
+                    ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
+                    ssa_emit_32(program, func, block_index, dest_ptr_reg);
+                    ssa_emit_32(program, func, block_index, 0);
+
+                    ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
+                    ssa_emit_32(program, func, block_index, dest_ptr_reg);
+                    ssa_emit_32(program, func, block_index, src_ptr_reg);
+
+                    s64 size = stmt->return_expr->resolved_type->bit_size;
+                    assert(size % 8 == 0);
+                    size /= 8;
+                    assert(size >= 0 && size < U32_MAX);
+
+                    ssa_emit_32(program, func, block_index, size);
+
+                    ssa_emit_op(program, func, block_index, SSA_OP_RET);
+                    ssa_emit_32(program, func, block_index, dest_ptr_reg);
+
+                } else {
+                    u32 value_reg = ssa_emit_expression(program, func, block_index, stmt->return_expr, scope);
+
+                    ssa_emit_op(program, func, block_index, SSA_OP_RET);
+                    ssa_emit_32(program, func, block_index, value_reg);
+                }
 
             } else {
                 assert(false);
@@ -320,7 +355,10 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, A
                 ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
                 u32 result_reg = ssa_register_create(func);
                 ssa_emit_32(program, func, block_index, result_reg);
-                ssa_emit_32(program, func, block_index, decl->variable.index);
+
+                u32 param_index = decl->variable.index;
+                if (func->sret) param_index++;
+                ssa_emit_32(program, func, block_index, param_index);
                 return result_reg;
             } else {
 
@@ -366,7 +404,12 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, A
             return result_reg;
         }
 
-        case AST_Expression_Kind::CALL: assert(false); break;
+        case AST_Expression_Kind::CALL: {
+            assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
+
+            return ssa_emit_expression(program, func, block_index, lvalue_expr, scope);
+        }
+
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
@@ -408,7 +451,10 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
                     result = ssa_register_create(func);
                     ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
                     ssa_emit_32(program, func, block_index, result);
-                    ssa_emit_32(program, func, block_index, decl->variable.index);
+
+                    u32 param_index = decl->variable.index;
+                    if (func->sret) param_index++;
+                    ssa_emit_32(program, func, block_index, param_index);
                 }
 
             } else {
@@ -471,6 +517,17 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
             bool found = ssa_find_function(program, name, &fn_index);
             assert(found);
 
+            bool sret = program->functions[fn_index].sret;
+
+            u32 sret_reg;
+            if (sret) {
+                bool found = ssa_find_alloc(func, expr, &sret_reg);
+                assert(found);
+
+                ssa_emit_op(program, func, block_index, SSA_OP_PUSH);
+                ssa_emit_32(program, func, block_index, sret_reg);
+            }
+
             for (s64 i = 0; i < expr->call.args.count; i++) {
                 AST_Expression *arg_expr = expr->call.args[i];
                 u32 arg_reg;
@@ -508,7 +565,14 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
             ssa_emit_32(program, func, block_index, fn_index);
 
             ssa_emit_op(program, func, block_index, SSA_OP_POP_N);
-            ssa_emit_32(program, func, block_index, expr->call.args.count);
+
+            u32 arg_pop_count = expr->call.args.count;
+            if (sret) arg_pop_count++;
+            ssa_emit_32(program, func, block_index, arg_pop_count);
+
+            if (sret) {
+                result = sret_reg;
+            }
             break;
         }
 

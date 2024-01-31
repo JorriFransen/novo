@@ -1,13 +1,11 @@
 
-// #import "another.no"
-
 Vec :: struct {
     x: s64;
     y: s64;
 }
 
 vec :: (x: s64, y: s64) -> Vec {
-    result : Vec;
+    result: Vec;
     result.x = x;
     result.y = y;
     return result;
@@ -17,7 +15,6 @@ vec_add :: (a: Vec, b: Vec) -> Vec {
     result: Vec;
     result.x = a.x + b.x;
     result.y = a.y + b.y;
-
     return result;
 }
 
