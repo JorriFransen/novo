@@ -176,6 +176,7 @@ enum class AST_Expression_Kind : u32
     INTEGER_LITERAL,
     REAL_LITERAL,
     CHAR_LITERAL,
+    BOOL_LITERAL,
     STRING_LITERAL,
 };
 
@@ -219,6 +220,7 @@ struct AST_Expression
         u64 integer_literal;
         Real_Value real_literal;
         char char_literal;
+        bool bool_literal;
         Atom string_literal;
     };
 
@@ -294,6 +296,7 @@ NAPI AST_Expression *ast_call_expression(Instance *instance, AST_Expression *bas
 NAPI AST_Expression *ast_integer_literal_expression(Instance *instance, u64 i, u32 range_id);
 NAPI AST_Expression *ast_real_literal_expression(Instance *instance, Real_Value rv, u32 range_id);
 NAPI AST_Expression *ast_char_literal_expression(Instance *instance, char c, u32 range_id);
+NAPI AST_Expression *ast_bool_literal_expression(Instance *instance, bool b, u32 range_id);
 NAPI AST_Expression *ast_string_literal_expression(Instance *instance, Atom atom, u32 range_id);
 
 NAPI AST_Type_Spec *ast_type_spec(Instance *instance, AST_Type_Spec_Kind kind, u32 range_id);

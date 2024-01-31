@@ -1,9 +1,24 @@
 
-#import "another.no"
+// TODO:
+//  - Basic control flow
+//      - if
+//      - while
+//      - for
+//      - switch
+//  - Foreign functions (call printf)
+//  - #run
+//  - #insert
+//  - Deduplicate imports
+//  - Make sure struct member names can shadow parent symbols
+//  - Flag for lvalue expressions?
+//  - Flag for lvalue expressions?
+//  - Defer 
 
 
 main :: () -> s64 {
 
-    return abc();
+    cond : bool = true;
+
+    return 0;
 }
 

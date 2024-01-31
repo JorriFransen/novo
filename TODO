@@ -1,4 +1,0 @@
- - Make sure struct member names can shadow parent symbols
- - Flag for lvalue expressions?
- - Default initializers
-

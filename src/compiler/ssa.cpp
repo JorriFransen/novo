@@ -212,7 +212,8 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
                         case Type_Kind::INVALID: assert(false); break;
                         case Type_Kind::VOID: assert(false); break;
 
-                        case Type_Kind::INTEGER: {
+                        case Type_Kind::INTEGER:
+                        case Type_Kind::BOOLEAN: {
                             u32 value_reg = ssa_emit_expression(program, func, block_index, init_expr, scope);
                             ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
                             ssa_emit_32(program, func, block_index, alloc_reg);
@@ -220,7 +221,6 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
                             break;
                         }
 
-                        case Type_Kind::BOOLEAN: assert(false); break;
                         case Type_Kind::FUNCTION: assert(false); break;
 
                         case Type_Kind::STRUCT: {
@@ -413,6 +413,7 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, A
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
+        case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
         case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
     }
 
@@ -590,6 +591,16 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
 
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
+
+        case AST_Expression_Kind::BOOL_LITERAL: {
+            ssa_emit_op(program, func, block_index, SSA_OP_LOAD_IM);
+
+            result = ssa_register_create(func);
+            ssa_emit_32(program, func, block_index, result);
+            ssa_emit_64(program, func, block_index, expr->bool_literal);
+            break;
+        }
+
         case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
     }
 

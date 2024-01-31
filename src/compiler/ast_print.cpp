@@ -291,6 +291,8 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
             break;
         }
 
+        case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
+
         case AST_Expression_Kind::STRING_LITERAL: {
             auto str = atom_string(expr->string_literal);
             string_builder_append(sb, "EXPR_STR: %s\n", str.data);

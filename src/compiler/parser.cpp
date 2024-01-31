@@ -315,13 +315,21 @@ AST_Expression *parse_leaf_expression(Parser *parser)
         next_token(parser->lexer);
         result = ast_string_literal_expression(parser->instance, ct.atom, range);
 
+    } else if (is_keyword(parser, g_keyword_true)) {
+        next_token(parser->lexer);
+        result = ast_bool_literal_expression(parser->instance, ct.atom, range);
+
     } else if (is_token(parser, '(')) {
         next_token(parser->lexer);
         result = parse_expression(parser);
         expect_token(parser, ')');
     }
 
-    if (!result) return nullptr;
+    if (!result) {
+        auto tok_str = atom_string(ct.atom);
+        instance_fatal_error(parser->instance, ct.source_pos_id, "Unexpected token '%s' when parsing leaf expression",  tok_str.data);
+        return nullptr;
+    }
 
     while (is_token(parser, '(') || is_token(parser, '.')) {
 

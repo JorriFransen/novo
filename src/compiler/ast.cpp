@@ -243,6 +243,13 @@ AST_Expression *ast_char_literal_expression(Instance *instance, char c, u32 rang
     return result;
 }
 
+AST_Expression *ast_bool_literal_expression(Instance *instance, bool b, u32 range_id)
+{
+    auto result = ast_expression(instance, AST_Expression_Kind::BOOL_LITERAL, range_id);
+    result->bool_literal = b;
+    return result;
+}
+
 AST_Expression *ast_string_literal_expression(Instance *instance, Atom atom, u32 range_id)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::STRING_LITERAL, range_id);
