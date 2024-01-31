@@ -27,6 +27,8 @@ struct Type_Task
 {
     AST_Node node;
     Scope *scope;
+
+    AST_Declaration *fn_decl;
 };
 
 struct SSA_Task
@@ -41,7 +43,7 @@ NAPI void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope,
 NAPI void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_Declaration *fn);
 NAPI void add_resolve_tasks(Instance *inst, AST_Type_Spec *ts, Scope *scope);
 
-NAPI void add_type_task(Instance *inst, AST_Node node, Scope *scope);
+NAPI void add_type_task(Instance *inst, AST_Node node, Scope *scope, AST_Declaration *fn);
 
 NAPI void add_ssa_task(Instance *inst, AST_Node node);
 

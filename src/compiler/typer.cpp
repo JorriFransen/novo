@@ -3,33 +3,34 @@
 #include "ast.h"
 #include "instance.h"
 #include "scope.h"
+#include "task.h"
 #include "type.h"
 
 namespace Novo {
 
-bool type_node(Instance *inst, AST_Node *node, Scope *scope)
+bool type_node(Instance *inst, Type_Task *task, AST_Node *node, Scope *scope)
 {
     switch (node->kind) {
 
         case AST_Node_Kind::INVALID: assert(false); break;
 
         case AST_Node_Kind::DECLARATION: {
-            return type_declaration(inst, node->declaration, scope);
+            return type_declaration(inst, task, node->declaration, scope);
         }
 
         case AST_Node_Kind::STATEMENT: {
-            return type_statement(inst, node->statement, scope);
+            return type_statement(inst, task, node->statement, scope);
         }
 
         case AST_Node_Kind::EXPRESSION: assert(false); break;
 
         case AST_Node_Kind::TYPE_SPEC: {
-            return type_type_spec(inst, node->ts, scope);
+            return type_type_spec(inst, task, node->ts, scope);
         }
     }
 }
 
-bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
+bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Scope *scope)
 {
     if (decl->flags & AST_DECL_FLAG_TYPED) {
         assert(decl->resolved_type);
@@ -41,11 +42,11 @@ bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
 
         case AST_Declaration_Kind::VARIABLE: {
 
-            if (decl->variable.type_spec && !type_type_spec(inst, decl->variable.type_spec, scope)) {
+            if (decl->variable.type_spec && !type_type_spec(inst, task, decl->variable.type_spec, scope)) {
                 return false;
             }
 
-            if (decl->variable.init_expr && !type_expression(inst, decl->variable.init_expr, scope)) {
+            if (decl->variable.init_expr && !type_expression(inst, task, decl->variable.init_expr, scope)) {
                 return false;
             }
 
@@ -65,7 +66,7 @@ bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
         }
 
         case AST_Declaration_Kind::STRUCT_MEMBER: {
-            if (!type_type_spec(inst, decl->variable.type_spec, scope)) {
+            if (!type_type_spec(inst, task, decl->variable.type_spec, scope)) {
                 return false;
             }
 
@@ -82,7 +83,7 @@ bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
             for (s64 i = 0; i < fields.count; i++) {
                 auto field = fields[i];
 
-                if (!type_declaration(inst, field, struct_scope)) {
+                if (!type_declaration(inst, task, field, struct_scope)) {
                     return false;
                 }
             }
@@ -143,7 +144,7 @@ bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope)
     return true;
 }
 
-bool type_statement(Instance *inst, AST_Statement *stmt, Scope *scope)
+bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope *scope)
 {
     if (stmt->flags & AST_TS_FLAG_TYPED) {
         return true;
@@ -155,7 +156,7 @@ bool type_statement(Instance *inst, AST_Statement *stmt, Scope *scope)
         case AST_Statement_Kind::IMPORT: assert(false); break;
 
         case AST_Statement_Kind::DECLARATION: {
-            if (!type_declaration(inst, stmt->declaration, scope)) {
+            if (!type_declaration(inst, task, stmt->declaration, scope)) {
                 return false;
             }
 
@@ -163,11 +164,11 @@ bool type_statement(Instance *inst, AST_Statement *stmt, Scope *scope)
         }
 
         case AST_Statement_Kind::ASSIGNMENT: {
-            if (!type_expression(inst, stmt->assignment.lvalue, scope)) {
+            if (!type_expression(inst, task, stmt->assignment.lvalue, scope)) {
                 return false;
             }
 
-            if (!type_expression(inst, stmt->assignment.rvalue, scope)) {
+            if (!type_expression(inst, task, stmt->assignment.rvalue, scope)) {
                 return false;
             }
 
@@ -179,7 +180,7 @@ bool type_statement(Instance *inst, AST_Statement *stmt, Scope *scope)
 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
-                if (!type_expression(inst, stmt->return_expr, scope)) {
+                if (!type_expression(inst, task, stmt->return_expr, scope)) {
                     return false;
                 }
             }
@@ -192,7 +193,7 @@ bool type_statement(Instance *inst, AST_Statement *stmt, Scope *scope)
     return true;
 }
 
-bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
+bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scope *scope)
 {
     if (expr->flags & AST_EXPR_FLAG_TYPED) {
         assert(expr->resolved_type);
@@ -215,11 +216,11 @@ bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
         }
 
         case AST_Expression_Kind::BINARY: {
-            if (!type_expression(inst, expr->binary.lhs, scope)) {
+            if (!type_expression(inst, task, expr->binary.lhs, scope)) {
                 return false;
             }
 
-            if (!type_expression(inst, expr->binary.rhs, scope)) {
+            if (!type_expression(inst, task, expr->binary.rhs, scope)) {
                 return false;
             }
 
@@ -230,7 +231,7 @@ bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
 
         case AST_Expression_Kind::MEMBER: {
 
-            if (!type_expression(inst, expr->member.base, scope)) {
+            if (!type_expression(inst, task, expr->member.base, scope)) {
                 return false;
             }
 
@@ -249,7 +250,7 @@ bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
 
         case AST_Expression_Kind::CALL: {
 
-            if (!type_expression(inst, expr->call.base, scope)) {
+            if (!type_expression(inst, task, expr->call.base, scope)) {
                 return false;
             }
 
@@ -257,7 +258,7 @@ bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
             auto fn_type = expr->call.base->resolved_type;
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (!type_expression(inst, expr->call.args[i], scope)) {
+                if (!type_expression(inst, task, expr->call.args[i], scope)) {
                     return false;
                 }
 
@@ -265,6 +266,12 @@ bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
             }
 
             expr->resolved_type = fn_type->function.return_type;
+            assert(task->fn_decl);
+            for (s64 i = 0; i < expr->call.args.count; i++) {
+                if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT) {
+                    darray_append(&task->fn_decl->function.temp_structs, expr->call.args[i]);
+                }
+            }
             break;
         }
 
@@ -283,7 +290,7 @@ bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope)
     return true;
 }
 
-bool type_type_spec(Instance *inst, AST_Type_Spec *ts, Scope *scope)
+bool type_type_spec(Instance *inst, Type_Task *task, AST_Type_Spec *ts, Scope *scope)
 {
     if (ts->flags & AST_TS_FLAG_TYPED) {
         assert(ts->resolved_type);

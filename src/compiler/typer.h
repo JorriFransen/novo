@@ -12,11 +12,12 @@ struct AST_Statement;
 struct AST_Type_Spec;
 struct Instance;
 struct Scope;
+struct Type_Task;
 
-NAPI bool type_node(Instance *inst, AST_Node *node, Scope *scope);
-NAPI bool type_declaration(Instance *inst, AST_Declaration *decl, Scope *scope);
-NAPI bool type_statement(Instance *inst, AST_Statement *stmt, Scope *scope);
-NAPI bool type_expression(Instance *inst, AST_Expression *expr, Scope *scope);
-NAPI bool type_type_spec(Instance *inst, AST_Type_Spec *ts, Scope *scope);
+NAPI bool type_node(Instance *inst, Type_Task *task, AST_Node *node, Scope *scope);
+NAPI bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Scope *scope);
+NAPI bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope *scope);
+NAPI bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scope *scope);
+NAPI bool type_type_spec(Instance *inst, Type_Task *task, AST_Type_Spec *ts, Scope *scope);
 
 }

@@ -94,6 +94,7 @@ struct AST_Declaration
             AST_Type_Spec *return_ts;
             DArray<AST_Statement *> body;
             DArray<AST_Declaration *> variables;
+            DArray<AST_Expression *> temp_structs;
             DArray<AST_Node> wait_for_bytecode;
 
             Scope *scope;
@@ -241,6 +242,8 @@ struct AST_Identifier
 
     AST_Declaration *decl;
 };
+
+NAPI bool operator==(const AST_Node &a, const AST_Node &b);
 
 NAPI AST_Node ast_node(AST_Declaration *decl);
 NAPI AST_Node ast_node(AST_Statement *stmt);

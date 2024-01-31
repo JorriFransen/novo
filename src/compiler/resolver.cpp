@@ -57,7 +57,8 @@ bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *de
             } else {
                 assert(decl->variable.type_spec || decl->variable.init_expr);
                 assert(task->fn_decl);
-                darray_append(&task->fn_decl->function.variables, decl);
+
+                darray_append(&task->fn_decl->function.variables, decl); // Make sure this is only done once!
             }
             break;
         }
@@ -208,7 +209,12 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
 
             if (!(expr->member.base->flags & AST_EXPR_FLAG_TYPED)) {
 
-                if (!type_expression(inst, expr->member.base, scope)) {
+                Type_Task type_task = {
+                    .node = ast_node(expr->member.base),
+                    .scope = scope,
+                    .fn_decl = task->fn_decl,
+                };
+                if (!type_expression(inst, &type_task, expr->member.base, scope)) {
                     return false;
                 }
             }
@@ -231,13 +237,12 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
                 return false;
             }
 
+            AST_Declaration *callee_decl = nullptr;
             if (expr->call.base->kind == AST_Expression_Kind::IDENTIFIER) {
-                auto decl = expr->call.base->identifier->decl;
-                assert(decl);
+                auto callee_decl = expr->call.base->identifier->decl;
+                assert(callee_decl);
 
                 assert(task->fn_decl);
-
-                darray_append(&task->fn_decl->function.wait_for_bytecode, ast_node(decl));
             }
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
@@ -247,6 +252,10 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
                 }
             }
 
+            // success
+            if (callee_decl) {
+                darray_append(&task->fn_decl->function.wait_for_bytecode, ast_node(callee_decl));
+            }
             break;
         }
 

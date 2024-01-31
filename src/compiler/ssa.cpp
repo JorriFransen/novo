@@ -3,11 +3,18 @@
 #include <string_builder.h>
 
 #include "ast.h"
+#include "parser.h"
 #include "type.h"
 
 #include <assert.h>
 
 namespace Novo {
+
+struct SSA_Alloc
+{
+    AST_Node ast_node;
+    u32 alloc_reg;
+};
 
 void ssa_program_init(SSA_Program *program, Allocator *allocator)
 {
@@ -22,7 +29,7 @@ void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 
     func->register_count = 0;
     func->param_count = param_count;
     darray_init(program->allocator, &func->blocks);
-    darray_init(program->allocator, &func->variables);
+    darray_init(program->allocator, &func->allocs);
 
     SSA_Block first_block;
     ssa_block_init(program, func, &first_block, "entry");
@@ -63,7 +70,7 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
             ssa_emit_32(program, &func, 0, dest_reg);
             ssa_emit_32(program, &func, 0, byte_size);
 
-            darray_append(&func.variables, { param_decl, dest_reg });
+            darray_append(&func.allocs, { ast_node(param_decl), dest_reg });
         }
     }
 
@@ -79,7 +86,23 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
         ssa_emit_32(program, &func, 0, dest_reg);
         ssa_emit_32(program, &func, 0, byte_size);
 
-        darray_append(&func.variables, { var_decl, dest_reg });
+        darray_append(&func.allocs, { ast_node(var_decl), dest_reg });
+    }
+
+    // Emit storage for (temporary) aggregates
+    for (s64 i = 0; i < decl->function.temp_structs.count; i++) {
+
+        auto expr = decl->function.temp_structs[i];
+        assert(expr->resolved_type->bit_size % 8 == 0);
+        auto byte_size = expr->resolved_type->bit_size / 8;
+
+        ssa_emit_op(program, &func, 0, SSA_OP_ALLOC);
+        u32 dest_reg = ssa_register_create(&func);
+        ssa_emit_32(program, &func, 0, dest_reg);
+
+        ssa_emit_32(program, &func, 0, byte_size);
+
+        darray_append(&func.allocs, { ast_node(expr), dest_reg });
     }
 
     // Copy parameters into local storage
@@ -129,18 +152,29 @@ bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index)
     return found;
 }
 
-bool ssa_find_local(SSA_Function *func, AST_Declaration *decl, u32 *result)
+bool ssa_find_alloc(SSA_Function *func, AST_Node *ast_node, u32 *result)
 {
-    assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+    for (s64 i = 0; i < func->allocs.count; i++) {
 
-    for (s64 i = 0; i < func->variables.count; i++) {
-        if (func->variables[i].decl == decl) {
-            *result = func->variables[i].alloc_reg;
+        if (func->allocs[i].ast_node == *ast_node) {
+            *result = func->allocs[i].alloc_reg;
             return true;
         }
     }
 
     return false;
+}
+
+bool ssa_find_alloc(SSA_Function *func, AST_Declaration *decl, u32 *result)
+{
+    AST_Node node = ast_node(decl);
+    return ssa_find_alloc(func, &node, result);
+}
+
+bool ssa_find_alloc(SSA_Function *func, AST_Expression *expr, u32 *result)
+{
+    AST_Node node = ast_node(expr);
+    return ssa_find_alloc(func, &node, result);
 }
 
 u32 ssa_register_create(SSA_Function *function)
@@ -163,7 +197,7 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
                 if (init_expr) {
 
                     u32 alloc_reg;
-                    bool found = ssa_find_local(func, stmt->declaration, &alloc_reg);
+                    bool found = ssa_find_alloc(func, stmt->declaration, &alloc_reg);
                     assert(found);
 
                     switch (init_expr->resolved_type->kind) {
@@ -272,15 +306,27 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, A
             AST_Declaration *decl = lvalue_expr->identifier->decl;
             assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
-            if (decl->flags & AST_DECL_FLAG_PARAM) {
-                assert(decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED);
+            bool is_struct = decl->resolved_type->kind == Type_Kind::STRUCT;
+            bool is_param = decl->flags & AST_DECL_FLAG_PARAM;
+
+            if (is_param) {
+                assert(decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED || is_struct);
             }
 
-            u32 alloc_reg;
-            bool found = ssa_find_local(func, decl, &alloc_reg);
-            assert(found);
+            if (is_param && is_struct) {
+                ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
+                u32 result_reg = ssa_register_create(func);
+                ssa_emit_32(program, func, block_index, result_reg);
+                ssa_emit_32(program, func, block_index, decl->variable.index);
+                return result_reg;
+            } else {
 
-            return alloc_reg;
+                u32 alloc_reg;
+                bool found = ssa_find_alloc(func, decl, &alloc_reg);
+                assert(found);
+
+                return alloc_reg;
+            }
         }
 
         case AST_Expression_Kind::BINARY: assert(false); break;
@@ -350,7 +396,7 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
                     ssa_emit_32(program, func, block_index, result);
 
                     u32 alloc_reg;
-                    bool found = ssa_find_local(func, decl, &alloc_reg);
+                    bool found = ssa_find_alloc(func, decl, &alloc_reg);
                     assert(found);
 
                     ssa_emit_32(program, func, block_index, alloc_reg);
@@ -423,7 +469,27 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
             assert(found);
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                u32 arg_reg = ssa_emit_expression(program, func, block_index, expr->call.args[i], scope);
+                AST_Expression *arg_expr = expr->call.args[i];
+                u32 arg_reg;
+                if (arg_expr->resolved_type->kind == Type_Kind::STRUCT) {
+
+                    bool found = ssa_find_alloc(func, arg_expr, &arg_reg);
+                    assert(found);
+
+                    u32 src_ptr_reg = ssa_emit_lvalue(program, func, block_index, arg_expr, scope);
+                    ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
+                    ssa_emit_32(program, func, block_index, arg_reg);
+                    ssa_emit_32(program, func, block_index, src_ptr_reg);
+
+                    s64 size = arg_expr->resolved_type->bit_size;
+                    assert(size % 8 == 0);
+                    size /= 8;
+                    assert(size >= 0 && size < U32_MAX);
+
+                    ssa_emit_32(program, func, block_index, size);
+                } else {
+                    arg_reg = ssa_emit_expression(program, func, block_index, arg_expr, scope);
+                }
 
                 ssa_emit_op(program, func, block_index, SSA_OP_PUSH);
                 ssa_emit_32(program, func, block_index, arg_reg);

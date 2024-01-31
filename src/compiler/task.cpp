@@ -111,11 +111,12 @@ void add_resolve_tasks(Instance *inst, AST_Type_Spec *ts, Scope *scope)
     darray_append(&inst->resolve_tasks, task);
 }
 
-void add_type_task(Instance *inst, AST_Node node, Scope *scope)
+void add_type_task(Instance *inst, AST_Node node, Scope *scope, AST_Declaration *fn)
 {
     Type_Task task = {
         .node = node,
         .scope = scope,
+        .fn_decl = fn,
     };
     darray_append(&inst->type_tasks, task);
 }

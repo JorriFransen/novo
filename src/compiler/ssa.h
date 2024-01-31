@@ -47,11 +47,8 @@ struct SSA_Block
     DArray<u8> bytes;
 };
 
-struct SSA_Local_Variable
-{
-    AST_Declaration *decl;
-    u32 alloc_reg;
-};
+struct AST_Node;
+struct SSA_Alloc;
 
 struct SSA_Function
 {
@@ -61,7 +58,7 @@ struct SSA_Function
     DArray<SSA_Block> blocks;
 
     // TODO: Use hash table if this gets too big?
-    DArray<SSA_Local_Variable> variables;
+    DArray<SSA_Alloc> allocs;
 };
 
 struct SSA_Program
@@ -79,7 +76,9 @@ NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *bl
 
 NAPI bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl);
 NAPI bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index);
-NAPI bool ssa_find_local(SSA_Function *func, AST_Declaration *decl, u32 *result);
+NAPI bool ssa_find_alloc(SSA_Function *func, AST_Node *node, u32 *result);
+NAPI bool ssa_find_alloc(SSA_Function *func, AST_Declaration *decl, u32 *result);
+NAPI bool ssa_find_alloc(SSA_Function *func, AST_Expression *expr, u32 *result);
 NAPI u32 ssa_register_create(SSA_Function *function);
 
 NAPI void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Statement *stmt, Scope *scope);

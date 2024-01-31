@@ -146,14 +146,14 @@ bool instance_start(Instance *inst)
                 darray_remove_unordered(&inst->resolve_tasks, i);
                 i--;
 
-                add_type_task(inst, task.node, task.scope);
+                add_type_task(inst, task.node, task.scope, task.fn_decl);
             }
         }
 
         for (s64 i = 0; i < inst->type_tasks.count; i++) {
             Type_Task task = inst->type_tasks[i];
 
-            bool success = type_node(inst, &task.node, task.scope);
+            bool success = type_node(inst, &task, &task.node, task.scope);
 
             if (success) {
                 progress = true;

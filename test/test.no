@@ -18,21 +18,22 @@ main :: () -> s64 {
     // return add(11, 22) + add(1, 2);
 
     p : Vec;
-    p.x = 11;
+    // p.x = 11;
     p.y = 22;
 
-    r : AABB;
-    r.pos = p;
+    // r : AABB;
+    // r.pos = p;
     // p.x = 22;
     // p.y = 11;
     // r.size = p;
 
-    return add(add(r.pos.x, r.pos.y), add(r.size.x, r.size.y));
+    return vec_y(p);
+    // return add(add(r.pos.x, r.pos.y), add(r.size.x, r.size.y));
 }
 
-// vec_y :: (v: Vec) -> s64 {
-//     return v.y;
-// }
+vec_y :: (v: Vec) -> s64 {
+    return v.y;
+}
 
 add :: (a: s64, b: s64) -> s64 {
     // result : s64;
