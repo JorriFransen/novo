@@ -265,6 +265,39 @@ u64 vm_run(VM *vm)
 
                 break;
             }
+
+            case SSA_OP_JMP_IF: {
+                u32 cond_reg = vm_fetch<u32>(block, &ip);
+                u32 true_block_index = vm_fetch<u32>(block, &ip);
+                u32 false_block_index = vm_fetch<u32>(block, &ip);
+
+                fn = &vm->current_program->functions[vm->fn_index];
+                assert(true_block_index < fn->blocks.count);
+                assert(false_block_index < fn->blocks.count);
+
+                u64 cond = vm_get_register(vm, cond_reg);
+                if (cond) {
+                    vm->block_index = true_block_index;
+                } else {
+                    vm->block_index = false_block_index;
+                }
+
+                block = &fn->blocks[vm->block_index];
+                ip = 0;
+                break;
+            }
+
+            case SSA_OP_JMP: {
+                u32 block_index = vm_fetch<u32>(block, &ip);
+
+                fn = &vm->current_program->functions[vm->fn_index];
+                assert(block_index < fn->blocks.count);
+
+                vm->block_index = block_index;
+                block = &fn->blocks[vm->block_index];
+                ip = 0;
+                break;
+            }
         }
     }
 

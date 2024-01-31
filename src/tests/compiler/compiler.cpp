@@ -28,6 +28,7 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/010_struct_return_1.no", .return_code = 22 },
     { .file_path = "tests/011_struct_return_2.no", .return_code = 33 },
     { .file_path = "tests/012_struct_return_3.no", .return_code = 66 },
+    { .file_path = "tests/013_if_1.no", .return_code = 11 },
 };
 
 static bool run_test_case(Test_Case *tc)

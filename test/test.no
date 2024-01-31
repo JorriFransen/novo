@@ -12,18 +12,24 @@
 //  - Make sure struct member names can shadow parent symbols
 //  - Flag for lvalue expressions?
 //  - Flag for lvalue expressions?
-//  - Defer 
+//  - Defer
 
-
-Vec :: struct {
-    x: s64;
-    y: s64;
-}
 
 main :: () -> s64 {
 
-    v: Vec;
+    result: s64 = 0;
 
-    return v.x;
+    cond := true;
+    if (true) {
+        result = 11;
+    }
+
+    cond = false;
+
+    if (cond) {
+        result = 22;
+    }
+
+    return result;
 }
 

@@ -229,7 +229,13 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             break;
         }
 
-        case AST_Statement_Kind::IF: assert(false); break;
+        case AST_Statement_Kind::IF: {
+            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "STMT_IF:\n");
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: assert(false); break;
     }
 }

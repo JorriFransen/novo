@@ -317,7 +317,11 @@ AST_Expression *parse_leaf_expression(Parser *parser)
 
     } else if (is_keyword(parser, g_keyword_true)) {
         next_token(parser->lexer);
-        result = ast_bool_literal_expression(parser->instance, ct.atom, range);
+        result = ast_bool_literal_expression(parser->instance, true, range);
+
+    } else if (is_keyword(parser, g_keyword_false)) {
+        next_token(parser->lexer);
+        result = ast_bool_literal_expression(parser->instance, false, range);
 
     } else if (is_token(parser, '(')) {
         next_token(parser->lexer);

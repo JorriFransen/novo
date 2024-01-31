@@ -1,0 +1,19 @@
+
+main :: () -> s64 {
+
+    result: s64 = 0;
+
+    cond := true;
+    if (true) {
+        result = 11;
+    }
+
+    cond = false;
+
+    if (cond) {
+        result = 22;
+    }
+
+    return result;
+}
+

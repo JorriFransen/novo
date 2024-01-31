@@ -39,12 +39,17 @@ enum SSA_Op : u8
 
     SSA_OP_CALL,        // CALL [32-bit dest reg] [32-bit function index]
     SSA_OP_RET,         // RET [32-bit value reg]
+
+    SSA_OP_JMP_IF,      // JMP_IF [32-bit cond reg] [32-bit true block] [32-bit false block]
+    SSA_OP_JMP,         // JMP [32-bit block]
 };
 
 struct SSA_Block
 {
     Atom name;
     DArray<u8> bytes;
+
+    bool exits;
 };
 
 struct AST_Node;
@@ -76,25 +81,29 @@ NAPI void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name,
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, Atom name);
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, const char *name);
 
+NAPI u32 ssa_register_create(SSA_Function *function);
+
 NAPI bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl);
+
 NAPI bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index);
 NAPI bool ssa_find_alloc(SSA_Function *func, AST_Node *node, u32 *result);
 NAPI bool ssa_find_alloc(SSA_Function *func, AST_Declaration *decl, u32 *result);
 NAPI bool ssa_find_alloc(SSA_Function *func, AST_Expression *expr, u32 *result);
-NAPI u32 ssa_register_create(SSA_Function *function);
 
-NAPI void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Statement *stmt, Scope *scope);
-NAPI u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Expression *lvalue_expr, Scope *scope);
-NAPI s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_index, AST_Expression *expr, Scope *scope);
+NAPI bool ssa_block_exits(SSA_Function *func, s64 *block_index);
 
-NAPI void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 block_index, SSA_Op op);
-NAPI void ssa_emit_8(SSA_Program *program, SSA_Function *func, s64 block_index, u8 value);
-NAPI void ssa_emit_16(SSA_Program *program, SSA_Function *func, s64 block_index, u16 value);
-NAPI void ssa_emit_32(SSA_Program *program, SSA_Function *func, s64 block_index, u32 value);
-NAPI void ssa_emit_64(SSA_Program *program, SSA_Function *func, s64 block_index, u64 value);
+NAPI void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Statement *stmt, Scope *scope);
+NAPI u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Expression *lvalue_expr, Scope *scope);
+NAPI s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Expression *expr, Scope *scope);
+
+NAPI void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 *block_index, SSA_Op op);
+NAPI void ssa_emit_8(SSA_Program *program, SSA_Function *func, s64 *block_index, u8 value);
+NAPI void ssa_emit_16(SSA_Program *program, SSA_Function *func, s64 *block_index, u16 value);
+NAPI void ssa_emit_32(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 value);
+NAPI void ssa_emit_64(SSA_Program *program, SSA_Function *func, s64 *block_index, u64 value);
 
 NAPI String ssa_to_string(Allocator *allocator, SSA_Program *program);
 NAPI void ssa_print(String_Builder *sb, SSA_Program *program);
-NAPI s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, s64 ip, Array_Ref<u8> bytes);
+NAPI s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function *fn, s64 ip, Array_Ref<u8> bytes);
 
 }
