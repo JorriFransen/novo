@@ -161,7 +161,8 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
     switch (stmt->kind) {
 
         case AST_Statement_Kind::INVALID: assert(false); break;
-        case AST_Statement_Kind::IMPORT: assert(false); break;
+
+        case AST_Statement_Kind::IMPORT: break;
 
         case AST_Statement_Kind::DECLARATION: {
             if (!type_declaration(inst, task, stmt->declaration, scope)) {

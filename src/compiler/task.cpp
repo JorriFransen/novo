@@ -32,7 +32,11 @@ void add_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
                 break;
             }
 
-            case AST_Node_Kind::STATEMENT: assert(false); break;
+            case AST_Node_Kind::STATEMENT: {
+                add_resolve_tasks(inst, node.statement, scope, nullptr);
+                break;
+            }
+
             case AST_Node_Kind::EXPRESSION: assert(false); break;
             case AST_Node_Kind::TYPE_SPEC: assert(false); break;
         }
@@ -86,8 +90,8 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
     switch (stmt->kind) {
 
         case AST_Statement_Kind::INVALID: assert(false); break;
-        case AST_Statement_Kind::IMPORT: assert(false); break;
 
+        case AST_Statement_Kind::IMPORT:
         case AST_Statement_Kind::CALL:
         case AST_Statement_Kind::DECLARATION:
         case AST_Statement_Kind::ASSIGNMENT:

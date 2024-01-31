@@ -564,11 +564,13 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 block_inde
 
             ssa_emit_32(program, func, block_index, fn_index);
 
-            ssa_emit_op(program, func, block_index, SSA_OP_POP_N);
-
             u32 arg_pop_count = expr->call.args.count;
             if (sret) arg_pop_count++;
-            ssa_emit_32(program, func, block_index, arg_pop_count);
+
+            if (arg_pop_count) {
+                ssa_emit_op(program, func, block_index, SSA_OP_POP_N);
+                ssa_emit_32(program, func, block_index, arg_pop_count);
+            }
 
             if (sret) {
                 result = sret_reg;

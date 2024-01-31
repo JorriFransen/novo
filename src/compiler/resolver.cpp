@@ -1,11 +1,13 @@
 #include "resolver.h"
 
 #include <containers/darray.h>
+#include <filesystem.h>
 #include <logger.h>
 #include <nstring.h>
 
 #include "ast.h"
 #include "atom.h"
+#include "instance.h"
 #include "scope.h"
 #include "task.h"
 #include "type.h"
@@ -132,7 +134,21 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
     switch (stmt->kind) {
 
         case AST_Statement_Kind::INVALID: assert(false); break;
-        case AST_Statement_Kind::IMPORT: assert(false); break;
+
+        case AST_Statement_Kind::IMPORT: {
+
+            String import_path = string_append(&inst->temp_allocator, inst->cwd, stmt->import_path);
+            assert(fs_is_file(import_path));
+
+            if (!(fs_is_realpath(import_path))) {
+                import_path = fs_realpath(&inst->ast_allocator, import_path);
+            } else {
+                import_path = string_copy(&inst->ast_allocator, import_path);
+            }
+
+            add_parse_task(inst, import_path);
+            break;
+        };
 
         case AST_Statement_Kind::DECLARATION: {
             if (!resolve_declaration(inst, task, stmt->declaration, scope)) {

@@ -101,9 +101,9 @@ bool instance_start(Instance *inst)
     }
 
     if (!fs_is_realpath(first_file_name)) {
-        first_file_path = fs_realpath(inst->default_allocator, first_file_name);
+        first_file_path = fs_realpath(&inst->ast_allocator, first_file_name);
     } else {
-        first_file_path = string_copy(inst->default_allocator, first_file_name);
+        first_file_path = string_copy(&inst->ast_allocator, first_file_name);
     }
 
     add_parse_task(inst, first_file_name);
