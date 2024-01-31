@@ -60,6 +60,7 @@ void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, 
     block->name = name;
     darray_init(program->allocator, &block->bytes);
     block->exits = false;
+    block->next_index = -1;
 }
 
 void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, const char *name)
@@ -177,6 +178,11 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
         ssa_emit_statement(program, &func, &block_index, stmt, scope);
     }
 
+    if (!ssa_block_exits(&func, &block_index)) {
+        SSA_Block *last_block = &func.blocks[block_index];
+        assert(last_block->bytes.count == 0);
+    }
+
     if (decl->ident->atom == atom_get("main")) {
         assert(program->entry_fn_index == -1);
         program->entry_fn_index = program->functions.count;
@@ -222,6 +228,16 @@ bool ssa_find_alloc(SSA_Function *func, AST_Expression *expr, u32 *result)
 {
     AST_Node node = ast_node(expr);
     return ssa_find_alloc(func, &node, result);
+}
+
+void ssa_set_insert_point(SSA_Function *func, s64 *block_index, u32 new_block_index)
+{
+    assert(new_block_index >= 0 && new_block_index < func->blocks.count);
+
+    if (*block_index == new_block_index) return;
+
+    func->blocks[*block_index].next_index = new_block_index;
+    *block_index = new_block_index;
 }
 
 bool ssa_block_exits(SSA_Function *func, s64 *block_index)
@@ -397,18 +413,18 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 ssa_emit_32(program, func, block_index, true_block);
                 ssa_emit_32(program, func, block_index, false_block);
 
-                *block_index = true_block;
+                ssa_set_insert_point(func, block_index, true_block);
                 ssa_emit_statement(program, func, block_index, if_block.then, scope);
                 if (!ssa_block_exits(func, block_index)) {
                     ssa_emit_op(program, func, block_index, SSA_OP_JMP);
                     ssa_emit_32(program, func, block_index, post_if_block);
                 }
 
-                *block_index = false_block;
+                ssa_set_insert_point(func, block_index, false_block);
             }
 
             if (stmt->if_stmt.else_stmt) {
-                *block_index = else_block;
+                ssa_set_insert_point(func, block_index, else_block);
                 ssa_emit_statement(program, func, block_index, stmt->if_stmt.else_stmt, scope);
                 if (!ssa_block_exits(func, block_index)) {
                     ssa_emit_op(program, func, block_index, SSA_OP_JMP);
@@ -416,7 +432,7 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 }
             }
 
-            *block_index = post_if_block;
+            ssa_set_insert_point(func, block_index, post_if_block);
 
             break;
         }
@@ -794,16 +810,27 @@ void ssa_print(String_Builder *sb, SSA_Program *program)
         SSA_Function *fn = &program->functions[fi];
         string_builder_append(sb, "%s:\n", atom_string(fn->name).data);
 
-        for (s64 bi = 0; bi < fn->blocks.count; bi++) {
-            SSA_Block *block = &fn->blocks[bi];
-            string_builder_append(sb, " %s:\n", atom_string(block->name).data);
+        s64 block_index = 0;
+        int printed_block_count = 0;
+        while (block_index >= 0 && block_index < fn->blocks.count) {
+            printed_block_count++;
+            SSA_Block *block = &fn->blocks[block_index];
+            if (block->bytes.count > 0) {
 
-            s64 ip = 0;
+                string_builder_append(sb, " %s:\n", atom_string(block->name).data);
 
-            while (ip < block->bytes.count) {
-                ip = ssa_print_instruction(sb, program, fn, ip, block->bytes);
+                s64 ip = 0;
+
+                while (ip < block->bytes.count) {
+                    ip = ssa_print_instruction(sb, program, fn, ip, block->bytes);
+                }
+
             }
+
+            block_index = block->next_index;
         }
+
+        assert(printed_block_count == fn->blocks.count);
     }
 }
 

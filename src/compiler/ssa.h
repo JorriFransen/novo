@@ -53,6 +53,8 @@ struct SSA_Block
     DArray<u8> bytes;
 
     bool exits;
+
+    s64 next_index; // This is used to reorder blocks for printing
 };
 
 struct AST_Node;
@@ -94,6 +96,7 @@ NAPI bool ssa_find_alloc(SSA_Function *func, AST_Node *node, u32 *result);
 NAPI bool ssa_find_alloc(SSA_Function *func, AST_Declaration *decl, u32 *result);
 NAPI bool ssa_find_alloc(SSA_Function *func, AST_Expression *expr, u32 *result);
 
+NAPI void ssa_set_insert_point(SSA_Function *func, s64 *block_index, u32 new_block_index);
 NAPI bool ssa_block_exits(SSA_Function *func, s64 *block_index);
 
 NAPI void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Statement *stmt, Scope *scope);
