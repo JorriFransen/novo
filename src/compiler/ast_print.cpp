@@ -257,7 +257,19 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
             break;
         }
 
-        case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::MEMBER: {
+            string_builder_append(sb, "EXPR_MEMBER:\n");
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "BASE:\n");
+            ast_expr_to_string(instance, sb, expr->member.base, indent + 2);
+
+            ast_print_pos(instance, sb, expr->member.member_name->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "MEMBER_NAME: '%s'\n", atom_string(expr->member.member_name->atom).data);
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
             string_builder_append(sb, "EXPR_CALL:\n");
@@ -291,7 +303,10 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
             break;
         }
 
-        case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::BOOL_LITERAL: {
+            string_builder_append(sb, "EXPR_BOOL: '%s'\n", expr->bool_literal ? "true" : "false");
+            break;
+        }
 
         case AST_Expression_Kind::STRING_LITERAL: {
             auto str = atom_string(expr->string_literal);

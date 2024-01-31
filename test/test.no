@@ -15,10 +15,15 @@
 //  - Defer 
 
 
+Vec :: struct {
+    x: s64;
+    y: s64;
+}
+
 main :: () -> s64 {
 
-    cond : bool = true;
+    v: Vec;
 
-    return 0;
+    return v.x;
 }
 

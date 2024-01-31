@@ -33,6 +33,7 @@ static Test_Case test_cases[] = {
 static bool run_test_case(Test_Case *tc)
 {
     Options options = default_options();
+    options.print_ast = true;
 
     options.input_file = tc->file_path;
 
