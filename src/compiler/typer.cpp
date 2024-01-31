@@ -187,6 +187,28 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
 
             break;
         }
+
+        case AST_Statement_Kind::IF: {
+            if (!type_expression(inst, task, stmt->if_stmt.cond, scope)) {
+                return false;
+            }
+
+            if (!type_statement(inst, task, stmt->if_stmt.then, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
+        case AST_Statement_Kind::BLOCK: {
+
+            for (s64 i = 0; i < stmt->block.statements.count; i++) {
+                if (!type_statement(inst, task, stmt->block.statements[i], scope)) {
+                    return false;
+                }
+            }
+            break;
+        }
     }
 
     stmt->flags |= AST_TS_FLAG_TYPED;

@@ -164,6 +164,22 @@ AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u3
     return result;
 }
 
+AST_Statement *ast_if_statement(Instance *instance, AST_Expression *cond, AST_Statement *then, u32 range_id)
+{
+    auto result = ast_statement(instance, AST_Statement_Kind::IF, range_id);
+    result->if_stmt.cond = cond;
+    result->if_stmt.then = then;
+    return result;
+}
+
+AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id)
+{
+    auto result = ast_statement(instance, AST_Statement_Kind::BLOCK, range_id);
+    result->block.statements = stmts;
+    result->block.scope = scope;
+    return result;
+}
+
 AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32 range_id)
 {
     auto result = allocate<AST_Expression>(&instance->ast_allocator);

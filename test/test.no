@@ -1,16 +1,6 @@
 
 // #import "another.no"
 
-Vec :: struct {
-    x: s64;
-    y: s64;
-}
-
-AABB :: struct {
-    pos: Vec;
-    size: Vec;
-}
-
 main :: () -> s64 {
     // return 72623859790382856; // 0x102030405060708
     // return 1 + 2;
@@ -20,6 +10,10 @@ main :: () -> s64 {
     p : Vec;
     // p.x = 11;
     p.y = 22;
+
+    if (p.y == 22) {
+        p.x = 11;
+    }
 
     // r : AABB;
     // r.pos = p;
@@ -41,3 +35,14 @@ add :: (a: s64, b: s64) -> s64 {
     // return result;
     return a + b;
 }
+
+Vec :: struct {
+    x: s64;
+    y: s64;
+}
+
+AABB :: struct {
+    pos: Vec;
+    size: Vec;
+}
+

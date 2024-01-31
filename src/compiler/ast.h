@@ -110,11 +110,19 @@ struct AST_Declaration
 enum class AST_Statement_Kind : u32
 {
     INVALID,
+
     IMPORT,
+
     DECLARATION,
+
     ASSIGNMENT,
+
     CALL,
     RETURN,
+
+    IF,
+
+    BLOCK,
 };
 
 typedef u32 AST_Statement_Flags;
@@ -141,6 +149,16 @@ struct AST_Statement
             AST_Expression *lvalue;
             AST_Expression *rvalue;
         } assignment;
+
+        struct {
+            AST_Expression *cond;
+            AST_Statement *then;
+        } if_stmt;
+
+        struct {
+            DArray<AST_Statement *> statements;
+            Scope *scope;
+        } block;
     };
 
     u32 range_id;
@@ -265,6 +283,8 @@ NAPI AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaratio
 NAPI AST_Statement *ast_assignment_statement(Instance *inst, AST_Expression *lvalue, AST_Expression *rvalue, u32 range_id);
 NAPI AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call);
 NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id);
+NAPI AST_Statement *ast_if_statement(Instance *instance, AST_Expression *cond, AST_Statement *then, u32 range_id);
+NAPI AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id);
 
 NAPI AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32 range_id);
 NAPI AST_Expression *ast_identifier_expression(Instance *instance, AST_Identifier *ident, u32 range_id);

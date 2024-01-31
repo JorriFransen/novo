@@ -228,6 +228,9 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             }
             break;
         }
+
+        case AST_Statement_Kind::IF: assert(false); break;
+        case AST_Statement_Kind::BLOCK: assert(false); break;
     }
 }
 

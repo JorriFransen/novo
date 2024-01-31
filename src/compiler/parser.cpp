@@ -363,11 +363,15 @@ AST_Expression *parse_leaf_expression(Parser *parser)
 
 static bool is_binary_op(Token &token)
 {
-    switch ((char)token.kind) {
+    switch ((u32)token.kind) {
         case '+':
         case '-':
         case '*':
         case '/':
+        case TOK_EQ:
+        case TOK_NEQ:
+        case TOK_LTEQ:
+        case TOK_GTEQ:
             return true;
     }
 
@@ -376,7 +380,7 @@ static bool is_binary_op(Token &token)
 
 static u64 get_precedence(Token &token)
 {
-    switch ((char)token.kind) {
+    switch ((u32)token.kind) {
 
         case '+':
         case '-':
@@ -385,6 +389,12 @@ static u64 get_precedence(Token &token)
         case '*':
         case '/':
             return 2;
+
+        case TOK_EQ:
+        case TOK_NEQ:
+        case TOK_LTEQ:
+        case TOK_GTEQ:
+            return 3;
     }
 
     assert(false);
@@ -429,7 +439,26 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope)
 {
     if (parser->lexer->token.kind == TOK_ERROR) return nullptr;
 
-    if (is_token(parser, TOK_KEYWORD)) {
+    u64 start = parser->lexer->token.source_pos_id;
+
+    if (match_token(parser, '{')) {
+
+        Scope *block_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
+
+        auto stmts = temp_array_create<AST_Statement *>(&parser->instance->temp_allocator, 8);
+        while (!is_token(parser, '}')) {
+            AST_Statement *stmt = parse_statement(parser, block_scope);
+            darray_append(&stmts, stmt);
+        }
+
+        u64 end = parser->lexer->token.source_pos_id;
+        expect_token(parser, '}');
+
+        auto stmt_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
+        auto block_range = source_range(parser->instance, start, end);
+        return ast_block_statement(parser->instance, stmt_array, block_scope, block_range);
+
+    } else if (is_token(parser, TOK_KEYWORD)) {
         return parse_keyword_statement(parser, scope);
     }
 
@@ -468,7 +497,17 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
 {
     auto ct = parser->lexer->token;
 
-    if (match_keyword(parser, g_keyword_return)) {
+    if (match_keyword(parser, g_keyword_if)) {
+
+        AST_Expression *cond = parse_expression(parser);
+        AST_Statement *then_stmt = parse_statement(parser, scope);
+
+        auto end = source_range_end(parser->instance, then_stmt->range_id);
+        auto range = source_range(parser->instance, ct.source_pos_id, end);
+
+        return ast_if_statement(parser->instance, cond, then_stmt, range);
+
+    } else if (match_keyword(parser, g_keyword_return)) {
 
         AST_Expression *expr = nullptr;
         if (!is_token(parser, ';')) {
@@ -567,6 +606,11 @@ bool is_token(Parser *parser, Token_Kind kind)
 bool is_token(Parser *parser, char c)
 {
     return is_token(parser->lexer, c);
+}
+
+bool is_keyword(Parser *parser, Atom kw_atom)
+{
+    return parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom;
 }
 
 }

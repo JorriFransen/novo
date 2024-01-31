@@ -88,15 +88,21 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
 
         case AST_Statement_Kind::DECLARATION:
         case AST_Statement_Kind::ASSIGNMENT:
-        case AST_Statement_Kind::RETURN: {
+        case AST_Statement_Kind::RETURN:
+        case AST_Statement_Kind::IF: {
+
             Resolve_Task task = {
                 .node = ast_node(stmt),
                 .scope = scope,
                 .fn_decl = fn,
                 .waiting_for = nullptr,
             };
+
             darray_append(&inst->resolve_tasks, task);
+            break;
         }
+
+        case AST_Statement_Kind::BLOCK: assert(false); break;
     }
 }
 

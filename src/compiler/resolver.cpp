@@ -166,6 +166,33 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
 
             break;
         }
+
+        case AST_Statement_Kind::IF: {
+
+            if (!resolve_expression(inst, task, stmt->if_stmt.cond, scope)) {
+                return false;
+            }
+
+            if (!resolve_statement(inst, task, stmt->if_stmt.then, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
+        case AST_Statement_Kind::BLOCK: {
+
+            for (s64 i = 0; i < stmt->block.statements.count; i++) {
+                AST_Statement *block_stmt = stmt->block.statements[i];
+
+                if (!resolve_statement(inst, task, block_stmt, scope)) {
+                    return false;
+                }
+
+            }
+
+            break;
+        }
     }
 
     stmt->flags |= AST_STMT_FLAG_RESOLVED;

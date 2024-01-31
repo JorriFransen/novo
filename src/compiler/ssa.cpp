@@ -291,7 +291,11 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 block_inde
             } else {
                 assert(false);
             }
+            break;
         }
+
+        case AST_Statement_Kind::IF: assert(false); break;
+        case AST_Statement_Kind::BLOCK: assert(false); break;
     }
 }
 
