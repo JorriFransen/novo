@@ -1,13 +1,17 @@
 #include "resolver.h"
 
+#include <containers/darray.h>
 #include <logger.h>
+#include <nstring.h>
 
 #include "ast.h"
-#include "parser.h"
+#include "atom.h"
 #include "scope.h"
 #include "task.h"
 #include "type.h"
 #include "typer.h"
+
+#include <assert.h>
 
 namespace Novo {
 
@@ -31,6 +35,9 @@ bool resolve_node(Instance *inst, Resolve_Task *task, AST_Node *node, Scope *sco
             return resolve_ts(inst, task, node->ts, scope);
         }
     }
+
+    assert(false);
+    return false;
 }
 
 bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *decl, Scope *scope)

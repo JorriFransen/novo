@@ -88,7 +88,10 @@ void instance_init(Instance *inst, Options options)
 bool instance_start(Instance *inst)
 {
     auto first_file_name = String_Ref(inst->options.input_file);
-    assert(first_file_name.length);
+    if (!first_file_name.length) {
+        fprintf(stderr, "Input file not set!\n");
+        return false;
+    }
 
     String first_file_path;
 

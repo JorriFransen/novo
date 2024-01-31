@@ -16,7 +16,7 @@ char &String::operator[](s64 index)
 }
 
 String_Ref::String_Ref() : data(nullptr), length(0) {}
-String_Ref::String_Ref(const char *cstr) : data(cstr), length(strlen(cstr)) {}
+String_Ref::String_Ref(const char *cstr) : data(cstr), length(cstr ? strlen(cstr) : 0) {}
 String_Ref::String_Ref(const char *cstr, s64 length) : data(cstr), length(length) {}
 String_Ref::String_Ref(const String &str) : data(str.data), length(str.length) {}
 

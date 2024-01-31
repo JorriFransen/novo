@@ -1,10 +1,15 @@
 #include "typer.h"
 
+#include <containers/darray.h>
+#include <memory/temp_allocator.h>
+
 #include "ast.h"
 #include "instance.h"
 #include "scope.h"
 #include "task.h"
 #include "type.h"
+
+#include <assert.h>
 
 namespace Novo {
 
@@ -28,6 +33,9 @@ bool type_node(Instance *inst, Type_Task *task, AST_Node *node, Scope *scope)
             return type_type_spec(inst, task, node->ts, scope);
         }
     }
+
+    assert(false);
+    return false;
 }
 
 bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Scope *scope)

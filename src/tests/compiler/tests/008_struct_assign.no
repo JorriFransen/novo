@@ -1,0 +1,32 @@
+
+Vec :: struct {
+    x: s64;
+    y: s64;
+}
+
+AABB :: struct {
+    pos: Vec;
+    size: Vec;
+}
+
+main :: () -> s64 {
+
+    r : AABB;
+
+    p : Vec;
+    p.x = 40;
+    p.y = 2;
+
+    r.pos = p;
+    r.size.x = p.y;
+    r.size.y = p.x;
+
+    r2 := r;
+
+    r.pos.x = 0;
+    r.pos.y = 0;
+    r.size.x = 0;
+    r.size.y = 0;
+
+    return r2.pos.x + r2.pos.y + r2.size.x + r2.size.y;
+}

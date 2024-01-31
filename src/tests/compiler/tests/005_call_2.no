@@ -1,0 +1,8 @@
+
+add :: (a: s64, b: s64) -> s64 {
+    return a + b;
+}
+
+main :: () -> s64 {
+    return add(1, add(1, add(10, add(17, 13))));
+}

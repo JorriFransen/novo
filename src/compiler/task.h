@@ -8,6 +8,7 @@
 namespace Novo {
 
 struct Instance;
+struct Scope;
 
 struct Parse_Task
 {

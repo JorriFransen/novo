@@ -7,7 +7,6 @@ namespace Novo {
 struct AST_Declaration;
 struct AST_Expression;
 struct AST_Node;
-struct AST_Node;
 struct AST_Statement;
 struct AST_Type_Spec;
 struct Instance;

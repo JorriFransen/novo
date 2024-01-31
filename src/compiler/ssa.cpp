@@ -3,7 +3,6 @@
 #include <string_builder.h>
 
 #include "ast.h"
-#include "parser.h"
 #include "type.h"
 
 #include <assert.h>

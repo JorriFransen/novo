@@ -1,0 +1,18 @@
+
+Vec :: struct {
+    x: s64;
+    y: s64;
+}
+
+vec :: (x: s64, y: s64) -> Vec {
+
+}
+
+main :: () -> s64 {
+
+    p := vec(11, 22);
+    p2 := vec(22, 11);
+
+    return p.x + p.y + p2.x + p2.y;
+}
+

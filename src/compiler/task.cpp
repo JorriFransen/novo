@@ -1,7 +1,10 @@
 #include "task.h"
 
+#include <containers/darray.h>
+
 #include "instance.h"
-#include <logger.h>
+
+#include <assert.h>
 
 namespace Novo {
 

@@ -1,0 +1,28 @@
+
+Vec :: struct {
+    x: s64;
+    y: s64;
+}
+
+vec_add :: (v: Vec) -> s64 {
+    result := v.x + v.y;
+
+    // Make sure we don't modify the original struct from the callers frame.
+    v.x = 0;
+    v.y = 0;
+
+    return result;
+}
+
+main :: () -> s64 {
+
+    p1 : Vec;
+    p1.x = 11;
+    p1.y = 22;
+
+    r1 := vec_add(p1);
+    r2 := vec_add(p1);
+
+    return r1 + r2;
+}
+
