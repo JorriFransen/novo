@@ -514,10 +514,42 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
         AST_Expression *cond = parse_expression(parser);
         AST_Statement *then_stmt = parse_statement(parser, scope);
 
-        auto end = source_range_end(parser->instance, then_stmt->range_id);
+        auto if_blocks = temp_array_create<AST_If_Block>(&parser->instance->temp_allocator);
+
+        darray_append(&if_blocks, { cond, then_stmt });
+
+        AST_Statement *else_stmt = nullptr;
+
+        while (match_keyword(parser, g_keyword_else)) {
+
+            if (match_keyword(parser, g_keyword_if)) {
+
+                AST_Expression *elif_cond = parse_expression(parser);
+                AST_Statement *elif_stmt = parse_statement(parser, scope);
+
+                darray_append(&if_blocks, { elif_cond, elif_stmt });
+            } else {
+
+                else_stmt = parse_statement(parser, scope);
+
+                break;
+            }
+        }
+
+        u32 end;
+        if (else_stmt) {
+            end = source_range_end(parser->instance, else_stmt->range_id);
+        } else if (if_blocks.array.count) {
+            end = source_range_end(parser->instance, if_blocks.array[if_blocks.array.count - 1].then->range_id);
+        } else {
+            end = source_range_end(parser->instance, then_stmt->range_id);
+        }
+
         auto range = source_range(parser->instance, ct.source_pos_id, end);
 
-        return ast_if_statement(parser->instance, cond, then_stmt, range);
+        auto if_blocks_array = temp_array_finalize(&parser->instance->ast_allocator, &if_blocks);
+
+        return ast_if_statement(parser->instance, if_blocks_array, else_stmt, range);
 
     } else if (match_keyword(parser, g_keyword_return)) {
 

@@ -196,7 +196,7 @@ bool instance_start(Instance *inst)
 
             if (success) {
 
-                success = ssa_emit_function(inst->ssa_program, task.func_decl);
+                success = ssa_emit_function(inst, inst->ssa_program, task.func_decl);
                 assert(success);
 
                 progress = true;

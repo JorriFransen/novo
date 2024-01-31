@@ -133,6 +133,11 @@ enum AST_Statement_Flag
     AST_STMT_FLAG_TYPED    = 0x02,
 };
 
+struct AST_If_Block {
+    AST_Expression *cond;
+    AST_Statement *then;
+};
+
 struct AST_Statement
 {
     AST_Statement_Kind kind;
@@ -151,8 +156,8 @@ struct AST_Statement
         } assignment;
 
         struct {
-            AST_Expression *cond;
-            AST_Statement *then;
+            DArray<AST_If_Block> blocks;
+            AST_Statement * else_stmt;
         } if_stmt;
 
         struct {
@@ -200,7 +205,7 @@ struct AST_Expression
 
         struct
         {
-            char op;
+            u32 op;
             AST_Expression *lhs;
             AST_Expression *rhs;
         } binary;
@@ -285,12 +290,12 @@ NAPI AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaratio
 NAPI AST_Statement *ast_assignment_statement(Instance *inst, AST_Expression *lvalue, AST_Expression *rvalue, u32 range_id);
 NAPI AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call);
 NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id);
-NAPI AST_Statement *ast_if_statement(Instance *instance, AST_Expression *cond, AST_Statement *then, u32 range_id);
+NAPI AST_Statement *ast_if_statement(Instance *instance, DArray<AST_If_Block> if_blocks, AST_Statement *else_stmt, u32 range_id);
 NAPI AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id);
 
 NAPI AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32 range_id);
 NAPI AST_Expression *ast_identifier_expression(Instance *instance, AST_Identifier *ident, u32 range_id);
-NAPI AST_Expression *ast_binary_expression(Instance *instance, char op, AST_Expression *lhs, AST_Expression *rhs, u32 range_id);
+NAPI AST_Expression *ast_binary_expression(Instance *instance, u32 op, AST_Expression *lhs, AST_Expression *rhs, u32 range_id);
 NAPI AST_Expression *ast_member_expression(Instance *inst, AST_Expression *base, AST_Identifier *member_name, u32 range_id);
 NAPI AST_Expression *ast_call_expression(Instance *instance, AST_Expression *base_expr, DArray<AST_Expression *> args, u32 range_id);
 NAPI AST_Expression *ast_integer_literal_expression(Instance *instance, u64 i, u32 range_id);

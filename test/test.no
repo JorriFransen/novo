@@ -1,7 +1,8 @@
 
 // TODO:
+//  - Explicit ordering for ssa blocks (to make the printed ssa more readable)
+//  - Remove empty ssa blocks (without renumbering all jumps if we can...)
 //  - Basic control flow
-//      - if
 //      - while
 //      - for
 //      - switch
@@ -17,19 +18,20 @@
 
 main :: () -> s64 {
 
-    result: s64 = 0;
+    i := 0;
+    result : s64;
 
-    cond := true;
-    if (true) {
-        result = 11;
-    }
+    // if (i == 0) {
+    //     result = 11;
+    // } else if (i == 1) {
+    //     result = 22;
+    // } else {
+    //     result = 33;
+    // }
+    // return result;
 
-    cond = false;
-
-    if (cond) {
-        result = 22;
-    }
-
-    return result;
+    if (i == 0) return 11;
+    else if (i == 1) return 22;
+    else return 33;
 }
 

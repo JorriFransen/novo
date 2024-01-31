@@ -198,11 +198,20 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
 
         case AST_Statement_Kind::IF: {
 
-            if (!resolve_expression(inst, task, stmt->if_stmt.cond, scope)) {
-                return false;
+            for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
+
+                auto if_block = stmt->if_stmt.blocks[i];
+
+                if (!resolve_expression(inst, task, if_block.cond, scope)) {
+                    return false;
+                }
+
+                if (!resolve_statement(inst, task, if_block.then, scope)) {
+                    return false;
+                }
             }
 
-            if (!resolve_statement(inst, task, stmt->if_stmt.then, scope)) {
+            if (stmt->if_stmt.else_stmt && !resolve_statement(inst, task, stmt->if_stmt.else_stmt, scope)) {
                 return false;
             }
 

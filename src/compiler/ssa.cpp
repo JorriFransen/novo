@@ -3,6 +3,8 @@
 #include <string_builder.h>
 
 #include "ast.h"
+#include "instance.h"
+#include "lexer.h"
 #include "type.h"
 
 #include <assert.h>
@@ -30,9 +32,7 @@ void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 
     darray_init(program->allocator, &func->blocks);
     darray_init(program->allocator, &func->allocs);
 
-    SSA_Block first_block;
-    ssa_block_init(program, func, &first_block, "entry");
-    darray_append(&func->blocks, first_block);
+    ssa_block_create(program, func, "entry");
 
     func->sret = sret;
     if (sret) func->param_count++;
@@ -40,6 +40,23 @@ void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 
 
 void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, Atom name)
 {
+    block->base_name = name;
+
+    int count = 0;
+    for (s64 i = 0; i < func->blocks.count; i++) {
+        if (func->blocks[i].base_name == name) {
+            count++;
+        }
+    }
+
+    if (count) {
+        const int name_buf_size = 128;
+        char name_buf[name_buf_size];
+        s32 new_length = string_format(name_buf, "%s.%d", atom_string(name).data, count);
+
+        name = atom_get(name_buf, new_length);
+    }
+
     block->name = name;
     darray_init(program->allocator, &block->bytes);
     block->exits = false;
@@ -50,13 +67,24 @@ void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, 
     return ssa_block_init(program, func, block, atom_get(name));
 }
 
+u32 ssa_block_create(SSA_Program *program, SSA_Function *function, const char *name)
+{
+    SSA_Block result;
+    ssa_block_init(program, function, &result, name);
+    s64 index = function->blocks.count;
+    assert(index >= 0 && U32_MAX);
+
+    darray_append(&function->blocks, result);
+    return (u32)index;
+}
+
 u32 ssa_register_create(SSA_Function *function)
 {
     assert(function->register_count != U32_MAX);
     return function->register_count++;
 }
 
-bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
+bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *decl)
 {
     SSA_Function func;
     assert(decl->ident);
@@ -142,6 +170,10 @@ bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl)
     for (s64 i = 0; i < decl->function.body.count; i++) {
         auto stmt = decl->function.body[i];
 
+        if (ssa_block_exits(&func, &block_index)) {
+            auto pos = source_range_start(inst, stmt->range_id);
+            instance_fatal_error(inst, pos, "Unreachable code detected");
+        }
         ssa_emit_statement(program, &func, &block_index, stmt, scope);
     }
 
@@ -340,31 +372,52 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
 
         case AST_Statement_Kind::IF: {
 
-            SSA_Block then_block;
-            ssa_block_init(program, func, &then_block, "then");
-            s64 then_block_index = func->blocks.count;
-            darray_append(&func->blocks, then_block);
+            u32 post_if_block = ssa_block_create(program, func, "if.post");
+            u32 else_block;
+            if (stmt->if_stmt.else_stmt) else_block = ssa_block_create(program, func, "if.else");
 
-            SSA_Block post_if_block;
-            ssa_block_init(program, func, &post_if_block, "if.post");
-            s64 post_if_block_index = func->blocks.count;
-            darray_append(&func->blocks, post_if_block);
+            for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
 
-            u32 cond_reg = ssa_emit_expression(program, func, block_index, stmt->if_stmt.cond, scope);
+                auto if_block = stmt->if_stmt.blocks[i];
 
-            ssa_emit_op(program, func, block_index, SSA_OP_JMP_IF);
-            ssa_emit_32(program, func, block_index, cond_reg);
-            ssa_emit_32(program, func, block_index, then_block_index);
-            ssa_emit_32(program, func, block_index, post_if_block_index);
+                u32 true_block = ssa_block_create(program, func, "if.true");
 
-            *block_index = then_block_index;
-            ssa_emit_statement(program, func, block_index, stmt->if_stmt.then, scope);
-            if (!ssa_block_exits(func, block_index)) {
-                ssa_emit_op(program, func, block_index, SSA_OP_JMP);
-                ssa_emit_32(program, func, block_index, post_if_block_index);
+                u32 false_block = post_if_block;
+                if (i < stmt->if_stmt.blocks.count -1 ) {
+                    false_block = ssa_block_create(program, func, "if.false");
+                } else if (i == stmt->if_stmt.blocks.count - 1 && stmt->if_stmt.else_stmt) {
+                    false_block = else_block;
+                }
+
+                u32 cond_reg = ssa_emit_expression(program, func, block_index, if_block.cond, scope);
+
+                assert(!ssa_block_exits(func, block_index));
+                ssa_emit_op(program, func, block_index, SSA_OP_JMP_IF);
+                ssa_emit_32(program, func, block_index, cond_reg);
+                ssa_emit_32(program, func, block_index, true_block);
+                ssa_emit_32(program, func, block_index, false_block);
+
+                *block_index = true_block;
+                ssa_emit_statement(program, func, block_index, if_block.then, scope);
+                if (!ssa_block_exits(func, block_index)) {
+                    ssa_emit_op(program, func, block_index, SSA_OP_JMP);
+                    ssa_emit_32(program, func, block_index, post_if_block);
+                }
+
+                *block_index = false_block;
             }
 
-            *block_index = post_if_block_index;
+            if (stmt->if_stmt.else_stmt) {
+                *block_index = else_block;
+                ssa_emit_statement(program, func, block_index, stmt->if_stmt.else_stmt, scope);
+                if (!ssa_block_exits(func, block_index)) {
+                    ssa_emit_op(program, func, block_index, SSA_OP_JMP);
+                    ssa_emit_32(program, func, block_index, post_if_block);
+                }
+            }
+
+            *block_index = post_if_block;
+
             break;
         }
 
@@ -531,6 +584,13 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
                     ssa_emit_op(program, func, block_index, SSA_OP_DIV);
                     break;
                 }
+
+                case TOK_EQ: {
+                    ssa_emit_op(program, func, block_index, SSA_OP_CMP);
+                    break;
+                }
+
+                default: assert(false);
             }
 
 
@@ -784,6 +844,20 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
             ip += sizeof(u32);
 
             string_builder_append(sb, "  %%%u = DIV %%%u %%%u\n", dest_reg, left, right);
+            break;
+        }
+
+        case SSA_OP_CMP: {
+            u32 dest_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 left = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 right = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = CMP %%%u %%%u\n", dest_reg, left, right);
             break;
         }
 

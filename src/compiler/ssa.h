@@ -14,6 +14,7 @@ struct AST_Expression;
 struct AST_Statement;
 struct Scope;
 struct String_Builder;
+struct Instance;
 
 enum SSA_Op : u8
 {
@@ -21,6 +22,7 @@ enum SSA_Op : u8
 
     SSA_OP_ADD,         // ADD [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
     SSA_OP_DIV,         // DIV [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_CMP,         // CMP [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
     SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size]
 
@@ -47,6 +49,7 @@ enum SSA_Op : u8
 struct SSA_Block
 {
     Atom name;
+    Atom base_name;
     DArray<u8> bytes;
 
     bool exits;
@@ -81,9 +84,10 @@ NAPI void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name,
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, Atom name);
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, const char *name);
 
+NAPI u32 ssa_block_create(SSA_Program *program, SSA_Function *function, const char *name);
 NAPI u32 ssa_register_create(SSA_Function *function);
 
-NAPI bool ssa_emit_function(SSA_Program *program, AST_Declaration *decl);
+NAPI bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *decl);
 
 NAPI bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index);
 NAPI bool ssa_find_alloc(SSA_Function *func, AST_Node *node, u32 *result);

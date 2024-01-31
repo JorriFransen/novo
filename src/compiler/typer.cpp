@@ -204,11 +204,20 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
         }
 
         case AST_Statement_Kind::IF: {
-            if (!type_expression(inst, task, stmt->if_stmt.cond, scope)) {
-                return false;
+
+            for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
+                auto if_block = stmt->if_stmt.blocks[i];
+
+                if (!type_expression(inst, task, if_block.cond, scope)) {
+                    return false;
+                }
+
+                if (!type_statement(inst, task, if_block.then, scope)) {
+                    return false;
+                }
             }
 
-            if (!type_statement(inst, task, stmt->if_stmt.then, scope)) {
+            if (stmt->if_stmt.else_stmt && !type_statement(inst, task, stmt->if_stmt.else_stmt, scope)) {
                 return false;
             }
 

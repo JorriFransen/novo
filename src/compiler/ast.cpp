@@ -164,11 +164,11 @@ AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u3
     return result;
 }
 
-AST_Statement *ast_if_statement(Instance *instance, AST_Expression *cond, AST_Statement *then, u32 range_id)
+AST_Statement *ast_if_statement(Instance *instance, DArray<AST_If_Block> if_blocks, AST_Statement *else_stmt, u32 range_id)
 {
     auto result = ast_statement(instance, AST_Statement_Kind::IF, range_id);
-    result->if_stmt.cond = cond;
-    result->if_stmt.then = then;
+    result->if_stmt.blocks = if_blocks;
+    result->if_stmt.else_stmt = else_stmt;
     return result;
 }
 
@@ -197,7 +197,7 @@ AST_Expression *ast_identifier_expression(Instance *instance, AST_Identifier *id
     return result;
 }
 
-NAPI AST_Expression *ast_binary_expression(Instance *instance, char op, AST_Expression *lhs, AST_Expression *rhs, u32 range_id)
+NAPI AST_Expression *ast_binary_expression(Instance *instance, u32 op, AST_Expression *lhs, AST_Expression *rhs, u32 range_id)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::BINARY, range_id);
     result->binary.op = op;

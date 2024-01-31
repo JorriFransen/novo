@@ -1,10 +1,9 @@
 
-main :: () -> s64 {
-
+t1 :: () -> s64 {
     result: s64 = 0;
 
     cond := true;
-    if (true) {
+    if (cond) {
         result = 11;
     }
 
@@ -15,5 +14,13 @@ main :: () -> s64 {
     }
 
     return result;
+}
+
+t2 :: () -> s64 {
+    if true return 100;
+}
+
+main :: () -> s64 {
+    return t1() + t2();
 }
 
