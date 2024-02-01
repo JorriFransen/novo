@@ -18,9 +18,9 @@ Scope *scope_new(Instance *instance, Scope_Kind kind, Scope *parent/*=nullptr*/)
     return result;
 }
 
-bool scope_add_symbol(Scope *scope, Atom atom, AST_Declaration *decl)
+bool scope_add_symbol(Scope *scope, Atom atom, AST_Declaration *decl, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
 {
-    if (scope_find_symbol(scope, atom, nullptr)) {
+    if (scope_find_symbol(scope, atom, nullptr, opts)) {
         return false;
     }
 
@@ -28,8 +28,12 @@ bool scope_add_symbol(Scope *scope, Atom atom, AST_Declaration *decl)
     return true;
 }
 
-AST_Declaration *scope_find_symbol(Scope *scope, Atom atom, Scope **found_in_scope)
+AST_Declaration *scope_find_symbol(Scope *scope, Atom atom, Scope **found_in_scope, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
 {
+    if (opts & SCOPE_FIND_OPTS_LIMIT_TO_STRUCT && scope->kind != Scope_Kind::STRUCT) {
+        return nullptr;
+    }
+
     for (s64 i = 0; i < scope->symbols.count; i++) {
         if (scope->symbols[i].atom == atom) {
 
@@ -39,7 +43,7 @@ AST_Declaration *scope_find_symbol(Scope *scope, Atom atom, Scope **found_in_sco
     }
 
     if (scope->parent) {
-        return scope_find_symbol(scope->parent, atom, found_in_scope);
+        return scope_find_symbol(scope->parent, atom, found_in_scope, opts);
     }
 
     return nullptr;

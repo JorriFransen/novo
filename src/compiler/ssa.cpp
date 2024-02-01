@@ -306,7 +306,7 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 }
 
             } else {
-                assert(false);
+                assert(stmt->declaration->kind == AST_Declaration_Kind::STRUCT);
             }
             break;
         }

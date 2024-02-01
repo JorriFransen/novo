@@ -196,7 +196,7 @@ AST_Declaration *parse_struct_declaration(Parser *parser, AST_Identifier *ident,
 
         auto mem_decl = ast_struct_member_declaration(parser->instance, name, ts, default_value, member_range_id);
 
-        if (!scope_add_symbol(struct_scope, name->atom, mem_decl)) {
+        if (!scope_add_symbol(struct_scope, name->atom, mem_decl, SCOPE_FIND_OPTS_LIMIT_TO_STRUCT)) {
             auto new_name = atom_string(name->atom);
             auto start = source_range_start(parser->instance, name->range_id);
 

@@ -1,21 +1,27 @@
 
 // TODO:
+//  - break
+//  - Global variables
 //  - Capture errors, and check for them in tests
 //  - Basic control flow
 //      - switch
 //  - Foreign functions (call printf)
 //  - #run
 //  - #insert
-//  - Make sure struct member names can shadow parent symbols
-//  - Flag for lvalue expressions?
 //  - Flag for lvalue expressions?
 //  - Defer
 
-#import "another.no"
-#import "another.no"
 
 main :: () -> s64 {
 
-    return abc();
+
+    x : s64;
+
+    Vec :: struct {
+        x: s64;
+        y: s64;
+    }
+
+    return x;
 }
 
