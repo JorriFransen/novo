@@ -1,21 +1,21 @@
 
 // TODO:
+//  - Capture errors, and check for them in tests
 //  - Basic control flow
 //      - switch
 //  - Foreign functions (call printf)
 //  - #run
 //  - #insert
-//  - Deduplicate imports
 //  - Make sure struct member names can shadow parent symbols
 //  - Flag for lvalue expressions?
 //  - Flag for lvalue expressions?
 //  - Defer
 
+#import "another.no"
+#import "another.no"
 
 main :: () -> s64 {
 
-    j = 4;
-    j : s64;
-    return 0;
+    return abc();
 }
 

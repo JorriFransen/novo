@@ -1,9 +1,9 @@
 #pragma once
 
 #include <defines.h>
-#include <nstring.h>
 
 #include "ast.h"
+#include "atom.h"
 
 namespace Novo {
 
@@ -12,7 +12,7 @@ struct Scope;
 
 struct Parse_Task
 {
-    String_Ref file_name;
+    Atom file_name;
 };
 
 struct Resolve_Task
@@ -37,7 +37,7 @@ struct SSA_Task
     AST_Declaration *func_decl;
 };
 
-NAPI void add_parse_task(Instance *inst, String_Ref path);
+NAPI void add_parse_task(Instance *inst, Atom path);
 
 NAPI void add_resolve_tasks(Instance *inst, AST_File *file, Scope *scope);
 NAPI void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_Declaration *fn);

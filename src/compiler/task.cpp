@@ -8,13 +8,14 @@
 
 namespace Novo {
 
-void add_parse_task(Instance *inst, String_Ref path)
+void add_parse_task(Instance *inst, Atom path)
 {
     Parse_Task task = {
         .file_name = path,
     };
 
     darray_append(&inst->parse_tasks, task);
+    darray_append(&inst->imported_files, path);
 }
 
 void add_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
@@ -89,8 +90,7 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
 {
     switch (stmt->kind) {
 
-        case AST_Statement_Kind::INVALID: assert(false); break;
-
+        case AST_Statement_Kind::INVALID:
         case AST_Statement_Kind::IMPORT:
         case AST_Statement_Kind::CALL:
         case AST_Statement_Kind::DECLARATION:

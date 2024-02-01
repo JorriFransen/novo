@@ -7,6 +7,7 @@
 #include <memory/temp_allocator.h>
 #include <nstring.h>
 
+#include "atom.h"
 #include "options.h"
 
 namespace Novo {
@@ -42,6 +43,8 @@ struct Instance
     DArray<SSA_Task> ssa_tasks;
 
     Scope *global_scope;
+
+    DArray<Atom> imported_files;
 
     DArray<Type *> function_types;
 

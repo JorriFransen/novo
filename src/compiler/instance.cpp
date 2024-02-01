@@ -50,6 +50,8 @@ void instance_init(Instance *inst, Options options)
 
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
+    darray_init(&inst->ast_allocator, &inst->imported_files);
+
     darray_init(&inst->ast_allocator, &inst->function_types);
 
     inst->fatal_error = false;
@@ -106,7 +108,8 @@ bool instance_start(Instance *inst)
         first_file_path = string_copy(&inst->ast_allocator, first_file_name);
     }
 
-    add_parse_task(inst, first_file_name);
+    Atom path_atom = atom_get(first_file_name);
+    add_parse_task(inst, path_atom);
 
     bool progress = true;
 
@@ -117,7 +120,7 @@ bool instance_start(Instance *inst)
         for (s64 i = 0; i < inst->parse_tasks.count; i++) {
             Parse_Task task = inst->parse_tasks[i];
 
-            AST_File *parsed_file = parse_file(inst, task.file_name);
+            AST_File *parsed_file = parse_file(inst, atom_string(task.file_name));
             if (parsed_file)
             {
                 darray_remove_unordered(&inst->parse_tasks, i);

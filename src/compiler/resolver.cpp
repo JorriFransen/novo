@@ -147,7 +147,19 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
                 import_path = string_copy(&inst->ast_allocator, import_path);
             }
 
-            add_parse_task(inst, import_path);
+            Atom path_atom = atom_get(import_path);
+
+            bool imported = false;
+            for (s64 i = 0; i < inst->imported_files.count; i++) {
+                if (inst->imported_files[i] == path_atom) {
+                    imported = true;
+                    break;
+                }
+            }
+
+            if (!imported) {
+                add_parse_task(inst, path_atom);
+            }
             break;
         };
 
@@ -417,9 +429,10 @@ bool resolve_identifier(Instance *inst, Resolve_Task *task, AST_Identifier *iden
 
             if (ident_pos_id <= decl_pos_id) {
                 auto ident_str = atom_string(ident->atom).data;
-                instance_error(inst, ident_pos_id, "Reference to identifier '%s' before declaration", ident_str);
                 u32 decl_start_id = source_range_start(inst, found_decl->range_id);
-                instance_fatal_error(inst, decl_start_id, "'%s' was first declared here", ident_str);
+
+                instance_error(inst, ident_pos_id, "Reference to identifier '%s' before declaration", ident_str);
+                instance_fatal_error_note(inst, decl_start_id, "'%s' was first declared here", ident_str);
             }
         }
 
