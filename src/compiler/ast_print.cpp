@@ -233,6 +233,7 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             ast_print_pos(instance, sb, stmt->range_id);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_IF:\n");
+            assert(false);
             break;
         }
 

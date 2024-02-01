@@ -31,12 +31,13 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/013_if_1.no", .return_code = 111 },
     { .file_path = "tests/014_if_2.no", .return_code = 18 },
     { .file_path = "tests/015_if_3.no", .return_code = 132 },
+    { .file_path = "tests/016_while.no", .return_code = 42 },
 };
 
 static bool run_test_case(Test_Case *tc)
 {
     Options options = default_options();
-    options.print_ast = true;
+    // options.print_ast = true;
 
     options.input_file = tc->file_path;
 

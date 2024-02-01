@@ -1,0 +1,12 @@
+
+main :: () -> s64 {
+
+    i := 0;
+    while (i < 42) {
+        i = i + 1;
+    }
+
+    while i < 10 i = 0;
+
+    return i;
+}
