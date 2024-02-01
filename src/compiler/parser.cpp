@@ -373,58 +373,13 @@ AST_Expression *parse_leaf_expression(Parser *parser)
     return result;
 }
 
-static bool is_binary_op(Token &token)
-{
-    switch ((u32)token.kind) {
-        case '+':
-        case '-':
-        case '*':
-        case '/':
-        case '<':
-        case '>':
-        case TOK_EQ:
-        case TOK_NEQ:
-        case TOK_LTEQ:
-        case TOK_GTEQ:
-            return true;
-    }
-
-    return false;
-}
-
-static u64 get_precedence(Token &token)
-{
-    switch ((u32)token.kind) {
-
-        case '<':
-        case '>':
-        case TOK_EQ:
-        case TOK_NEQ:
-        case TOK_LTEQ:
-        case TOK_GTEQ:
-            return 1;
-
-        case '+':
-        case '-':
-            return 2;
-
-        case '*':
-        case '/':
-            return 3;
-
-    }
-
-    assert(false);
-    return 0;
-}
-
 static AST_Expression *parse_increasing_precedence(Parser *parser, AST_Expression *left, u64 min_prec)
 {
     auto op_token = parser->lexer->token;
 
-    if (!is_binary_op(op_token)) return left;
+    if (!is_binary_op(op_token.kind)) return left;
 
-    auto new_prec = get_precedence(op_token);
+    auto new_prec = get_precedence(op_token.kind);
 
     if (new_prec <= min_prec) {
         return left;
@@ -501,6 +456,20 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi)
 
         auto sr_id = source_range(parser->instance, source_range_start(parser->instance, expr->range_id), end);
         return ast_assignment_statement(parser->instance, expr, value, sr_id);
+
+    } else if (is_binary_arithmetic_op(parser->lexer->token.kind)) {
+
+        u32 op = parser->lexer->token.kind;
+        next_token(parser->lexer);
+        expect_token(parser, '=');
+
+        AST_Expression *rhs = parse_expression(parser);
+
+        if (eat_semi) expect_token(parser, ';');
+
+        auto end = source_range_end(parser->instance, rhs->range_id);
+        auto range = source_range(parser->instance, source_range_start(parser->instance, expr->range_id), end);
+        return ast_arithmetic_assignment_statement(parser->instance, op, expr, rhs, range);
 
     } else {
         assert(false);
@@ -708,5 +677,65 @@ bool is_keyword(Parser *parser, Atom kw_atom)
 {
     return parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom;
 }
+
+bool is_binary_arithmetic_op(Token_Kind op)
+{
+    switch ((u32)op) {
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+            return true;
+    }
+
+    return false;
+}
+
+bool is_binary_cmp_op(Token_Kind op)
+{
+    switch ((u32)op) {
+        case '<':
+        case '>':
+        case TOK_EQ:
+        case TOK_NEQ:
+        case TOK_LTEQ:
+        case TOK_GTEQ:
+            return true;
+    }
+
+    return false;
+}
+
+ bool is_binary_op(Token_Kind op)
+{
+    return is_binary_arithmetic_op(op) || is_binary_cmp_op(op);
+}
+
+u64 get_precedence(Token_Kind op)
+{
+    switch ((u32)op) {
+
+        case '<':
+        case '>':
+        case TOK_EQ:
+        case TOK_NEQ:
+        case TOK_LTEQ:
+        case TOK_GTEQ:
+            return 1;
+
+        case '+':
+        case '-':
+            return 2;
+
+        case '*':
+        case '/':
+            return 3;
+
+    }
+
+    assert(false);
+    return 0;
+}
+
 
 }

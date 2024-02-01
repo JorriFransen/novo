@@ -116,6 +116,7 @@ enum class AST_Statement_Kind : u32
     DECLARATION,
 
     ASSIGNMENT,
+    ARITHMETIC_ASSIGNMENT,
 
     CALL,
     RETURN,
@@ -156,6 +157,12 @@ struct AST_Statement
             AST_Expression *lvalue;
             AST_Expression *rvalue;
         } assignment;
+
+        struct {
+            u32 op;
+            AST_Expression *lvalue;
+            AST_Expression *rvalue;
+        } arithmetic_assignment;
 
         struct {
             DArray<AST_If_Block> blocks;
@@ -304,6 +311,7 @@ NAPI AST_Statement *ast_statement(Instance *instance, AST_Statement_Kind kind, u
 NAPI AST_Statement *ast_import_statement(Instance *instance, String_Ref path, u32 range_id);
 NAPI AST_Statement *ast_declaration_statement(Instance *instance, AST_Declaration *decl, u32 range_id);
 NAPI AST_Statement *ast_assignment_statement(Instance *inst, AST_Expression *lvalue, AST_Expression *rvalue, u32 range_id);
+NAPI AST_Statement *ast_arithmetic_assignment_statement(Instance *inst, u32 op, AST_Expression *lvalue, AST_Expression *rvalue, u32 range_id);
 NAPI AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call);
 NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id);
 NAPI AST_Statement *ast_if_statement(Instance *instance, DArray<AST_If_Block> if_blocks, AST_Statement *else_stmt, u32 range_id);

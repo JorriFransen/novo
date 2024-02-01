@@ -95,6 +95,7 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
         case AST_Statement_Kind::CALL:
         case AST_Statement_Kind::DECLARATION:
         case AST_Statement_Kind::ASSIGNMENT:
+        case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT:
         case AST_Statement_Kind::RETURN:
         case AST_Statement_Kind::IF:
         case AST_Statement_Kind::WHILE:

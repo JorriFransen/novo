@@ -8,6 +8,7 @@
 #include "ast.h"
 #include "atom.h"
 #include "instance.h"
+#include "parser.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "task.h"
@@ -17,6 +18,8 @@
 #include <assert.h>
 
 namespace Novo {
+
+enum Token_Kind : u32;
 
 bool resolve_node(Instance *inst, Resolve_Task *task, AST_Node *node, Scope *scope)
 {
@@ -184,6 +187,28 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
             }
 
             if (!resolve_expression(inst, task, stmt->assignment.rvalue, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
+        case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
+
+            AST_Expression *lvalue = stmt->arithmetic_assignment.lvalue;
+
+            if (!resolve_expression(inst, task, lvalue, scope)) {
+                return false;
+            }
+
+            if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
+                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE) {
+                lvalue->identifier->decl->flags |= AST_DECL_FLAG_STORAGE_REQUIRED;
+            }
+
+            assert(is_binary_arithmetic_op((Token_Kind)stmt->arithmetic_assignment.op));
+
+            if (!resolve_expression(inst, task, stmt->arithmetic_assignment.rvalue, scope)) {
                 return false;
             }
 

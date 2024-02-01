@@ -1,6 +1,7 @@
 
 // TODO:
 //  - break
+//  - continue
 //  - Global variables
 //  - Capture errors, and check for them in tests
 //  - Basic control flow
@@ -9,19 +10,18 @@
 //  - #run
 //  - #insert
 //  - Flag for lvalue expressions?
+//  - Constant expressions
+//  - Constant variables
 //  - Defer
+//  - Nested function declarations
 
 
 main :: () -> s64 {
 
+    i := 1;
 
-    x : s64;
+    i += 4;
 
-    Vec :: struct {
-        x: s64;
-        y: s64;
-    }
-
-    return x;
+    return i;
 }
 

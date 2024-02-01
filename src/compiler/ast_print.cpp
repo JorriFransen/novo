@@ -214,6 +214,23 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             break;
         }
 
+        case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
+            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "STMT_ARITHMETIC_ASSIGN: '%s'\n", tmp_token_kind_str((Token_Kind)stmt->arithmetic_assignment.op).data);
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, " LVALUE:\n");
+            ast_expr_to_string(instance, sb, stmt->arithmetic_assignment.lvalue, indent + 2);
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, " RVALUE:\n");
+            ast_expr_to_string(instance, sb, stmt->arithmetic_assignment.rvalue, indent + 2);
+            break;
+        }
+
         case AST_Statement_Kind::CALL: {
             ast_expr_to_string(instance, sb, stmt->call, indent);
             break;

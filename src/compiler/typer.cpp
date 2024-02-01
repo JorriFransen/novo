@@ -176,22 +176,50 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
         }
 
         case AST_Statement_Kind::ASSIGNMENT: {
-            if (!type_expression(inst, task, stmt->assignment.lvalue, scope)) {
+
+            AST_Expression *lvalue = stmt->assignment.lvalue;
+            AST_Expression *rvalue = stmt->assignment.rvalue;
+
+            if (!type_expression(inst, task, lvalue, scope)) {
                 return false;
             }
 
-            if (!type_expression(inst, task, stmt->assignment.rvalue, scope)) {
+            if (!type_expression(inst, task, rvalue, scope)) {
                 return false;
             }
 
-            if (stmt->assignment.lvalue->resolved_type != stmt->assignment.rvalue->resolved_type) {
+            if (lvalue->resolved_type != rvalue->resolved_type) {
                 auto sp_id = source_range_start(inst, stmt->range_id);
                 instance_fatal_error(inst, sp_id, "Mismatching types in assignment, left: '%s', right: '%s'",
-                        temp_type_string(inst, stmt->assignment.lvalue->resolved_type).data,
-                        temp_type_string(inst, stmt->assignment.rvalue->resolved_type).data);
+                        temp_type_string(inst, lvalue->resolved_type).data,
+                        temp_type_string(inst, rvalue->resolved_type).data);
             }
+
             break;
         }
+
+        case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
+
+            AST_Expression *lvalue = stmt->arithmetic_assignment.lvalue;
+            AST_Expression *rvalue = stmt->arithmetic_assignment.rvalue;
+
+            if (!type_expression(inst, task, lvalue, scope)) {
+                return false;
+            }
+
+            if (!type_expression(inst, task, rvalue, scope)) {
+                return false;
+            }
+
+            if (lvalue->resolved_type != rvalue->resolved_type) {
+                auto sp_id = source_range_start(inst, stmt->range_id);
+                instance_fatal_error(inst, sp_id, "Mismatching types in arithmetic assignment, left: '%s', right: '%s'",
+                        temp_type_string(inst, lvalue->resolved_type).data,
+                        temp_type_string(inst, rvalue->resolved_type).data);
+            }
+
+            break;
+        };
 
         case AST_Statement_Kind::CALL: {
             if (!type_expression(inst, task, stmt->call, scope)) {

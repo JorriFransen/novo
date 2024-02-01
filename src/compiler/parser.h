@@ -52,5 +52,10 @@ NAPI bool is_token(Parser *parser, Token_Kind kind);
 NAPI bool is_token(Parser *parser, char c);
 NAPI bool is_keyword(Parser *parser, Atom kw_atom);
 
+NAPI bool is_binary_arithmetic_op(Token_Kind op);
+NAPI bool is_binary_cmp_op(Token_Kind op);
+NAPI bool is_binary_op(Token_Kind op);
+NAPI u64 get_precedence(Token_Kind op);
+
 
 }

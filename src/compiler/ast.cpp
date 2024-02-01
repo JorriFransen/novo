@@ -148,6 +148,15 @@ AST_Statement *ast_assignment_statement(Instance *inst, AST_Expression *lvalue, 
     return result;
 }
 
+AST_Statement *ast_arithmetic_assignment_statement(Instance *inst, u32 op, AST_Expression *lvalue, AST_Expression *rvalue, u32 range_id)
+{
+    auto result = ast_statement(inst, AST_Statement_Kind::ARITHMETIC_ASSIGNMENT, range_id);
+    result->arithmetic_assignment.op = op;
+    result->arithmetic_assignment.lvalue = lvalue;
+    result->arithmetic_assignment.rvalue = rvalue;
+    return result;
+}
+
 AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *call)
 {
     assert(call->kind == AST_Expression_Kind::CALL);

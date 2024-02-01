@@ -351,6 +351,35 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
             break;
         }
 
+        case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
+
+            u32 lvalue = ssa_emit_lvalue(program, func, block_index, stmt->arithmetic_assignment.lvalue, scope);
+
+            u32 lhs = ssa_register_create(func);
+            ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
+            ssa_emit_32(program, func, block_index, lhs);
+            ssa_emit_32(program, func, block_index, lvalue);
+
+            u32 rhs = ssa_emit_expression(program, func, block_index, stmt->arithmetic_assignment.rvalue, scope);
+
+            switch (stmt->arithmetic_assignment.op) {
+                default: assert(false); break;
+                case '+': ssa_emit_op(program, func, block_index, SSA_OP_ADD); break;
+                case '/': ssa_emit_op(program, func, block_index, SSA_OP_DIV); break;
+            }
+
+            u32 result = ssa_register_create(func);
+            ssa_emit_32(program, func, block_index, result);
+            ssa_emit_32(program, func, block_index, lhs);
+            ssa_emit_32(program, func, block_index, rhs);
+
+            ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
+            ssa_emit_32(program, func, block_index, lvalue);
+            ssa_emit_32(program, func, block_index, result);
+
+            break;
+        }
+
         case AST_Statement_Kind::CALL: {
             ssa_emit_expression(program, func, block_index, stmt->call, scope);
             break;
