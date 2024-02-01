@@ -231,6 +231,29 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
             break;
         }
 
+        case AST_Statement_Kind::FOR: {
+
+            Scope *for_scope = stmt->for_stmt.scope;
+
+            if (!resolve_statement(inst, task, stmt->for_stmt.init, for_scope)) {
+                return false;
+            }
+
+            if (!resolve_expression(inst, task, stmt->for_stmt.cond, for_scope)) {
+                return false;
+            }
+
+            if (!resolve_statement(inst, task, stmt->for_stmt.step, for_scope)) {
+                return false;
+            }
+
+            if (!resolve_statement(inst, task, stmt->for_stmt.stmt, for_scope)) {
+                return false;
+            }
+
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {

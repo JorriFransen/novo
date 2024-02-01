@@ -5,6 +5,7 @@
 #include "ast.h"
 #include "instance.h"
 #include "lexer.h"
+#include "source_pos.h"
 #include "type.h"
 
 #include <assert.h>
@@ -397,6 +398,7 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
             u32 post_if_block = ssa_block_create(program, func, "if.post");
             u32 else_block;
             if (stmt->if_stmt.else_stmt) else_block = ssa_block_create(program, func, "if.else");
+            else else_block = post_if_block;
 
             for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
 
@@ -454,6 +456,28 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
             ssa_set_insert_point(func, block_index, do_block);
 
             ssa_emit_statement(program, func, block_index, stmt->while_stmt.stmt, scope);
+            ssa_emit_jmp(program, func, block_index, cond_block);
+
+            ssa_set_insert_point(func, block_index, post_block);
+            break;
+        }
+
+        case AST_Statement_Kind::FOR: {
+
+            u32 cond_block = ssa_block_create(program, func, "for.cond");
+            u32 do_block = ssa_block_create(program, func, "for.do");
+            u32 post_block = ssa_block_create(program, func, "for.post");
+
+            ssa_emit_statement(program, func, block_index, stmt->for_stmt.init, scope);
+            ssa_emit_jmp(program, func, block_index, cond_block);
+
+            ssa_set_insert_point(func, block_index, cond_block);
+            u32 cond = ssa_emit_expression(program, func, block_index, stmt->for_stmt.cond, scope);
+            ssa_emit_jmp_if(program, func, block_index, cond, do_block, post_block);
+
+            ssa_set_insert_point(func, block_index, do_block);
+            ssa_emit_statement(program, func, block_index, stmt->for_stmt.stmt, scope);
+            ssa_emit_statement(program, func, block_index, stmt->for_stmt.step, scope);
             ssa_emit_jmp(program, func, block_index, cond_block);
 
             ssa_set_insert_point(func, block_index, post_block);

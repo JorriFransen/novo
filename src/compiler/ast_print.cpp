@@ -283,6 +283,37 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             break;
         }
 
+        case AST_Statement_Kind::FOR: {
+            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "FOR:\n");
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "INIT:\n");
+
+            ast_stmt_to_string(instance, sb, stmt->for_stmt.init, indent + 2);
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "COND:\n");
+
+            ast_expr_to_string(instance, sb, stmt->for_stmt.cond, indent + 2);
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "STEP:\n");
+
+            ast_stmt_to_string(instance, sb, stmt->for_stmt.step, indent + 2);
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "DO:\n");
+
+            ast_stmt_to_string(instance, sb, stmt->for_stmt.stmt, indent + 2);
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
             ast_print_pos(instance, sb, stmt->range_id);
             ast_print_indent(sb, indent);

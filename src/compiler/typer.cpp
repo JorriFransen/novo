@@ -2,6 +2,7 @@
 
 #include <containers/darray.h>
 #include <memory/temp_allocator.h>
+#include <nstring.h>
 
 #include "ast.h"
 #include "instance.h"
@@ -241,11 +242,42 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             if (cond->resolved_type->kind != Type_Kind::BOOLEAN) {
                 auto sp_id = source_range_start(inst, cond->range_id);
                 instance_fatal_error(inst, sp_id, "Expression after 'while' must be of boolean type (got: '%s')",
-                        temp_type_string(inst, cond->resolved_type).data);
+                                     temp_type_string(inst, cond->resolved_type).data);
             }
 
             AST_Statement *while_stmt = stmt->while_stmt.stmt;
             if (!type_statement(inst, task, while_stmt, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
+        case AST_Statement_Kind::FOR: {
+
+            AST_Statement *init = stmt->for_stmt.init;
+            if (!type_statement(inst, task, init, scope)) {
+                return false;
+            }
+
+            AST_Expression *cond = stmt->for_stmt.cond;
+            if (!type_expression(inst, task, cond, scope)) {
+                return false;
+            }
+
+            if (cond->resolved_type->kind != Type_Kind::BOOLEAN) {
+                auto sp_id = source_range_start(inst, cond->range_id);
+                instance_fatal_error(inst, sp_id, "Conditional in 'for' must be of boolean type (got: '%s')",
+                                     temp_type_string(inst, cond->resolved_type).data);
+            }
+
+            AST_Statement *step = stmt->for_stmt.step;
+            if (!type_statement(inst, task, step, scope)) {
+                return false;
+            }
+
+            AST_Statement *for_stmt = stmt->for_stmt.stmt;
+            if (!type_statement(inst, task, for_stmt, scope)) {
                 return false;
             }
 

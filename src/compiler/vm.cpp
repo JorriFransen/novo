@@ -6,6 +6,7 @@
 #include "ssa.h"
 
 #include <assert.h>
+#include <string.h>
 
 namespace Novo {
 

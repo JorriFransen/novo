@@ -265,7 +265,7 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
     expect_token(parser, '{');
     while (!is_token(parser, '}')) {
 
-        auto stmt = parse_statement(parser, fn_scope);
+        auto stmt = parse_statement(parser, fn_scope, true);
         if (!stmt) return nullptr;
 
         darray_append(&stmts, stmt);
@@ -452,7 +452,7 @@ AST_Expression *parse_expression(Parser *parser, u64 min_prec/*=0*/)
     }
 }
 
-AST_Statement *parse_statement(Parser *parser, Scope *scope)
+AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi)
 {
     if (parser->lexer->token.kind == TOK_ERROR) return nullptr;
 
@@ -464,7 +464,7 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope)
 
         auto stmts = temp_array_create<AST_Statement *>(&parser->instance->temp_allocator, 8);
         while (!is_token(parser, '}')) {
-            AST_Statement *stmt = parse_statement(parser, block_scope);
+            AST_Statement *stmt = parse_statement(parser, block_scope, true);
             darray_append(&stmts, stmt);
         }
 
@@ -485,7 +485,7 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope)
 
     if (expr->kind == AST_Expression_Kind::CALL) {
         auto result = ast_call_expr_statement(parser->instance, expr);
-        expect_token(parser, ';');
+        if (eat_semi) expect_token(parser, ';');
         return result;
 
     } else if (expr->kind == AST_Expression_Kind::IDENTIFIER && is_token(parser, ':')) {
@@ -497,7 +497,7 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope)
         auto value = parse_expression(parser);
 
         auto end = parser->lexer->token.source_pos_id;
-        expect_token(parser, ';');
+        if (eat_semi) expect_token(parser, ';');
 
         auto sr_id = source_range(parser->instance, source_range_start(parser->instance, expr->range_id), end);
         return ast_assignment_statement(parser->instance, expr, value, sr_id);
@@ -517,7 +517,7 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
     if (match_keyword(parser, g_keyword_if)) {
 
         AST_Expression *cond = parse_expression(parser);
-        AST_Statement *then_stmt = parse_statement(parser, scope);
+        AST_Statement *then_stmt = parse_statement(parser, scope, true);
 
         auto if_blocks = temp_array_create<AST_If_Block>(&parser->instance->temp_allocator);
 
@@ -530,12 +530,12 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
             if (match_keyword(parser, g_keyword_if)) {
 
                 AST_Expression *elif_cond = parse_expression(parser);
-                AST_Statement *elif_stmt = parse_statement(parser, scope);
+                AST_Statement *elif_stmt = parse_statement(parser, scope, true);
 
                 darray_append(&if_blocks, { elif_cond, elif_stmt });
             } else {
 
-                else_stmt = parse_statement(parser, scope);
+                else_stmt = parse_statement(parser, scope, true);
 
                 break;
             }
@@ -567,11 +567,39 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
             expect_token(parser, ')');
         }
 
-        AST_Statement *stmt = parse_statement(parser, scope);
+        AST_Statement *stmt = parse_statement(parser, scope, true);
 
         auto end = source_range_end(parser->instance, stmt->range_id);
         auto range = source_range(parser->instance, ct.source_pos_id, end);
         return ast_while_statement(parser->instance, cond, stmt, range);
+
+    } else if (match_keyword(parser, g_keyword_for)) {
+
+        bool expect_close_paren = match_token(parser, '(');
+
+        Scope *for_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
+
+        AST_Statement *init_stmt = parse_statement(parser, for_scope, true);
+        AST_Expression *cond = parse_expression(parser);
+        expect_token(parser, ';');
+        AST_Statement *step_stmt = parse_statement(parser, for_scope, false);
+
+        if (expect_close_paren) {
+            expect_token(parser, ')');
+        } else {
+            expect_token(parser, ';');
+        }
+
+        AST_Statement *do_stmt = parse_statement(parser, for_scope, true);
+
+        assert(init_stmt);
+        assert(cond);
+        assert(step_stmt);
+        assert(do_stmt);
+
+        auto end = source_range_end(parser->instance, do_stmt->range_id);
+        auto range = source_range(parser->instance, ct.source_pos_id, end);
+        return ast_for_statement(parser->instance, init_stmt, cond, step_stmt, do_stmt, for_scope, range);
 
     } else if (match_keyword(parser, g_keyword_return)) {
 

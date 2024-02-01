@@ -122,6 +122,7 @@ enum class AST_Statement_Kind : u32
 
     IF,
     WHILE,
+    FOR,
 
     BLOCK,
 };
@@ -165,6 +166,15 @@ struct AST_Statement
             AST_Expression *cond;
             AST_Statement *stmt;
         } while_stmt;
+
+        struct {
+            AST_Statement *init;
+            AST_Expression *cond;
+            AST_Statement *step;
+            AST_Statement *stmt;
+
+            Scope *scope;
+        } for_stmt;
 
         struct {
             DArray<AST_Statement *> statements;
@@ -298,6 +308,7 @@ NAPI AST_Statement *ast_call_expr_statement(Instance *instance, AST_Expression *
 NAPI AST_Statement *ast_return_statement(Instance *instance, AST_Expression *expr, u32 range_id);
 NAPI AST_Statement *ast_if_statement(Instance *instance, DArray<AST_If_Block> if_blocks, AST_Statement *else_stmt, u32 range_id);
 NAPI AST_Statement *ast_while_statement(Instance *instance, AST_Expression *cond, AST_Statement *stmt, u32 range_id);
+NAPI AST_Statement *ast_for_statement(Instance *instance, AST_Statement *init, AST_Expression *cond, AST_Statement *step, AST_Statement *stmt, Scope *scope, u32 range_id);
 NAPI AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id);
 
 NAPI AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32 range_id);

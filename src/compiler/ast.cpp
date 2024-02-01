@@ -180,6 +180,17 @@ AST_Statement *ast_while_statement(Instance *instance, AST_Expression *cond, AST
     return result;
 }
 
+AST_Statement *ast_for_statement(Instance *instance, AST_Statement *init, AST_Expression *cond, AST_Statement *step, AST_Statement *stmt, Scope *scope, u32 range_id)
+{
+    auto result = ast_statement(instance, AST_Statement_Kind::FOR, range_id);
+    result->for_stmt.init = init;
+    result->for_stmt.cond = cond;
+    result->for_stmt.step = step;
+    result->for_stmt.stmt = stmt;
+    result->for_stmt.scope = scope;
+    return result;
+}
+
 AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id)
 {
     auto result = ast_statement(instance, AST_Statement_Kind::BLOCK, range_id);

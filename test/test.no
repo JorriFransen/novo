@@ -1,8 +1,6 @@
 
 // TODO:
 //  - Basic control flow
-//      - while
-//      - for
 //      - switch
 //  - Foreign functions (call printf)
 //  - #run
@@ -16,33 +14,19 @@
 
 main :: () -> s64 {
 
-    i := 0;
-    result : s64;
+    j := 0;
+    for (i := 0; i < 10; i = i + 1) {
 
-    while (i < 10) {
-        result = result + i;
-        i = i + 1;
+        j = i;
 
-        // if (i == 2) {
-        //     result = result + 1;
-        // }
     }
 
-    return result;
+    for (i := 0; i < 0; i = i + 1) {
+        j = 0;
+    }
 
-    // if (i == 0) {
-    //     result = 11;
-    // } else if (i == 1) {
-    //     result = 22;
-    // } else if (i == 2) {
-    //     result = 33;
-    // } else {
-    //     result = 44;
-    // }
-    // return result;
+    i := 3;
 
-    // if (i == 0) return 11;
-    // else if (i == 1) return 22;
-    // else return 33;
+    return j + i;
 }
 

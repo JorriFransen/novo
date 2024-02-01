@@ -1,11 +1,13 @@
 
-#include <cstdio>
 #include <defines.h>
 #include <instance.h>
+#include <memory/allocator.h>
 #include <options.h>
-#include <parser.h>
 #include <ssa.h>
 #include <vm.h>
+
+#include <assert.h>
+#include <stdio.h>
 
 using namespace Novo;
 
@@ -32,12 +34,13 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/014_if_2.no", .return_code = 18 },
     { .file_path = "tests/015_if_3.no", .return_code = 132 },
     { .file_path = "tests/016_while.no", .return_code = 42 },
+    { .file_path = "tests/017_while.no", .return_code = 12 },
 };
 
 static bool run_test_case(Test_Case *tc)
 {
     Options options = default_options();
-    // options.print_ast = true;
+    options.print_ast = true;
 
     options.input_file = tc->file_path;
 

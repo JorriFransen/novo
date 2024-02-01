@@ -30,7 +30,7 @@ NAPI AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, S
 NAPI AST_Declaration *parse_struct_declaration(Parser *parser, AST_Identifier *ident, Scope *scope);
 NAPI AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *ident, Scope *scope);
 
-NAPI AST_Statement *parse_statement(Parser *parser, Scope *scope);
+NAPI AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi);
 NAPI AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope);
 
 NAPI AST_Expression *parse_leaf_expression(Parser *parser);
