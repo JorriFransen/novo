@@ -121,7 +121,18 @@ u64 vm_run(VM *vm)
                 break;
             }
 
-            case SSA_OP_CMP: {
+            case SSA_OP_LT: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 left_reg = vm_fetch<u32>(block, &ip);
+                u32 right_reg = vm_fetch<u32>(block, &ip);
+
+                u64 left_value = vm_get_register(vm, left_reg);
+                u64 right_value = vm_get_register(vm, right_reg);
+                vm_set_register(vm, dest_reg, left_value < right_value);
+                break;
+            }
+
+            case SSA_OP_EQ: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 left_reg = vm_fetch<u32>(block, &ip);
                 u32 right_reg = vm_fetch<u32>(block, &ip);

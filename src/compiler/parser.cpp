@@ -380,6 +380,8 @@ static bool is_binary_op(Token &token)
         case '-':
         case '*':
         case '/':
+        case '<':
+        case '>':
         case TOK_EQ:
         case TOK_NEQ:
         case TOK_LTEQ:
@@ -394,19 +396,22 @@ static u64 get_precedence(Token &token)
 {
     switch ((u32)token.kind) {
 
-        case '+':
-        case '-':
-            return 1;
-
-        case '*':
-        case '/':
-            return 2;
-
+        case '<':
+        case '>':
         case TOK_EQ:
         case TOK_NEQ:
         case TOK_LTEQ:
         case TOK_GTEQ:
+            return 1;
+
+        case '+':
+        case '-':
+            return 2;
+
+        case '*':
+        case '/':
             return 3;
+
     }
 
     assert(false);
@@ -551,6 +556,23 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
 
         return ast_if_statement(parser->instance, if_blocks_array, else_stmt, range);
 
+
+    } else if (match_keyword(parser, g_keyword_while)) {
+
+        bool expect_close_paren = match_token(parser, '(');
+
+        AST_Expression *cond = parse_expression(parser);
+
+        if (expect_close_paren) {
+            expect_token(parser, ')');
+        }
+
+        AST_Statement *stmt = parse_statement(parser, scope);
+
+        auto end = source_range_end(parser->instance, stmt->range_id);
+        auto range = source_range(parser->instance, ct.source_pos_id, end);
+        return ast_while_statement(parser->instance, cond, stmt, range);
+
     } else if (match_keyword(parser, g_keyword_return)) {
 
         AST_Expression *expr = nullptr;
@@ -563,6 +585,8 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
         auto range = source_range(parser->instance, ct.source_pos_id, end);
         return ast_return_statement(parser->instance, expr, range);
     }
+
+    instance_fatal_error(parser->instance, ct.source_pos_id, "Unexpected keyword '%s'", atom_string(ct.atom).data);
 
     assert(false);
     return nullptr;

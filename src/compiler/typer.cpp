@@ -5,7 +5,9 @@
 
 #include "ast.h"
 #include "instance.h"
+#include "lexer.h"
 #include "scope.h"
+#include "source_pos.h"
 #include "task.h"
 #include "type.h"
 
@@ -181,7 +183,12 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
                 return false;
             }
 
-            assert(stmt->assignment.lvalue->resolved_type == stmt->assignment.rvalue->resolved_type);
+            if (stmt->assignment.lvalue->resolved_type != stmt->assignment.rvalue->resolved_type) {
+                auto sp_id = source_range_start(inst, stmt->range_id);
+                instance_fatal_error(inst, sp_id, "Mismatching types in assignment, left: '%s', right: '%s'",
+                        temp_type_string(inst, stmt->assignment.lvalue->resolved_type).data,
+                        temp_type_string(inst, stmt->assignment.rvalue->resolved_type).data);
+            }
             break;
         }
 
@@ -218,6 +225,27 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             }
 
             if (stmt->if_stmt.else_stmt && !type_statement(inst, task, stmt->if_stmt.else_stmt, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
+        case AST_Statement_Kind::WHILE: {
+
+            AST_Expression *cond = stmt->while_stmt.cond;
+            if (!type_expression(inst, task, cond, scope)) {
+                return false;
+            }
+
+            if (cond->resolved_type->kind != Type_Kind::BOOLEAN) {
+                auto sp_id = source_range_start(inst, cond->range_id);
+                instance_fatal_error(inst, sp_id, "Expression after 'while' must be of boolean type (got: '%s')",
+                        temp_type_string(inst, cond->resolved_type).data);
+            }
+
+            AST_Statement *while_stmt = stmt->while_stmt.stmt;
+            if (!type_statement(inst, task, while_stmt, scope)) {
                 return false;
             }
 
@@ -271,7 +299,24 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
             }
 
             assert(expr->binary.lhs->resolved_type == expr->binary.rhs->resolved_type);
-            expr->resolved_type = expr->binary.lhs->resolved_type;
+
+            switch (expr->binary.op) {
+                case '<':
+                case '>':
+                case TOK_EQ:
+                case TOK_NEQ:
+                case TOK_LTEQ:
+                case TOK_GTEQ: {
+                    expr->resolved_type = inst->builtin_type_bool;
+                    break;
+                }
+
+                default: {
+                    expr->resolved_type = expr->binary.lhs->resolved_type;
+                    break;
+                }
+            }
+
             break;
         }
 

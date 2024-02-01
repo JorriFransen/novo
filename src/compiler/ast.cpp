@@ -172,6 +172,14 @@ AST_Statement *ast_if_statement(Instance *instance, DArray<AST_If_Block> if_bloc
     return result;
 }
 
+AST_Statement *ast_while_statement(Instance *instance, AST_Expression *cond, AST_Statement *stmt, u32 range_id)
+{
+    auto result = ast_statement(instance, AST_Statement_Kind::WHILE, range_id);
+    result->while_stmt.cond = cond;
+    result->while_stmt.stmt = stmt;
+    return result;
+}
+
 AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id)
 {
     auto result = ast_statement(instance, AST_Statement_Kind::BLOCK, range_id);

@@ -179,8 +179,13 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
     }
 
     if (!ssa_block_exits(&func, &block_index)) {
-        SSA_Block *last_block = &func.blocks[block_index];
-        assert(last_block->bytes.count == 0);
+        u32 sp_id;
+        if (decl->function.body.count) {
+            sp_id = source_range_end(inst, decl->function.body[decl->function.body.count - 1]->range_id);
+        } else {
+            sp_id = source_range_end(inst, decl->range_id);
+        }
+        instance_fatal_error(inst, sp_id, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
     }
 
     if (decl->ident->atom == atom_get("main")) {
@@ -437,6 +442,34 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
             break;
         }
 
+        case AST_Statement_Kind::WHILE: {
+
+            u32 cond_block = ssa_block_create(program, func, "while.cond");
+            u32 do_block = ssa_block_create(program, func, "while.do");
+            u32 post_block = ssa_block_create(program, func, "while.post");
+
+            ssa_emit_op(program, func, block_index, SSA_OP_JMP);
+            ssa_emit_32(program, func, block_index, cond_block);
+
+            ssa_set_insert_point(func, block_index, cond_block);
+
+            u32 cond_reg = ssa_emit_expression(program, func, block_index, stmt->while_stmt.cond, scope);
+            ssa_emit_op(program, func, block_index, SSA_OP_JMP_IF);
+            ssa_emit_32(program, func, block_index, cond_reg);
+            ssa_emit_32(program, func, block_index, do_block);
+            ssa_emit_32(program, func, block_index, post_block);
+
+            ssa_set_insert_point(func, block_index, do_block);
+
+            ssa_emit_statement(program, func, block_index, stmt->while_stmt.stmt, scope);
+
+            ssa_emit_op(program, func, block_index, SSA_OP_JMP);
+            ssa_emit_32(program, func, block_index, cond_block);
+
+            ssa_set_insert_point(func, block_index, post_block);
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
             Scope *block_scope = stmt->block.scope;
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
@@ -601,8 +634,13 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
                     break;
                 }
 
+                case '<': {
+                    ssa_emit_op(program, func, block_index, SSA_OP_LT);
+                    break;
+                }
+
                 case TOK_EQ: {
-                    ssa_emit_op(program, func, block_index, SSA_OP_CMP);
+                    ssa_emit_op(program, func, block_index, SSA_OP_EQ);
                     break;
                 }
 
@@ -874,7 +912,7 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
             break;
         }
 
-        case SSA_OP_CMP: {
+        case SSA_OP_LT: {
             u32 dest_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
@@ -884,7 +922,21 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
             u32 right = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
-            string_builder_append(sb, "  %%%u = CMP %%%u %%%u\n", dest_reg, left, right);
+            string_builder_append(sb, "  %%%u = LT %%%u %%%u\n", dest_reg, left, right);
+            break;
+        }
+
+        case SSA_OP_EQ: {
+            u32 dest_reg = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 left = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 right = *(u32 *)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = EQ %%%u %%%u\n", dest_reg, left, right);
             break;
         }
 

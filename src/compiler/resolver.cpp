@@ -218,6 +218,19 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
             break;
         }
 
+        case AST_Statement_Kind::WHILE: {
+
+            if (!resolve_expression(inst, task, stmt->while_stmt.cond, scope)) {
+                return false;
+            }
+
+            if (!resolve_statement(inst, task, stmt->while_stmt.stmt, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
