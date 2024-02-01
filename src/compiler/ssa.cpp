@@ -60,6 +60,7 @@ void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, 
     block->name = name;
     darray_init(program->allocator, &block->bytes);
     block->exits = false;
+    darray_init(program->allocator, &block->incoming, 0);
     block->next_index = -1;
 }
 
@@ -178,7 +179,7 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
         ssa_emit_statement(program, &func, &block_index, stmt, scope);
     }
 
-    if (!ssa_block_exits(&func, &block_index)) {
+    if (!ssa_block_exits(&func, &block_index) && func.blocks[block_index].incoming.count > 0) {
         u32 sp_id;
         if (decl->function.body.count) {
             sp_id = source_range_end(inst, decl->function.body[decl->function.body.count - 1]->range_id);
@@ -413,16 +414,12 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 u32 cond_reg = ssa_emit_expression(program, func, block_index, if_block.cond, scope);
 
                 assert(!ssa_block_exits(func, block_index));
-                ssa_emit_op(program, func, block_index, SSA_OP_JMP_IF);
-                ssa_emit_32(program, func, block_index, cond_reg);
-                ssa_emit_32(program, func, block_index, true_block);
-                ssa_emit_32(program, func, block_index, false_block);
+                ssa_emit_jmp_if(program, func, block_index, cond_reg, true_block, false_block);
 
                 ssa_set_insert_point(func, block_index, true_block);
                 ssa_emit_statement(program, func, block_index, if_block.then, scope);
                 if (!ssa_block_exits(func, block_index)) {
-                    ssa_emit_op(program, func, block_index, SSA_OP_JMP);
-                    ssa_emit_32(program, func, block_index, post_if_block);
+                    ssa_emit_jmp(program, func, block_index, post_if_block);
                 }
 
                 ssa_set_insert_point(func, block_index, false_block);
@@ -432,8 +429,7 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 ssa_set_insert_point(func, block_index, else_block);
                 ssa_emit_statement(program, func, block_index, stmt->if_stmt.else_stmt, scope);
                 if (!ssa_block_exits(func, block_index)) {
-                    ssa_emit_op(program, func, block_index, SSA_OP_JMP);
-                    ssa_emit_32(program, func, block_index, post_if_block);
+                    ssa_emit_jmp(program, func, block_index, post_if_block);
                 }
             }
 
@@ -448,23 +444,17 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
             u32 do_block = ssa_block_create(program, func, "while.do");
             u32 post_block = ssa_block_create(program, func, "while.post");
 
-            ssa_emit_op(program, func, block_index, SSA_OP_JMP);
-            ssa_emit_32(program, func, block_index, cond_block);
+            ssa_emit_jmp(program, func, block_index, cond_block);
 
             ssa_set_insert_point(func, block_index, cond_block);
 
             u32 cond_reg = ssa_emit_expression(program, func, block_index, stmt->while_stmt.cond, scope);
-            ssa_emit_op(program, func, block_index, SSA_OP_JMP_IF);
-            ssa_emit_32(program, func, block_index, cond_reg);
-            ssa_emit_32(program, func, block_index, do_block);
-            ssa_emit_32(program, func, block_index, post_block);
+            ssa_emit_jmp_if(program, func, block_index, cond_reg, do_block, post_block);
 
             ssa_set_insert_point(func, block_index, do_block);
 
             ssa_emit_statement(program, func, block_index, stmt->while_stmt.stmt, scope);
-
-            ssa_emit_op(program, func, block_index, SSA_OP_JMP);
-            ssa_emit_32(program, func, block_index, cond_block);
+            ssa_emit_jmp(program, func, block_index, cond_block);
 
             ssa_set_insert_point(func, block_index, post_block);
             break;
@@ -766,6 +756,25 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
     return result;
 }
 
+void ssa_emit_jmp_if(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 cond_reg, u32 true_block, u32 false_block)
+{
+    ssa_emit_op(program, func, block_index, SSA_OP_JMP_IF);
+    ssa_emit_32(program, func, block_index, cond_reg);
+    ssa_emit_32(program, func, block_index, true_block);
+    ssa_emit_32(program, func, block_index, false_block);
+
+    darray_append(&func->blocks[true_block].incoming, (u32)*block_index);
+    darray_append(&func->blocks[false_block].incoming, (u32)*block_index);
+}
+
+void ssa_emit_jmp(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 block)
+{
+    ssa_emit_op(program, func, block_index, SSA_OP_JMP);
+    ssa_emit_32(program, func, block_index, block);
+
+    darray_append(&func->blocks[block].incoming, (u32)*block_index);
+}
+
 void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 *block_index, SSA_Op op)
 {
     SSA_Block *block = &func->blocks[*block_index];
@@ -775,6 +784,8 @@ void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 *block_index, SSA
     if (op == SSA_OP_RET ||
         op == SSA_OP_JMP ||
         op == SSA_OP_JMP_IF) {
+
+        assert(!block->exits);
 
         block->exits = true;
 

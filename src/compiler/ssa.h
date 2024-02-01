@@ -55,6 +55,7 @@ struct SSA_Block
 
     bool exits;
 
+    DArray<u32> incoming;
     s64 next_index; // This is used to reorder blocks for printing
 };
 
@@ -104,6 +105,8 @@ NAPI void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *bloc
 NAPI u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Expression *lvalue_expr, Scope *scope);
 NAPI s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Expression *expr, Scope *scope);
 
+NAPI void ssa_emit_jmp_if(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 cond_reg, u32 true_block, u32 false_block);
+NAPI void ssa_emit_jmp(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 block);
 NAPI void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 *block_index, SSA_Op op);
 NAPI void ssa_emit_8(SSA_Program *program, SSA_Function *func, s64 *block_index, u8 value);
 NAPI void ssa_emit_16(SSA_Program *program, SSA_Function *func, s64 *block_index, u16 value);
