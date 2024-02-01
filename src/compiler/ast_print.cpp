@@ -8,6 +8,7 @@
 #include "ast.h"
 #include "atom.h"
 #include "instance.h"
+#include "lexer.h"
 #include "source_pos.h"
 
 #include <assert.h>
@@ -233,12 +234,65 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             ast_print_pos(instance, sb, stmt->range_id);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_IF:\n");
-            assert(false);
+
+            for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
+                auto if_block = stmt->if_stmt.blocks[i];
+
+                ast_print_pos(instance, sb, 0);
+                ast_print_indent(sb, indent + 1);
+                if (i == 0) {
+                    string_builder_append(sb, "IF_COND:\n");
+                } else {
+                    string_builder_append(sb, "ELSE_IF_COND:\n");
+                }
+
+                ast_expr_to_string(instance, sb, if_block.cond, indent + 2);
+
+                ast_print_pos(instance, sb, 0);
+                ast_print_indent(sb, indent + 1);
+                string_builder_append(sb, "THEN:\n");
+
+                ast_stmt_to_string(instance, sb, if_block.then, indent + 2);
+            }
+
+            if (stmt->if_stmt.else_stmt) {
+                ast_print_pos(instance, sb, 0);
+                ast_print_indent(sb, indent + 1);
+                string_builder_append(sb, "ELSE:\n");
+                ast_stmt_to_string(instance, sb, stmt->if_stmt.else_stmt, indent + 2);
+            }
             break;
         }
 
-        case AST_Statement_Kind::WHILE: assert(false); break;
-        case AST_Statement_Kind::BLOCK: assert(false); break;
+        case AST_Statement_Kind::WHILE: {
+            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "WHILE:\n");
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "COND:\n");
+
+            ast_expr_to_string(instance, sb, stmt->while_stmt.cond, indent + 2);
+
+            ast_print_pos(instance, sb, 0);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "DO:\n");
+
+            ast_stmt_to_string(instance, sb, stmt->while_stmt.stmt, indent + 2);
+            break;
+        }
+
+        case AST_Statement_Kind::BLOCK: {
+            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "BLOCK:\n");
+
+            for (s64 i = 0; i < stmt->block.statements.count; i++) {
+                ast_stmt_to_string(instance, sb, stmt->block.statements[i], indent + 1);
+            }
+            break;
+        }
     }
 }
 
@@ -259,7 +313,7 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
         }
 
         case AST_Expression_Kind::BINARY: {
-            string_builder_append(sb, "EXPR_BINARY: '%c'\n", expr->binary.op);
+            string_builder_append(sb, "EXPR_BINARY: '%s'\n", tmp_token_kind_str((Token_Kind)expr->binary.op).data);
             ast_expr_to_string(instance, sb, expr->binary.lhs, indent + 1);
             ast_expr_to_string(instance, sb, expr->binary.rhs, indent + 1);
             break;
