@@ -88,11 +88,11 @@ AST_Declaration *parse_declaration(Parser *parser, Scope *scope, bool eat_semi)
     AST_Identifier *ident = parse_identifier(parser);
 
     // Report redeclarations in higher level scopes first
-    if (scope_find_symbol(scope, ident->atom)) {
+    if (scope_find_symbol(scope, ident->atom, nullptr)) {
         auto name = atom_string(ident->atom);
         auto start = source_range_start(parser->instance, ident->range_id);
 
-        auto ex_decl = scope_find_symbol(scope, ident->atom);
+        auto ex_decl = scope_find_symbol(scope, ident->atom, nullptr);
         assert(ex_decl);
         assert(ex_decl->ident);
         auto ex_start = source_range_start(parser->instance, ex_decl->ident->range_id);
@@ -157,7 +157,7 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
         auto name = atom_string(ident->atom);
         auto start = source_range_start(parser->instance, ident->range_id);
 
-        auto ex_decl = scope_find_symbol(scope, ident->atom);
+        auto ex_decl = scope_find_symbol(scope, ident->atom, nullptr);
         assert(ex_decl);
         assert(ex_decl->ident);
         auto ex_start = source_range_start(parser->instance, ex_decl->ident->range_id);
@@ -200,7 +200,7 @@ AST_Declaration *parse_struct_declaration(Parser *parser, AST_Identifier *ident,
             auto new_name = atom_string(name->atom);
             auto start = source_range_start(parser->instance, name->range_id);
 
-            auto ex_decl = scope_find_symbol(struct_scope, name->atom);
+            auto ex_decl = scope_find_symbol(struct_scope, name->atom, nullptr);
             assert(ex_decl);
             assert(ex_decl->ident);
             auto ex_start = source_range_start(parser->instance, ex_decl->ident->range_id);

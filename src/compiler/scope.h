@@ -35,6 +35,8 @@ struct Scope
 
 NAPI Scope *scope_new(Instance *instance, Scope_Kind kind, Scope *parent = nullptr);
 NAPI bool scope_add_symbol(Scope *scope, Atom atom, AST_Declaration *decl);
-NAPI AST_Declaration *scope_find_symbol(Scope *scope, Atom atom);
+NAPI AST_Declaration *scope_find_symbol(Scope *scope, Atom atom, Scope **found_in_scope);
+
+NAPI bool scope_is_parent(Scope *child, Scope *parent);
 
 }

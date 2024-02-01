@@ -361,7 +361,7 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
             Type *struct_type = expr->member.base->resolved_type;
             assert(struct_type->kind == Type_Kind::STRUCT);
 
-            AST_Declaration *field = scope_find_symbol(struct_type->structure.scope, expr->member.member_name->atom);
+            AST_Declaration *field = scope_find_symbol(struct_type->structure.scope, expr->member.member_name->atom, nullptr);
             u32 index = field->variable.index;
             assert(index >= 0 && index < struct_type->structure.members.count);
 

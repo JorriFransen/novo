@@ -9,6 +9,7 @@
 #include "atom.h"
 #include "instance.h"
 #include "scope.h"
+#include "source_pos.h"
 #include "task.h"
 #include "type.h"
 #include "typer.h"
@@ -403,7 +404,25 @@ bool resolve_identifier(Instance *inst, Resolve_Task *task, AST_Identifier *iden
 
     if (ident->decl) return true;
 
-    if (AST_Declaration *found_decl = scope_find_symbol(scope, ident->atom)) {
+    Scope *found_in_scope;
+    if (AST_Declaration *found_decl = scope_find_symbol(scope, ident->atom, &found_in_scope)) {
+
+        if (task->fn_decl &&
+            (found_in_scope == task->fn_decl->function.scope ||
+             scope_is_parent(found_in_scope, task->fn_decl->function.scope))) {
+
+            // The declaration is inside the current function, check the order...
+            u32 decl_pos_id = source_range_end(inst, found_decl->range_id);
+            u32 ident_pos_id = source_range_start(inst, ident->range_id);
+
+            if (ident_pos_id <= decl_pos_id) {
+                auto ident_str = atom_string(ident->atom).data;
+                instance_error(inst, ident_pos_id, "Reference to identifier '%s' before declaration", ident_str);
+                u32 decl_start_id = source_range_start(inst, found_decl->range_id);
+                instance_fatal_error(inst, decl_start_id, "'%s' was first declared here", ident_str);
+            }
+        }
+
         ident->decl = found_decl;
         return true;
     }
