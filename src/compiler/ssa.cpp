@@ -18,6 +18,14 @@ struct SSA_Alloc
     u32 alloc_reg;
 };
 
+struct SSA_Builder
+{
+    SSA_Program *program;
+    SSA_Function *function;
+    s64 block_index;
+};
+
+
 void ssa_program_init(SSA_Program *program, Allocator *allocator)
 {
     program->allocator = allocator;
@@ -81,10 +89,15 @@ u32 ssa_block_create(SSA_Program *program, SSA_Function *function, const char *n
     return (u32)index;
 }
 
-u32 ssa_register_create(SSA_Function *function)
+u32 ssa_block_create(SSA_Builder *builder, const char *name)
 {
-    assert(function->register_count != U32_MAX);
-    return function->register_count++;
+    return ssa_block_create(builder->program, builder->function, name);
+}
+
+u32 ssa_register_create(SSA_Builder *builder)
+{
+    assert(builder->function->register_count != U32_MAX);
+    return builder->function->register_count++;
 }
 
 bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *decl)
@@ -95,7 +108,13 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
     bool sret = decl->resolved_type->function.return_type->kind == Type_Kind::STRUCT;
 
     ssa_function_init(program, &func, decl->ident->atom, decl->function.params.count, sret);
-    s64 block_index = 0;
+
+    SSA_Builder local_builder;
+    local_builder.program = program;
+    local_builder.function = &func;
+    local_builder.block_index = 0;
+
+    SSA_Builder *builder = &local_builder;
 
     auto scope = decl->function.scope;
 
@@ -108,10 +127,10 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
             assert(param_decl->resolved_type->bit_size % 8 == 0);
             auto byte_size = param_decl->resolved_type->bit_size / 8;
 
-            ssa_emit_op(program, &func, &block_index, SSA_OP_ALLOC);
-            u32 dest_reg = ssa_register_create(&func);
-            ssa_emit_32(program, &func, &block_index, dest_reg);
-            ssa_emit_32(program, &func, &block_index, byte_size);
+            ssa_emit_op(builder, SSA_OP_ALLOC);
+            u32 dest_reg = ssa_register_create(builder);
+            ssa_emit_32(builder, dest_reg);
+            ssa_emit_32(builder, byte_size);
 
             darray_append(&func.allocs, { ast_node(param_decl), dest_reg });
         }
@@ -124,10 +143,10 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
         assert(var_decl->resolved_type->bit_size % 8 == 0);
         auto byte_size = var_decl->resolved_type->bit_size / 8;
 
-        ssa_emit_op(program, &func, &block_index, SSA_OP_ALLOC);
-        u32 dest_reg = ssa_register_create(&func);
-        ssa_emit_32(program, &func, &block_index, dest_reg);
-        ssa_emit_32(program, &func, &block_index, byte_size);
+        ssa_emit_op(builder, SSA_OP_ALLOC);
+        u32 dest_reg = ssa_register_create(builder);
+        ssa_emit_32(builder, dest_reg);
+        ssa_emit_32(builder, byte_size);
 
         darray_append(&func.allocs, { ast_node(var_decl), dest_reg });
     }
@@ -139,11 +158,11 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
         assert(expr->resolved_type->bit_size % 8 == 0);
         auto byte_size = expr->resolved_type->bit_size / 8;
 
-        ssa_emit_op(program, &func, &block_index, SSA_OP_ALLOC);
-        u32 dest_reg = ssa_register_create(&func);
-        ssa_emit_32(program, &func, &block_index, dest_reg);
+        ssa_emit_op(builder, SSA_OP_ALLOC);
+        u32 dest_reg = ssa_register_create(builder);
+        ssa_emit_32(builder, dest_reg);
 
-        ssa_emit_32(program, &func, &block_index, byte_size);
+        ssa_emit_32(builder, byte_size);
 
         darray_append(&func.allocs, { ast_node(expr), dest_reg });
     }
@@ -154,18 +173,18 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
         AST_Declaration *param_decl = decl->function.params[i];
 
         if (param_decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
-            u32 val_reg = ssa_register_create(&func);
-            ssa_emit_op(program, &func, &block_index, SSA_OP_LOAD_PARAM);
-            ssa_emit_32(program, &func, &block_index, val_reg);
+            u32 val_reg = ssa_register_create(builder);
+            ssa_emit_op(builder, SSA_OP_LOAD_PARAM);
+            ssa_emit_32(builder, val_reg);
             assert(i <= U32_MAX);
 
             u32 param_index = i;
             if (sret) param_index++;
-            ssa_emit_32(program, &func, &block_index, param_index);
+            ssa_emit_32(builder, param_index);
 
-            ssa_emit_op(program, &func, &block_index, SSA_OP_STORE_PTR);
-            ssa_emit_32(program, &func, &block_index, param_storage_index++);
-            ssa_emit_32(program, &func, &block_index, val_reg);
+            ssa_emit_op(builder, SSA_OP_STORE_PTR);
+            ssa_emit_32(builder, param_storage_index++);
+            ssa_emit_32(builder, val_reg);
         }
     }
 
@@ -173,14 +192,14 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
     for (s64 i = 0; i < decl->function.body.count; i++) {
         auto stmt = decl->function.body[i];
 
-        if (ssa_block_exits(&func, &block_index)) {
+        if (ssa_block_exits(builder, builder->block_index)) {
             auto pos = source_range_start(inst, stmt->range_id);
             instance_fatal_error(inst, pos, "Unreachable code detected");
         }
-        ssa_emit_statement(program, &func, &block_index, stmt, scope);
+        ssa_emit_statement(builder, stmt, scope);
     }
 
-    if (!ssa_block_exits(&func, &block_index) && func.blocks[block_index].incoming.count > 0) {
+    if (!ssa_block_exits(builder, builder->block_index) && func.blocks[builder->block_index].incoming.count > 0) {
         u32 sp_id;
         if (decl->function.body.count) {
             sp_id = source_range_end(inst, decl->function.body[decl->function.body.count - 1]->range_id);
@@ -212,12 +231,12 @@ bool ssa_find_function(SSA_Program *program, Atom atom, u32 *index)
     return found;
 }
 
-bool ssa_find_alloc(SSA_Function *func, AST_Node *ast_node, u32 *result)
+bool ssa_find_alloc(SSA_Builder *builder, AST_Node *ast_node, u32 *result)
 {
-    for (s64 i = 0; i < func->allocs.count; i++) {
+    for (s64 i = 0; i < builder->function->allocs.count; i++) {
 
-        if (func->allocs[i].ast_node == *ast_node) {
-            *result = func->allocs[i].alloc_reg;
+        if (builder->function->allocs[i].ast_node == *ast_node) {
+            *result = builder->function->allocs[i].alloc_reg;
             return true;
         }
     }
@@ -225,37 +244,36 @@ bool ssa_find_alloc(SSA_Function *func, AST_Node *ast_node, u32 *result)
     return false;
 }
 
-bool ssa_find_alloc(SSA_Function *func, AST_Declaration *decl, u32 *result)
+bool ssa_find_alloc(SSA_Builder *builder, AST_Declaration *decl, u32 *result)
 {
     AST_Node node = ast_node(decl);
-    return ssa_find_alloc(func, &node, result);
+    return ssa_find_alloc(builder, &node, result);
 }
 
-bool ssa_find_alloc(SSA_Function *func, AST_Expression *expr, u32 *result)
+bool ssa_find_alloc(SSA_Builder *builder, AST_Expression *expr, u32 *result)
 {
     AST_Node node = ast_node(expr);
-    return ssa_find_alloc(func, &node, result);
+    return ssa_find_alloc(builder, &node, result);
 }
 
-void ssa_set_insert_point(SSA_Function *func, s64 *block_index, u32 new_block_index)
+void ssa_set_insert_point(SSA_Builder *builder, u32 new_block_index)
 {
-    assert(new_block_index >= 0 && new_block_index < func->blocks.count);
+    assert(new_block_index >= 0 && new_block_index < builder->function->blocks.count);
 
-    if (*block_index == new_block_index) return;
+    if (builder->block_index == new_block_index) return;
 
-    func->blocks[*block_index].next_index = new_block_index;
-    *block_index = new_block_index;
+    builder->function->blocks[builder->block_index].next_index = new_block_index;
+    builder->block_index = new_block_index;
 }
 
-bool ssa_block_exits(SSA_Function *func, s64 *block_index)
+bool ssa_block_exits(SSA_Builder *builder, s64 block_index)
 {
-    s64 index = *block_index;
-    assert(index >= 0 && index < func->blocks.count);
+    assert(block_index >= 0 && block_index < builder->function->blocks.count);
 
-    return func->blocks[index].exits;
+    return builder->function->blocks[block_index].exits;
 }
 
-void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Statement *stmt, Scope *scope)
+void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
 {
     switch (stmt->kind) {
 
@@ -269,7 +287,7 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 if (init_expr) {
 
                     u32 alloc_reg;
-                    bool found = ssa_find_alloc(func, stmt->declaration, &alloc_reg);
+                    bool found = ssa_find_alloc(builder, stmt->declaration, &alloc_reg);
                     assert(found);
 
                     switch (init_expr->resolved_type->kind) {
@@ -279,27 +297,27 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
 
                         case Type_Kind::INTEGER:
                         case Type_Kind::BOOLEAN: {
-                            u32 value_reg = ssa_emit_expression(program, func, block_index, init_expr, scope);
-                            ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
-                            ssa_emit_32(program, func, block_index, alloc_reg);
-                            ssa_emit_32(program, func, block_index, value_reg);
+                            u32 value_reg = ssa_emit_expression(builder, init_expr, scope);
+                            ssa_emit_op(builder, SSA_OP_STORE_PTR);
+                            ssa_emit_32(builder, alloc_reg);
+                            ssa_emit_32(builder, value_reg);
                             break;
                         }
 
                         case Type_Kind::FUNCTION: assert(false); break;
 
                         case Type_Kind::STRUCT: {
-                            u32 value_reg = ssa_emit_lvalue(program, func, block_index, init_expr, scope);
-                            ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
-                            ssa_emit_32(program, func, block_index, alloc_reg);
-                            ssa_emit_32(program, func, block_index, value_reg);
+                            u32 value_reg = ssa_emit_lvalue(builder, init_expr, scope);
+                            ssa_emit_op(builder, SSA_OP_MEMCPY);
+                            ssa_emit_32(builder, alloc_reg);
+                            ssa_emit_32(builder, value_reg);
 
                             s64 size = init_expr->resolved_type->bit_size;
                             assert(size % 8 == 0);
                             size /= 8;
                             assert(size >= 0 && size < U32_MAX);
 
-                            ssa_emit_32(program, func, block_index, size);
+                            ssa_emit_32(builder, size);
                             break;
                         }
                     }
@@ -320,12 +338,12 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
 
                 case Type_Kind::INTEGER:
                 case Type_Kind::BOOLEAN: {
-                    u32 rvalue = ssa_emit_expression(program, func, block_index, stmt->assignment.rvalue, scope);
-                    auto lvalue = ssa_emit_lvalue(program, func, block_index, stmt->assignment.lvalue, scope);
+                    u32 rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);
+                    auto lvalue = ssa_emit_lvalue(builder, stmt->assignment.lvalue, scope);
 
-                    ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
-                    ssa_emit_32(program, func, block_index, lvalue);
-                    ssa_emit_32(program, func, block_index, rvalue);
+                    ssa_emit_op(builder, SSA_OP_STORE_PTR);
+                    ssa_emit_32(builder, lvalue);
+                    ssa_emit_32(builder, rvalue);
 
                     break;
                 }
@@ -333,18 +351,18 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 case Type_Kind::FUNCTION: assert(false); break;
 
                 case Type_Kind::STRUCT: {
-                    u32 rvalue = ssa_emit_lvalue(program, func, block_index, stmt->assignment.rvalue, scope);
-                    u32 lvalue = ssa_emit_lvalue(program, func, block_index, stmt->assignment.lvalue, scope);
-                    ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
-                    ssa_emit_32(program, func, block_index, lvalue);
-                    ssa_emit_32(program, func, block_index, rvalue);
+                    u32 rvalue = ssa_emit_lvalue(builder, stmt->assignment.rvalue, scope);
+                    u32 lvalue = ssa_emit_lvalue(builder, stmt->assignment.lvalue, scope);
+                    ssa_emit_op(builder, SSA_OP_MEMCPY);
+                    ssa_emit_32(builder, lvalue);
+                    ssa_emit_32(builder, rvalue);
 
                     s64 size = stmt->assignment.rvalue->resolved_type->bit_size;
                     assert(size % 8 == 0);
                     size /= 8;
                     assert(size >= 0 && size < U32_MAX);
 
-                    ssa_emit_32(program, func, block_index, size);
+                    ssa_emit_32(builder, size);
                     break;
                 }
             }
@@ -353,67 +371,67 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
 
         case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
 
-            u32 lvalue = ssa_emit_lvalue(program, func, block_index, stmt->arithmetic_assignment.lvalue, scope);
+            u32 lvalue = ssa_emit_lvalue(builder, stmt->arithmetic_assignment.lvalue, scope);
 
-            u32 lhs = ssa_register_create(func);
-            ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
-            ssa_emit_32(program, func, block_index, lhs);
-            ssa_emit_32(program, func, block_index, lvalue);
+            u32 lhs = ssa_register_create(builder);
+            ssa_emit_op(builder, SSA_OP_LOAD_PTR);
+            ssa_emit_32(builder, lhs);
+            ssa_emit_32(builder, lvalue);
 
-            u32 rhs = ssa_emit_expression(program, func, block_index, stmt->arithmetic_assignment.rvalue, scope);
+            u32 rhs = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
 
             switch (stmt->arithmetic_assignment.op) {
                 default: assert(false); break;
-                case '+': ssa_emit_op(program, func, block_index, SSA_OP_ADD); break;
-                case '/': ssa_emit_op(program, func, block_index, SSA_OP_DIV); break;
+                case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
+                case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
             }
 
-            u32 result = ssa_register_create(func);
-            ssa_emit_32(program, func, block_index, result);
-            ssa_emit_32(program, func, block_index, lhs);
-            ssa_emit_32(program, func, block_index, rhs);
+            u32 result = ssa_register_create(builder);
+            ssa_emit_32(builder, result);
+            ssa_emit_32(builder, lhs);
+            ssa_emit_32(builder, rhs);
 
-            ssa_emit_op(program, func, block_index, SSA_OP_STORE_PTR);
-            ssa_emit_32(program, func, block_index, lvalue);
-            ssa_emit_32(program, func, block_index, result);
+            ssa_emit_op(builder, SSA_OP_STORE_PTR);
+            ssa_emit_32(builder, lvalue);
+            ssa_emit_32(builder, result);
 
             break;
         }
 
         case AST_Statement_Kind::CALL: {
-            ssa_emit_expression(program, func, block_index, stmt->call, scope);
+            ssa_emit_expression(builder, stmt->call, scope);
             break;
         }
 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
-                if (func->sret) {
-                    u32 src_ptr_reg = ssa_emit_lvalue(program, func, block_index, stmt->return_expr, scope);
+                if (builder->function->sret) {
+                    u32 src_ptr_reg = ssa_emit_lvalue(builder, stmt->return_expr, scope);
 
-                    u32 dest_ptr_reg = ssa_register_create(func);
-                    ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
-                    ssa_emit_32(program, func, block_index, dest_ptr_reg);
-                    ssa_emit_32(program, func, block_index, 0);
+                    u32 dest_ptr_reg = ssa_register_create(builder);
+                    ssa_emit_op(builder, SSA_OP_LOAD_PARAM);
+                    ssa_emit_32(builder, dest_ptr_reg);
+                    ssa_emit_32(builder, 0);
 
-                    ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
-                    ssa_emit_32(program, func, block_index, dest_ptr_reg);
-                    ssa_emit_32(program, func, block_index, src_ptr_reg);
+                    ssa_emit_op(builder, SSA_OP_MEMCPY);
+                    ssa_emit_32(builder, dest_ptr_reg);
+                    ssa_emit_32(builder, src_ptr_reg);
 
                     s64 size = stmt->return_expr->resolved_type->bit_size;
                     assert(size % 8 == 0);
                     size /= 8;
                     assert(size >= 0 && size < U32_MAX);
 
-                    ssa_emit_32(program, func, block_index, size);
+                    ssa_emit_32(builder, size);
 
-                    ssa_emit_op(program, func, block_index, SSA_OP_RET);
-                    ssa_emit_32(program, func, block_index, dest_ptr_reg);
+                    ssa_emit_op(builder, SSA_OP_RET);
+                    ssa_emit_32(builder, dest_ptr_reg);
 
                 } else {
-                    u32 value_reg = ssa_emit_expression(program, func, block_index, stmt->return_expr, scope);
+                    u32 value_reg = ssa_emit_expression(builder, stmt->return_expr, scope);
 
-                    ssa_emit_op(program, func, block_index, SSA_OP_RET);
-                    ssa_emit_32(program, func, block_index, value_reg);
+                    ssa_emit_op(builder, SSA_OP_RET);
+                    ssa_emit_32(builder, value_reg);
                 }
 
             } else {
@@ -424,92 +442,99 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
 
         case AST_Statement_Kind::IF: {
 
-            u32 post_if_block = ssa_block_create(program, func, "if.post");
+            u32 post_if_block = ssa_block_create(builder, "if.post");
             u32 else_block;
-            if (stmt->if_stmt.else_stmt) else_block = ssa_block_create(program, func, "if.else");
+            if (stmt->if_stmt.else_stmt) else_block = ssa_block_create(builder, "if.else");
             else else_block = post_if_block;
 
             for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
 
                 auto if_block = stmt->if_stmt.blocks[i];
 
-                u32 true_block = ssa_block_create(program, func, "if.true");
+                u32 true_block = ssa_block_create(builder, "if.true");
 
                 u32 false_block = post_if_block;
                 if (i < stmt->if_stmt.blocks.count -1 ) {
-                    false_block = ssa_block_create(program, func, "if.false");
+                    false_block = ssa_block_create(builder, "if.false");
                 } else if (i == stmt->if_stmt.blocks.count - 1 && stmt->if_stmt.else_stmt) {
                     false_block = else_block;
                 }
 
-                u32 cond_reg = ssa_emit_expression(program, func, block_index, if_block.cond, scope);
+                u32 cond_reg = ssa_emit_expression(builder, if_block.cond, scope);
 
-                assert(!ssa_block_exits(func, block_index));
-                ssa_emit_jmp_if(program, func, block_index, cond_reg, true_block, false_block);
+                assert(!ssa_block_exits(builder, builder->block_index));
+                ssa_emit_jmp_if(builder, cond_reg, true_block, false_block);
 
-                ssa_set_insert_point(func, block_index, true_block);
-                ssa_emit_statement(program, func, block_index, if_block.then, scope);
-                if (!ssa_block_exits(func, block_index)) {
-                    ssa_emit_jmp(program, func, block_index, post_if_block);
+                ssa_set_insert_point(builder, true_block);
+                ssa_emit_statement(builder, if_block.then, scope);
+                if (!ssa_block_exits(builder, builder->block_index)) {
+                    ssa_emit_jmp(builder, post_if_block);
                 }
 
-                ssa_set_insert_point(func, block_index, false_block);
+                ssa_set_insert_point(builder, false_block);
             }
 
             if (stmt->if_stmt.else_stmt) {
-                ssa_set_insert_point(func, block_index, else_block);
-                ssa_emit_statement(program, func, block_index, stmt->if_stmt.else_stmt, scope);
-                if (!ssa_block_exits(func, block_index)) {
-                    ssa_emit_jmp(program, func, block_index, post_if_block);
+                ssa_set_insert_point(builder, else_block);
+                ssa_emit_statement(builder, stmt->if_stmt.else_stmt, scope);
+                if (!ssa_block_exits(builder, builder->block_index)) {
+                    ssa_emit_jmp(builder, post_if_block);
                 }
             }
 
-            ssa_set_insert_point(func, block_index, post_if_block);
+            ssa_set_insert_point(builder, post_if_block);
 
             break;
         }
 
         case AST_Statement_Kind::WHILE: {
 
-            u32 cond_block = ssa_block_create(program, func, "while.cond");
-            u32 do_block = ssa_block_create(program, func, "while.do");
-            u32 post_block = ssa_block_create(program, func, "while.post");
+            u32 cond_block = ssa_block_create(builder, "while.cond");
+            u32 do_block = ssa_block_create(builder, "while.do");
+            u32 post_block = ssa_block_create(builder, "while.post");
 
-            ssa_emit_jmp(program, func, block_index, cond_block);
+            ssa_emit_jmp(builder, cond_block);
 
-            ssa_set_insert_point(func, block_index, cond_block);
+            ssa_set_insert_point(builder, cond_block);
 
-            u32 cond_reg = ssa_emit_expression(program, func, block_index, stmt->while_stmt.cond, scope);
-            ssa_emit_jmp_if(program, func, block_index, cond_reg, do_block, post_block);
+            u32 cond_reg = ssa_emit_expression(builder, stmt->while_stmt.cond, scope);
+            ssa_emit_jmp_if(builder, cond_reg, do_block, post_block);
 
-            ssa_set_insert_point(func, block_index, do_block);
+            ssa_set_insert_point(builder, do_block);
 
-            ssa_emit_statement(program, func, block_index, stmt->while_stmt.stmt, scope);
-            ssa_emit_jmp(program, func, block_index, cond_block);
+            ssa_emit_statement(builder, stmt->while_stmt.stmt, scope);
+            ssa_emit_jmp(builder, cond_block);
 
-            ssa_set_insert_point(func, block_index, post_block);
+            ssa_set_insert_point(builder, post_block);
             break;
         }
 
         case AST_Statement_Kind::FOR: {
 
-            u32 cond_block = ssa_block_create(program, func, "for.cond");
-            u32 do_block = ssa_block_create(program, func, "for.do");
-            u32 post_block = ssa_block_create(program, func, "for.post");
+            u32 cond_block = ssa_block_create(builder, "for.cond");
+            u32 do_block = ssa_block_create(builder, "for.do");
+            u32 post_block = ssa_block_create(builder, "for.post");
 
-            ssa_emit_statement(program, func, block_index, stmt->for_stmt.init, scope);
-            ssa_emit_jmp(program, func, block_index, cond_block);
+            ssa_emit_statement(builder, stmt->for_stmt.init, scope);
+            ssa_emit_jmp(builder, cond_block);
 
-            ssa_set_insert_point(func, block_index, cond_block);
-            u32 cond = ssa_emit_expression(program, func, block_index, stmt->for_stmt.cond, scope);
-            ssa_emit_jmp_if(program, func, block_index, cond, do_block, post_block);
+            ssa_set_insert_point(builder, cond_block);
+            u32 cond = ssa_emit_expression(builder, stmt->for_stmt.cond, scope);
+            ssa_emit_jmp_if(builder, cond, do_block, post_block);
 
-            ssa_set_insert_point(func, block_index, do_block);
-            ssa_emit_statement(program, func, block_index, stmt->for_stmt.stmt, scope);
-            ssa_emit_statement(program, func, block_index, stmt->for_stmt.step, scope);
-            ssa_emit_jmp(program, func, block_index, cond_block);
+            ssa_set_insert_point(builder, do_block);
+            ssa_emit_statement(builder, stmt->for_stmt.stmt, scope);
+            ssa_emit_statement(builder, stmt->for_stmt.step, scope);
+            ssa_emit_jmp(builder, cond_block);
 
-            ssa_set_insert_point(func, block_index, post_block);
+            ssa_set_insert_point(builder, post_block);
+            break;
+        }
+
+        case AST_Statement_Kind::BREAK: {
+
+            assert(false);
+
             break;
         }
 
@@ -517,13 +542,13 @@ void ssa_emit_statement(SSA_Program *program, SSA_Function *func, s64 *block_ind
             Scope *block_scope = stmt->block.scope;
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
 
-                ssa_emit_statement(program, func, block_index, stmt->block.statements[i], block_scope);
+                ssa_emit_statement(builder, stmt->block.statements[i], block_scope);
             }
         }
     }
 }
 
-u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Expression *lvalue_expr, Scope *scope)
+u32 ssa_emit_lvalue(SSA_Builder *builder, AST_Expression *lvalue_expr, Scope *scope)
 {
     switch (lvalue_expr->kind) {
 
@@ -542,18 +567,18 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, 
             }
 
             if (is_param && is_struct) {
-                ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
-                u32 result_reg = ssa_register_create(func);
-                ssa_emit_32(program, func, block_index, result_reg);
+                ssa_emit_op(builder, SSA_OP_LOAD_PARAM);
+                u32 result_reg = ssa_register_create(builder);
+                ssa_emit_32(builder, result_reg);
 
                 u32 param_index = decl->variable.index;
-                if (func->sret) param_index++;
-                ssa_emit_32(program, func, block_index, param_index);
+                if (builder->function->sret) param_index++;
+                ssa_emit_32(builder, param_index);
                 return result_reg;
             } else {
 
                 u32 alloc_reg;
-                bool found = ssa_find_alloc(func, decl, &alloc_reg);
+                bool found = ssa_find_alloc(builder, decl, &alloc_reg);
                 assert(found);
 
                 return alloc_reg;
@@ -563,12 +588,12 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, 
         case AST_Expression_Kind::BINARY: assert(false); break;
 
         case AST_Expression_Kind::MEMBER: {
-            auto base_lvalue = ssa_emit_lvalue(program, func, block_index, lvalue_expr->member.base, scope);
+            auto base_lvalue = ssa_emit_lvalue(builder, lvalue_expr->member.base, scope);
 
-            u32 result_reg = ssa_register_create(func);
-            ssa_emit_op(program, func, block_index, SSA_OP_STRUCT_OFFSET);
-            ssa_emit_32(program, func, block_index, result_reg);
-            ssa_emit_32(program, func, block_index, base_lvalue);
+            u32 result_reg = ssa_register_create(builder);
+            ssa_emit_op(builder, SSA_OP_STRUCT_OFFSET);
+            ssa_emit_32(builder, result_reg);
+            ssa_emit_32(builder, base_lvalue);
 
 
             auto field = lvalue_expr->member.member_name->decl;
@@ -588,8 +613,8 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, 
             assert(offset >= 0 && offset < U32_MAX);
 
 
-            ssa_emit_32(program, func, block_index, (u32)offset);
-            ssa_emit_16(program, func, block_index, (u16)index);
+            ssa_emit_32(builder, (u32)offset);
+            ssa_emit_16(builder, (u16)index);
 
             return result_reg;
         }
@@ -597,7 +622,7 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, 
         case AST_Expression_Kind::CALL: {
             assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
 
-            return ssa_emit_expression(program, func, block_index, lvalue_expr, scope);
+            return ssa_emit_expression(builder, lvalue_expr, scope);
         }
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
@@ -610,7 +635,7 @@ u32 ssa_emit_lvalue(SSA_Program *program, SSA_Function *func, s64 *block_index, 
     assert(false);
 }
 
-s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_index, AST_Expression *expr, Scope *scope)
+s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope)
 {
     s64 result = -1;
 
@@ -627,63 +652,63 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
 
                 if (decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
 
-                    assert(decl->variable.index >= 0 && decl->variable.index < func->param_count);
-                    result = ssa_register_create(func);
-                    ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
-                    ssa_emit_32(program, func, block_index, result);
+                    assert(decl->variable.index >= 0 && decl->variable.index < builder->function->param_count);
+                    result = ssa_register_create(builder);
+                    ssa_emit_op(builder, SSA_OP_LOAD_PTR);
+                    ssa_emit_32(builder, result);
 
                     u32 alloc_reg;
-                    bool found = ssa_find_alloc(func, decl, &alloc_reg);
+                    bool found = ssa_find_alloc(builder, decl, &alloc_reg);
                     assert(found);
 
-                    ssa_emit_32(program, func, block_index, alloc_reg);
+                    ssa_emit_32(builder, alloc_reg);
                 } else {
 
-                    result = ssa_register_create(func);
-                    ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PARAM);
-                    ssa_emit_32(program, func, block_index, result);
+                    result = ssa_register_create(builder);
+                    ssa_emit_op(builder, SSA_OP_LOAD_PARAM);
+                    ssa_emit_32(builder, result);
 
                     u32 param_index = decl->variable.index;
-                    if (func->sret) param_index++;
-                    ssa_emit_32(program, func, block_index, param_index);
+                    if (builder->function->sret) param_index++;
+                    ssa_emit_32(builder, param_index);
                 }
 
             } else {
 
-                auto lvalue = ssa_emit_lvalue(program, func, block_index, expr, scope);
+                auto lvalue = ssa_emit_lvalue(builder, expr, scope);
 
-                result = ssa_register_create(func);
+                result = ssa_register_create(builder);
 
-                ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
+                ssa_emit_op(builder, SSA_OP_LOAD_PTR);
 
-                ssa_emit_32(program, func, block_index, result);
-                ssa_emit_32(program, func, block_index, lvalue);
+                ssa_emit_32(builder, result);
+                ssa_emit_32(builder, lvalue);
             }
             break;
         }
 
         case AST_Expression_Kind::BINARY: {
-            u32 left = ssa_emit_expression(program, func, block_index, expr->binary.lhs, scope);
-            u32 right = ssa_emit_expression(program, func, block_index, expr->binary.rhs, scope);
+            u32 left = ssa_emit_expression(builder, expr->binary.lhs, scope);
+            u32 right = ssa_emit_expression(builder, expr->binary.rhs, scope);
 
             switch (expr->binary.op) {
                 case '+': {
-                    ssa_emit_op(program, func, block_index, SSA_OP_ADD);
+                    ssa_emit_op(builder, SSA_OP_ADD);
                     break;
                 }
 
                 case '/': {
-                    ssa_emit_op(program, func, block_index, SSA_OP_DIV);
+                    ssa_emit_op(builder, SSA_OP_DIV);
                     break;
                 }
 
                 case '<': {
-                    ssa_emit_op(program, func, block_index, SSA_OP_LT);
+                    ssa_emit_op(builder, SSA_OP_LT);
                     break;
                 }
 
                 case TOK_EQ: {
-                    ssa_emit_op(program, func, block_index, SSA_OP_EQ);
+                    ssa_emit_op(builder, SSA_OP_EQ);
                     break;
                 }
 
@@ -691,22 +716,22 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
             }
 
 
-            result = ssa_register_create(func);
-            ssa_emit_32(program, func, block_index, result);
+            result = ssa_register_create(builder);
+            ssa_emit_32(builder, result);
 
-            ssa_emit_32(program, func, block_index, left);
-            ssa_emit_32(program, func, block_index, right);
+            ssa_emit_32(builder, left);
+            ssa_emit_32(builder, right);
 
             break;
         }
 
         case AST_Expression_Kind::MEMBER: {
-            auto lvalue = ssa_emit_lvalue(program, func, block_index, expr, scope);
+            auto lvalue = ssa_emit_lvalue(builder, expr, scope);
 
-            result = ssa_register_create(func);
-            ssa_emit_op(program, func, block_index, SSA_OP_LOAD_PTR);
-            ssa_emit_32(program, func, block_index, result);
-            ssa_emit_32(program, func, block_index, lvalue);
+            result = ssa_register_create(builder);
+            ssa_emit_op(builder, SSA_OP_LOAD_PTR);
+            ssa_emit_32(builder, result);
+            ssa_emit_32(builder, lvalue);
             break;
         }
 
@@ -717,18 +742,18 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
             auto name = expr->call.base->identifier->atom;
 
             u32 fn_index;
-            bool found = ssa_find_function(program, name, &fn_index);
+            bool found = ssa_find_function(builder->program, name, &fn_index);
             assert(found);
 
-            bool sret = program->functions[fn_index].sret;
+            bool sret = builder->program->functions[fn_index].sret;
 
             u32 sret_reg;
             if (sret) {
-                bool found = ssa_find_alloc(func, expr, &sret_reg);
+                bool found = ssa_find_alloc(builder, expr, &sret_reg);
                 assert(found);
 
-                ssa_emit_op(program, func, block_index, SSA_OP_PUSH);
-                ssa_emit_32(program, func, block_index, sret_reg);
+                ssa_emit_op(builder, SSA_OP_PUSH);
+                ssa_emit_32(builder, sret_reg);
             }
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
@@ -736,43 +761,43 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
                 u32 arg_reg;
                 if (arg_expr->resolved_type->kind == Type_Kind::STRUCT) {
 
-                    bool found = ssa_find_alloc(func, arg_expr, &arg_reg);
+                    bool found = ssa_find_alloc(builder, arg_expr, &arg_reg);
                     assert(found);
 
-                    u32 src_ptr_reg = ssa_emit_lvalue(program, func, block_index, arg_expr, scope);
-                    ssa_emit_op(program, func, block_index, SSA_OP_MEMCPY);
-                    ssa_emit_32(program, func, block_index, arg_reg);
-                    ssa_emit_32(program, func, block_index, src_ptr_reg);
+                    u32 src_ptr_reg = ssa_emit_lvalue(builder, arg_expr, scope);
+                    ssa_emit_op(builder, SSA_OP_MEMCPY);
+                    ssa_emit_32(builder, arg_reg);
+                    ssa_emit_32(builder, src_ptr_reg);
 
                     s64 size = arg_expr->resolved_type->bit_size;
                     assert(size % 8 == 0);
                     size /= 8;
                     assert(size >= 0 && size < U32_MAX);
 
-                    ssa_emit_32(program, func, block_index, size);
+                    ssa_emit_32(builder, size);
                 } else {
-                    arg_reg = ssa_emit_expression(program, func, block_index, arg_expr, scope);
+                    arg_reg = ssa_emit_expression(builder, arg_expr, scope);
                 }
 
-                ssa_emit_op(program, func, block_index, SSA_OP_PUSH);
-                ssa_emit_32(program, func, block_index, arg_reg);
+                ssa_emit_op(builder, SSA_OP_PUSH);
+                ssa_emit_32(builder, arg_reg);
             }
 
             assert(expr->resolved_type->kind != Type_Kind::VOID);
 
-            ssa_emit_op(program, func, block_index, SSA_OP_CALL);
+            ssa_emit_op(builder, SSA_OP_CALL);
 
-            result = ssa_register_create(func);
-            ssa_emit_32(program, func, block_index, result);
+            result = ssa_register_create(builder);
+            ssa_emit_32(builder, result);
 
-            ssa_emit_32(program, func, block_index, fn_index);
+            ssa_emit_32(builder, fn_index);
 
             u32 arg_pop_count = expr->call.args.count;
             if (sret) arg_pop_count++;
 
             if (arg_pop_count) {
-                ssa_emit_op(program, func, block_index, SSA_OP_POP_N);
-                ssa_emit_32(program, func, block_index, arg_pop_count);
+                ssa_emit_op(builder, SSA_OP_POP_N);
+                ssa_emit_32(builder, arg_pop_count);
             }
 
             if (sret) {
@@ -782,12 +807,12 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
         }
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
-            ssa_emit_op(program, func, block_index, SSA_OP_LOAD_IM);
+            ssa_emit_op(builder, SSA_OP_LOAD_IM);
 
-            result = ssa_register_create(func);
-            ssa_emit_32(program, func, block_index, result);
+            result = ssa_register_create(builder);
+            ssa_emit_32(builder, result);
 
-            ssa_emit_64(program, func, block_index, expr->integer_literal);
+            ssa_emit_64(builder, expr->integer_literal);
             break;
         }
 
@@ -795,11 +820,11 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
 
         case AST_Expression_Kind::BOOL_LITERAL: {
-            ssa_emit_op(program, func, block_index, SSA_OP_LOAD_IM);
+            ssa_emit_op(builder, SSA_OP_LOAD_IM);
 
-            result = ssa_register_create(func);
-            ssa_emit_32(program, func, block_index, result);
-            ssa_emit_64(program, func, block_index, expr->bool_literal);
+            result = ssa_register_create(builder);
+            ssa_emit_32(builder, result);
+            ssa_emit_64(builder, expr->bool_literal);
             break;
         }
 
@@ -809,28 +834,30 @@ s64 ssa_emit_expression(SSA_Program *program, SSA_Function *func, s64 *block_ind
     return result;
 }
 
-void ssa_emit_jmp_if(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 cond_reg, u32 true_block, u32 false_block)
+void ssa_emit_jmp_if(SSA_Builder *builder, u32 cond_reg, u32 true_block, u32 false_block)
 {
-    ssa_emit_op(program, func, block_index, SSA_OP_JMP_IF);
-    ssa_emit_32(program, func, block_index, cond_reg);
-    ssa_emit_32(program, func, block_index, true_block);
-    ssa_emit_32(program, func, block_index, false_block);
+    assert(!ssa_block_exits(builder, builder->block_index));
 
-    darray_append(&func->blocks[true_block].incoming, (u32)*block_index);
-    darray_append(&func->blocks[false_block].incoming, (u32)*block_index);
+    ssa_emit_op(builder, SSA_OP_JMP_IF);
+    ssa_emit_32(builder, cond_reg);
+    ssa_emit_32(builder, true_block);
+    ssa_emit_32(builder, false_block);
+
+    darray_append(&builder->function->blocks[true_block].incoming, (u32)builder->block_index);
+    darray_append(&builder->function->blocks[false_block].incoming, (u32)builder->block_index);
 }
 
-void ssa_emit_jmp(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 block)
+void ssa_emit_jmp(SSA_Builder *builder, u32 block)
 {
-    ssa_emit_op(program, func, block_index, SSA_OP_JMP);
-    ssa_emit_32(program, func, block_index, block);
+    ssa_emit_op(builder, SSA_OP_JMP);
+    ssa_emit_32(builder, block);
 
-    darray_append(&func->blocks[block].incoming, (u32)*block_index);
+    darray_append(&builder->function->blocks[block].incoming, (u32)builder->block_index);
 }
 
-void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 *block_index, SSA_Op op)
+void ssa_emit_op(SSA_Builder *builder, SSA_Op op)
 {
-    SSA_Block *block = &func->blocks[*block_index];
+    SSA_Block *block = &builder->function->blocks[builder->block_index];
 
     assert(!block->exits);
 
@@ -847,25 +874,25 @@ void ssa_emit_op(SSA_Program *program, SSA_Function *func, s64 *block_index, SSA
     darray_append(&block->bytes, (u8)op);
 }
 
-void ssa_emit_8(SSA_Program *program, SSA_Function *func, s64 *block_index, u8 value)
+void ssa_emit_8(SSA_Builder *builder, u8 value)
 {
-    auto bytes = &func->blocks[*block_index].bytes;
+    auto bytes = &builder->function->blocks[builder->block_index].bytes;
 
     darray_append(bytes, value);
 }
 
-void ssa_emit_16(SSA_Program *program, SSA_Function *func, s64 *block_index, u16 value)
+void ssa_emit_16(SSA_Builder *builder, u16 value)
 {
-    auto bytes = &func->blocks[*block_index].bytes;
+    auto bytes = &builder->function->blocks[builder->block_index].bytes;
 
     // Little endian
     darray_append(bytes, (u8)(value & 0xFF));
     darray_append(bytes, (u8)((value >> 8) & 0xFF));
 }
 
-void ssa_emit_32(SSA_Program *program, SSA_Function *func, s64 *block_index, u32 value)
+void ssa_emit_32(SSA_Builder *builder, u32 value)
 {
-    auto bytes = &func->blocks[*block_index].bytes;
+    auto bytes = &builder->function->blocks[builder->block_index].bytes;
 
     // Little endian
     darray_append(bytes, (u8)(value & 0xFF));
@@ -874,9 +901,9 @@ void ssa_emit_32(SSA_Program *program, SSA_Function *func, s64 *block_index, u32
     darray_append(bytes, (u8)((value >> 24) & 0xFF));
 }
 
-void ssa_emit_64(SSA_Program *program, SSA_Function *func, s64 *block_index, u64 value)
+void ssa_emit_64(SSA_Builder *builder, u64 value)
 {
-    auto bytes = &func->blocks[*block_index].bytes;
+    auto bytes = &builder->function->blocks[builder->block_index].bytes;
 
     // Little endian
     darray_append(bytes, (u8)(value & 0xFF));
