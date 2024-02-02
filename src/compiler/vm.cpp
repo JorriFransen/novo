@@ -100,49 +100,28 @@ u64 vm_run(VM *vm)
 
             case SSA_OP_NOP: assert(false); break;
 
-            case SSA_OP_ADD: {
-                u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u32 left_reg = vm_fetch<u32>(block, &ip);
-                u32 right_reg = vm_fetch<u32>(block, &ip);
+#define BINOP_CASE(op_name, op) case SSA_OP_##op_name: { \
+    u32 dest_reg = vm_fetch<u32>(block, &ip); \
+    u32 left_reg = vm_fetch<u32>(block, &ip); \
+    u32 right_reg = vm_fetch<u32>(block, &ip); \
+    u64 left_value = vm_get_register(vm, left_reg); \
+    u64 right_value = vm_get_register(vm, right_reg); \
+    vm_set_register(vm, dest_reg, left_value op right_value); \
+    break; \
+}
 
-                u64 left_value = vm_get_register(vm, left_reg);
-                u64 right_value = vm_get_register(vm, right_reg);
-                vm_set_register(vm, dest_reg, left_value + right_value);
-                break;
-            }
+            BINOP_CASE(ADD, +);
+            BINOP_CASE(SUB, -);
+            BINOP_CASE(MUL, *);
+            BINOP_CASE(DIV, /);
+            BINOP_CASE(LT, <);
+            BINOP_CASE(GT, >);
+            BINOP_CASE(EQ, ==);
+            BINOP_CASE(NEQ, !=);
+            BINOP_CASE(GTEQ, >=);
+            BINOP_CASE(LTEQ, <=);
 
-            case SSA_OP_DIV: {
-                u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u32 left_reg = vm_fetch<u32>(block, &ip);
-                u32 right_reg = vm_fetch<u32>(block, &ip);
-
-                u64 left_value = vm_get_register(vm, left_reg);
-                u64 right_value = vm_get_register(vm, right_reg);
-                vm_set_register(vm, dest_reg, left_value / right_value);
-                break;
-            }
-
-            case SSA_OP_LT: {
-                u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u32 left_reg = vm_fetch<u32>(block, &ip);
-                u32 right_reg = vm_fetch<u32>(block, &ip);
-
-                u64 left_value = vm_get_register(vm, left_reg);
-                u64 right_value = vm_get_register(vm, right_reg);
-                vm_set_register(vm, dest_reg, left_value < right_value);
-                break;
-            }
-
-            case SSA_OP_EQ: {
-                u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u32 left_reg = vm_fetch<u32>(block, &ip);
-                u32 right_reg = vm_fetch<u32>(block, &ip);
-
-                u64 left_value = vm_get_register(vm, left_reg);
-                u64 right_value = vm_get_register(vm, right_reg);
-                vm_set_register(vm, dest_reg, left_value == right_value);
-                break;
-            }
+#undef BINOP_CASE
 
             case SSA_OP_MEMCPY: {
                 u32 dest_ptr_reg = vm_fetch<u32>(block, &ip);

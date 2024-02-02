@@ -21,9 +21,16 @@ enum SSA_Op : u8
     SSA_OP_NOP,
 
     SSA_OP_ADD,         // ADD [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_SUB,         // SUB [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_MUL,         // MUL [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
     SSA_OP_DIV,         // DIV [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+
     SSA_OP_LT,          // LT [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_GT,          // GT [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
     SSA_OP_EQ,          // EQ [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_NEQ,         // NEQ [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_LTEQ,        // LTEQ [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_GTEQ,        // GTEQ [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
     SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size]
 

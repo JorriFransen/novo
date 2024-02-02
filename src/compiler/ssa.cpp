@@ -726,8 +726,28 @@ s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope
                     break;
                 }
 
+                case '>': {
+                    ssa_emit_op(builder, SSA_OP_GT);
+                    break;
+                }
+
                 case TOK_EQ: {
                     ssa_emit_op(builder, SSA_OP_EQ);
+                    break;
+                }
+
+                case TOK_NEQ: {
+                    ssa_emit_op(builder, SSA_OP_NEQ);
+                    break;
+                }
+
+                case TOK_LTEQ: {
+                    ssa_emit_op(builder, SSA_OP_LTEQ);
+                    break;
+                }
+
+                case TOK_GTEQ: {
+                    ssa_emit_op(builder, SSA_OP_GTEQ);
                     break;
                 }
 
@@ -994,61 +1014,27 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
 
         case SSA_OP_NOP: assert(false); break;
 
-        case SSA_OP_ADD: {
-            u32 dest_reg = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
+#define BINOP_CASE(op) case SSA_OP_##op: { \
+    u32 dest_reg = *(u32 *)&bytes[ip]; \
+    ip += sizeof(u32); \
+    u32 left = *(u32 *)&bytes[ip]; \
+    ip += sizeof(u32); \
+    u32 right = *(u32 *)&bytes[ip]; \
+    ip += sizeof(u32); \
+    string_builder_append(sb, "  %%%u = "#op" %%%u %%%u\n", dest_reg, left, right); \
+    break; \
+}
 
-            u32 left = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
+        BINOP_CASE(ADD);
+        BINOP_CASE(DIV);
+        BINOP_CASE(LT);
+        BINOP_CASE(GT);
+        BINOP_CASE(EQ);
+        BINOP_CASE(NEQ);
+        BINOP_CASE(LTEQ);
+        BINOP_CASE(GTEQ);
 
-            u32 right = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            string_builder_append(sb, "  %%%u = ADD %%%u %%%u\n", dest_reg, left, right);
-            break;
-        }
-
-        case SSA_OP_DIV: {
-            u32 dest_reg = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            u32 left = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            u32 right = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            string_builder_append(sb, "  %%%u = DIV %%%u %%%u\n", dest_reg, left, right);
-            break;
-        }
-
-        case SSA_OP_LT: {
-            u32 dest_reg = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            u32 left = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            u32 right = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            string_builder_append(sb, "  %%%u = LT %%%u %%%u\n", dest_reg, left, right);
-            break;
-        }
-
-        case SSA_OP_EQ: {
-            u32 dest_reg = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            u32 left = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            u32 right = *(u32 *)&bytes[ip];
-            ip += sizeof(u32);
-
-            string_builder_append(sb, "  %%%u = EQ %%%u %%%u\n", dest_reg, left, right);
-            break;
-        }
+#undef BINOP_CASE
 
         case SSA_OP_ALLOC: {
             u32 dest_reg = *(u32 *)&bytes[ip];
