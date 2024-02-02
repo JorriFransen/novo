@@ -525,6 +525,7 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
 
             u32 cond_block = ssa_block_create(builder, "for.cond");
             u32 do_block = ssa_block_create(builder, "for.do");
+            u32 step_block = ssa_block_create(builder, "for.step");
             u32 post_block = ssa_block_create(builder, "for.post");
 
             ssa_emit_statement(builder, stmt->for_stmt.init, scope);
@@ -539,6 +540,10 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
             stack_push(&builder->break_blocks, post_block);
             ssa_emit_statement(builder, stmt->for_stmt.stmt, scope);
             stack_pop(&builder->break_blocks);
+
+            ssa_emit_jmp(builder, step_block);
+
+            ssa_set_insert_point(builder, step_block);
 
             ssa_emit_statement(builder, stmt->for_stmt.step, scope);
             ssa_emit_jmp(builder, cond_block);
