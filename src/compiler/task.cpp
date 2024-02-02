@@ -1,6 +1,7 @@
 #include "task.h"
 
 #include <containers/darray.h>
+#include <memory/allocator.h>
 
 #include "instance.h"
 
@@ -77,12 +78,7 @@ void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_
         case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
     }
 
-    Resolve_Task decl_task = {
-        .node = ast_node(decl),
-        .scope = scope,
-        .fn_decl = fn,
-        .waiting_for = nullptr,
-    };
+    Resolve_Task decl_task = resolve_task_create(inst, ast_node(decl), scope, fn);
     darray_append(&inst->resolve_tasks, decl_task);
 }
 
@@ -100,14 +96,10 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
         case AST_Statement_Kind::IF:
         case AST_Statement_Kind::WHILE:
         case AST_Statement_Kind::FOR:
+        case AST_Statement_Kind::BREAK:
         case AST_Statement_Kind::BLOCK: {
 
-            Resolve_Task task = {
-                .node = ast_node(stmt),
-                .scope = scope,
-                .fn_decl = fn,
-                .waiting_for = nullptr,
-            };
+            Resolve_Task task = resolve_task_create(inst, ast_node(stmt), scope, fn);
 
             darray_append(&inst->resolve_tasks, task);
             break;
@@ -118,12 +110,7 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
 
 void add_resolve_tasks(Instance *inst, AST_Type_Spec *ts, Scope *scope)
 {
-    Resolve_Task task = {
-        .node = ast_node(ts),
-        .scope = scope,
-        .fn_decl = nullptr,
-        .waiting_for = nullptr,
-    };
+    Resolve_Task task = resolve_task_create(inst, ast_node(ts), scope, nullptr);
     darray_append(&inst->resolve_tasks, task);
 }
 
@@ -147,5 +134,20 @@ void add_ssa_task(Instance *inst, AST_Node node)
     };
     darray_append(&inst->ssa_tasks, task);
 }
+
+Resolve_Task resolve_task_create(Instance *inst, AST_Node node, Scope *scope, AST_Declaration *fn_decl)
+{
+    Resolve_Task result;
+    result.node = node;
+    result.scope = scope;
+    result.fn_decl = fn_decl;
+    result.waiting_for = nullptr;
+
+    // TODO: Dynamic allocator?
+    stack_init(c_allocator(), &result.break_stack, 0);
+
+    return result;
+}
+
 
 }

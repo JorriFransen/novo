@@ -1,0 +1,25 @@
+
+main :: () -> s64 {
+
+    i := 0;
+
+    while (i < 10) {
+        i += 1;
+
+        if (i == 5) {
+            break;
+        }
+    }
+
+    jj : s64;
+
+    for (j := 0; j < 10; j += 1) {
+        jj = j;
+        if (j == 5) {
+            break;
+        }
+    }
+
+
+    return i + jj;
+}

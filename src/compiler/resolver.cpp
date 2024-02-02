@@ -1,6 +1,7 @@
 #include "resolver.h"
 
 #include <containers/darray.h>
+#include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
 #include <nstring.h>
@@ -262,9 +263,13 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
                 return false;
             }
 
+            stack_push(&task->break_stack, stmt);
+
             if (!resolve_statement(inst, task, stmt->while_stmt.stmt, scope)) {
                 return false;
             }
+
+            stack_pop(&task->break_stack);
 
             break;
         }
@@ -285,10 +290,20 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
                 return false;
             }
 
+            stack_push(&task->break_stack, stmt);
+
             if (!resolve_statement(inst, task, stmt->for_stmt.stmt, for_scope)) {
                 return false;
             }
 
+            stack_pop(&task->break_stack);
+
+            break;
+        }
+
+        case AST_Statement_Kind::BREAK: {
+            assert(stack_count(&task->break_stack));
+            stmt->break_node = stack_top(&task->break_stack);
             break;
         }
 
@@ -308,6 +323,7 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
     }
 
     stmt->flags |= AST_STMT_FLAG_RESOLVED;
+
     return true;
 }
 

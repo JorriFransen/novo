@@ -8,12 +8,12 @@
 
 namespace Novo {
 
-struct AST_File;
 struct AST_Declaration;
-struct AST_Statement;
-struct AST_Identifier;
-struct AST_Type_Spec;
 struct AST_Expression;
+struct AST_File;
+struct AST_Identifier;
+struct AST_Statement;
+struct AST_Type_Spec;
 struct Instance;
 struct Scope;
 

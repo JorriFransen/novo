@@ -312,6 +312,12 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             break;
         }
 
+        case AST_Statement_Kind::BREAK: {
+            assert(stmt->break_node);
+
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {

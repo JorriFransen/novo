@@ -1,5 +1,7 @@
 #include "instance.h"
 
+#include <containers/darray.h>
+#include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
 
@@ -153,6 +155,9 @@ bool instance_start(Instance *inst)
                 i--;
 
                 add_type_task(inst, task.node, task.scope, task.fn_decl);
+
+                stack_free(&task.break_stack);
+
             }
         }
 

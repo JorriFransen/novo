@@ -36,6 +36,7 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/016_while.no", .return_code = 42 },
     { .file_path = "tests/017_while.no", .return_code = 12 },
     { .file_path = "tests/018_arithmetic_assignment.no", .return_code = 5 },
+    { .file_path = "tests/019_break_while_for.no", .return_code = 10 },
 };
 
 static bool run_test_case(Test_Case *tc)

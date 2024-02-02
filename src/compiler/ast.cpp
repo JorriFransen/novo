@@ -200,6 +200,13 @@ AST_Statement *ast_for_statement(Instance *instance, AST_Statement *init, AST_Ex
     return result;
 }
 
+AST_Statement *ast_break_statement(Instance *instance, u32 range_id)
+{
+    auto result = ast_statement(instance, AST_Statement_Kind::BREAK, range_id);
+    result->break_node = nullptr;
+    return result;
+}
+
 AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id)
 {
     auto result = ast_statement(instance, AST_Statement_Kind::BLOCK, range_id);
