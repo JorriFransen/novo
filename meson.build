@@ -19,6 +19,7 @@ common_source = [
   'src/common/string_builder.cpp', 'src/common/string_builder.h',
 
   'src/common/containers/darray.h',
+  'src/common/containers/stack.h',
 
   'src/common/memory/allocator.cpp', 'src/common/memory/allocator.h',
   'src/common/memory/linear_allocator.cpp', 'src/common/memory/linear_allocator.h',
