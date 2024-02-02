@@ -43,6 +43,26 @@ void ssa_program_init(SSA_Program *program, Allocator *allocator)
     darray_init(allocator, &program->functions);
 }
 
+void ssa_program_free(SSA_Program *program)
+{
+    for (s64 fi = 0; fi < program->functions.count; fi++) {
+        SSA_Function *func = &program->functions[fi];
+
+        for (s64 bi = 0; bi < func->blocks.count; bi++) {
+            SSA_Block *block = &func->blocks[bi];
+
+            darray_free(&block->bytes);
+            darray_free(&block->incoming);
+        }
+
+        darray_free(&func->blocks);
+        darray_free(&func->allocs);
+
+    }
+
+    darray_free(&program->functions);
+}
+
 void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 param_count, bool sret)
 {
     func->name = name;

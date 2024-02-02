@@ -61,12 +61,15 @@ static bool run_test_case(Test_Case *tc)
 
     u64 return_code = vm_run(&vm, instance.ssa_program);
 
-    if (return_code == tc->return_code) {
-        return true;
-    } else {
+    bool result = return_code == tc->return_code;
+    if (!result) {
         fprintf(stderr, "Mismatching return code for test file '%s', got: %llu, expected: %llu\n", tc->file_path, return_code, tc->return_code);
-        return false;
+        result = false;
     }
+
+    instance_free(&instance);
+
+    return result;
 }
 
 int main(int argc, char *argv[]) {

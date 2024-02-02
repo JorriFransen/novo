@@ -4,11 +4,11 @@
 
 namespace Novo {
 
-Allocator linear_allocator_create(Linear_Allocator *la, Allocator *backing_allocator, s64 size)
+Allocator linear_allocator_create(Linear_Allocator* la, Allocator* backing_allocator, s64 size)
 {
     la->backing_allocator = backing_allocator;
 
-    la->buffer = (u8 *)allocate(backing_allocator, size);
+    la->buffer = (u8*)allocate(backing_allocator, size);
     assert(la->buffer);
 
     la->used = 0;
@@ -17,7 +17,12 @@ Allocator linear_allocator_create(Linear_Allocator *la, Allocator *backing_alloc
     return { linear_allocator_fn, la, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
-void *linear_allocator_allocate(Linear_Allocator *la, s64 size, u64 align)
+void linear_allocator_free(Linear_Allocator* allocator)
+{
+    free(allocator->backing_allocator, allocator->buffer);
+}
+
+void* linear_allocator_allocate(Linear_Allocator* la, s64 size, u64 align)
 {
     s64 actual_size = size + (align - 1);
 
@@ -26,20 +31,20 @@ void *linear_allocator_allocate(Linear_Allocator *la, s64 size, u64 align)
         return nullptr;
     }
 
-    auto ptr = (void *)get_aligned((u64)&la->buffer[la->used], align);
+    auto ptr = (void*)get_aligned((u64)&la->buffer[la->used], align);
     la->used += actual_size;
 
     return ptr;
 }
 
-void linear_allocator_free_all(Linear_Allocator *la)
+void linear_allocator_free_all(Linear_Allocator* la)
 {
     la->used = 0;
 }
 
 FN_ALLOCATOR(linear_allocator_fn)
 {
-    auto la = (Linear_Allocator *)allocator_data;
+    auto la = (Linear_Allocator*)allocator_data;
 
     switch (mode) {
 

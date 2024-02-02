@@ -5,25 +5,30 @@
 
 namespace Novo {
 
-Allocator temp_allocator_create(Temp_Allocator *ta, Allocator *backing_allocator, s64 size)
+Allocator temp_allocator_create(Temp_Allocator* ta, Allocator* backing_allocator, s64 size)
 {
     linear_allocator_create(&ta->linear_allocator_data, backing_allocator, size);
     return { temp_allocator_fn, ta, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
-Temp_Allocator_Mark temp_allocator_get_mark(Temp_Allocator *ta)
+void temp_allocator_free(Temp_Allocator* ta)
+{
+    linear_allocator_free(&ta->linear_allocator_data);
+}
+
+Temp_Allocator_Mark temp_allocator_get_mark(Temp_Allocator* ta)
 {
     return ta->linear_allocator_data.used;
 }
 
-void temp_allocator_reset(Temp_Allocator *ta, Temp_Allocator_Mark mark/*={}*/)
+void temp_allocator_reset(Temp_Allocator* ta, Temp_Allocator_Mark mark/*={}*/)
 {
     ta->linear_allocator_data.used = mark;
 }
 
 FN_ALLOCATOR(temp_allocator_fn)
 {
-    auto ta = (Temp_Allocator *)allocator_data;
+    auto ta = (Temp_Allocator*)allocator_data;
 
     switch (mode) {
 

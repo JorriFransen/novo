@@ -89,6 +89,26 @@ void instance_init(Instance *inst, Options options)
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
 }
 
+void instance_free(Instance *inst)
+{
+
+    darray_free(&inst->parse_tasks);
+    darray_free(&inst->resolve_tasks);
+    darray_free(&inst->type_tasks);
+    darray_free(&inst->ssa_tasks);
+
+    darray_free(&inst->imported_files);
+    darray_free(&inst->function_types);
+
+    darray_free(&inst->source_positions);
+    darray_free(&inst->source_ranges);
+
+    ssa_program_free(inst->ssa_program);
+
+    temp_allocator_free(&inst->temp_allocator_data);
+    linear_allocator_free(&inst->ast_allocator_data);
+}
+
 bool instance_start(Instance *inst)
 {
     auto first_file_name = String_Ref(inst->options.input_file);
@@ -156,7 +176,7 @@ bool instance_start(Instance *inst)
 
                 add_type_task(inst, task.node, task.scope, task.fn_decl);
 
-                stack_free(&task.break_stack);
+                stack_free(&task.loop_control_stack);
 
             }
         }

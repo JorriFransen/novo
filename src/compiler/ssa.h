@@ -93,6 +93,8 @@ struct SSA_Program
 struct SSA_Builder;
 
 NAPI void ssa_program_init(SSA_Program *program, Allocator *allocator);
+NAPI void ssa_program_free(SSA_Program *program);
+
 NAPI void ssa_function_init(SSA_Program *program, SSA_Function *func, Atom name, u32 param_count, bool sret);
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, Atom name);
 NAPI void ssa_block_init(SSA_Program *program, SSA_Function *func, SSA_Block *block, const char *name);

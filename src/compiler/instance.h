@@ -61,6 +61,8 @@ struct Instance
 };
 
 NAPI void instance_init(Instance *inst, Options options);
+NAPI void instance_free(Instance *inst);
+
 NAPI bool instance_start(Instance *inst);
 
 NAPI void instance_error(Instance *inst, Source_Pos sp, const char* fmt, ...);
