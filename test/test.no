@@ -1,7 +1,6 @@
 
 // TODO:
 //  - Free instance (in tests)
-//  - for test
 //  - continue
 //  - Global variables
 //  - Capture errors, and check for them in tests
