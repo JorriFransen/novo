@@ -20,13 +20,19 @@ struct SSA_Alloc
     u32 alloc_reg;
 };
 
+struct SSA_Break_Info
+{
+    u32 break_block;
+    u32 continue_block;
+};
+
 struct SSA_Builder
 {
     SSA_Program *program;
     SSA_Function *function;
     s64 block_index;
 
-    Stack<u32> break_blocks;
+    Stack<SSA_Break_Info> break_info_stack;
 };
 
 
@@ -119,7 +125,7 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
     local_builder.block_index = 0;
 
     auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-    stack_init(&inst->temp_allocator, &local_builder.break_blocks, 0);
+    stack_init(&inst->temp_allocator, &local_builder.break_info_stack, 0);
 
     SSA_Builder *builder = &local_builder;
 
@@ -511,9 +517,9 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
 
             ssa_set_insert_point(builder, do_block);
 
-            stack_push(&builder->break_blocks, post_block);
+            stack_push(&builder->break_info_stack, { post_block, cond_block });
             ssa_emit_statement(builder, stmt->while_stmt.stmt, scope);
-            stack_pop(&builder->break_blocks);
+            stack_pop(&builder->break_info_stack);
 
             ssa_emit_jmp(builder, cond_block);
 
@@ -537,9 +543,9 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
 
             ssa_set_insert_point(builder, do_block);
 
-            stack_push(&builder->break_blocks, post_block);
+            stack_push(&builder->break_info_stack, { post_block, step_block });
             ssa_emit_statement(builder, stmt->for_stmt.stmt, scope);
-            stack_pop(&builder->break_blocks);
+            stack_pop(&builder->break_info_stack);
 
             ssa_emit_jmp(builder, step_block);
 
@@ -554,10 +560,20 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
 
         case AST_Statement_Kind::BREAK: {
 
-            assert(stack_count(&builder->break_blocks));
+            assert(stack_count(&builder->break_info_stack));
 
-            u32 break_block = stack_top(&builder->break_blocks);
-            ssa_emit_jmp(builder, break_block);
+            SSA_Break_Info break_info = stack_top(&builder->break_info_stack);
+            ssa_emit_jmp(builder, break_info.break_block);
+
+            break;
+        }
+
+        case AST_Statement_Kind::CONTINUE: {
+
+            assert(stack_count(&builder->break_info_stack));
+
+            SSA_Break_Info break_info = stack_top(&builder->break_info_stack);
+            ssa_emit_jmp(builder, break_info.continue_block);
 
             break;
         }

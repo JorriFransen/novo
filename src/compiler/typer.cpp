@@ -312,9 +312,9 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             break;
         }
 
-        case AST_Statement_Kind::BREAK: {
-            assert(stmt->break_node);
-
+        case AST_Statement_Kind::BREAK:
+        case AST_Statement_Kind::CONTINUE: {
+            assert(stmt->loop_control_target);
             break;
         }
 

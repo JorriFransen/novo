@@ -577,6 +577,13 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
         auto range = source_range(parser->instance, ct.source_pos_id);
         return ast_break_statement(parser->instance, range);
 
+    } else if (match_keyword(parser, g_keyword_continue)) {
+
+        expect_token(parser, ';');
+
+        auto range = source_range(parser->instance, ct.source_pos_id);
+        return ast_continue_statement(parser->instance, range);
+
     } else if (match_keyword(parser, g_keyword_return)) {
 
         AST_Expression *expr = nullptr;

@@ -126,6 +126,7 @@ enum class AST_Statement_Kind : u32
     FOR,
 
     BREAK,
+    CONTINUE,
 
     BLOCK,
 };
@@ -185,7 +186,7 @@ struct AST_Statement
             Scope *scope;
         } for_stmt;
 
-        AST_Statement *break_node;
+        AST_Statement *loop_control_target;
 
         struct {
             DArray<AST_Statement *> statements;
@@ -322,6 +323,7 @@ NAPI AST_Statement *ast_if_statement(Instance *instance, DArray<AST_If_Block> if
 NAPI AST_Statement *ast_while_statement(Instance *instance, AST_Expression *cond, AST_Statement *stmt, u32 range_id);
 NAPI AST_Statement *ast_for_statement(Instance *instance, AST_Statement *init, AST_Expression *cond, AST_Statement *step, AST_Statement *stmt, Scope *scope, u32 range_id);
 NAPI AST_Statement *ast_break_statement(Instance *instance, u32 range_id);
+NAPI AST_Statement *ast_continue_statement(Instance *instance, u32 range_id);
 NAPI AST_Statement *ast_block_statement(Instance *instance, DArray<AST_Statement *> stmts, Scope *scope, u32 range_id);
 
 NAPI AST_Expression *ast_expression(Instance *instance, AST_Expression_Kind kind, u32 range_id);

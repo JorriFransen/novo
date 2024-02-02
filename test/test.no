@@ -1,7 +1,6 @@
 
 // TODO:
 //  - Free instance (in tests)
-//  - continue
 //  - Global variables
 //  - Capture errors, and check for them in tests
 //  - Basic control flow
@@ -19,25 +18,22 @@
 main :: () -> s64 {
 
     i := 0;
+    ii := 0;
 
     while (i < 10) {
         i += 1;
 
-        if (i == 5) {
-            break;
-        }
+        if i == 9 continue;
+
+        ii += 1;
     }
 
-    jj : s64;
-
-    for (j := 0; j < 10; j += 1) {
-        jj = j;
-        if (j == 5) {
-            break;
-        }
+    jj := 0;
+    for j := 0; j < 10; j += 1; {
+        if j == 9 continue;
+        jj += 1;
     }
 
-
-    return i + jj;
+    return ii + jj;
 }
 

@@ -203,7 +203,14 @@ AST_Statement *ast_for_statement(Instance *instance, AST_Statement *init, AST_Ex
 AST_Statement *ast_break_statement(Instance *instance, u32 range_id)
 {
     auto result = ast_statement(instance, AST_Statement_Kind::BREAK, range_id);
-    result->break_node = nullptr;
+    result->loop_control_target = nullptr;
+    return result;
+}
+
+AST_Statement *ast_continue_statement(Instance *instance, u32 range_id)
+{
+    auto result = ast_statement(instance, AST_Statement_Kind::CONTINUE, range_id);
+    result->loop_control_target = nullptr;
     return result;
 }
 

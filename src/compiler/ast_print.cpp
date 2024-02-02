@@ -338,6 +338,13 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
             break;
         }
 
+        case AST_Statement_Kind::CONTINUE: {
+            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "CONTINUE:\n");
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
             ast_print_pos(instance, sb, stmt->range_id);
             ast_print_indent(sb, indent);

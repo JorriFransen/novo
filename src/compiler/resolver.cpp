@@ -263,13 +263,13 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
                 return false;
             }
 
-            stack_push(&task->break_stack, stmt);
+            stack_push(&task->loop_control_stack, stmt);
 
             if (!resolve_statement(inst, task, stmt->while_stmt.stmt, scope)) {
                 return false;
             }
 
-            stack_pop(&task->break_stack);
+            stack_pop(&task->loop_control_stack);
 
             break;
         }
@@ -290,20 +290,21 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
                 return false;
             }
 
-            stack_push(&task->break_stack, stmt);
+            stack_push(&task->loop_control_stack, stmt);
 
             if (!resolve_statement(inst, task, stmt->for_stmt.stmt, for_scope)) {
                 return false;
             }
 
-            stack_pop(&task->break_stack);
+            stack_pop(&task->loop_control_stack);
 
             break;
         }
 
-        case AST_Statement_Kind::BREAK: {
-            assert(stack_count(&task->break_stack));
-            stmt->break_node = stack_top(&task->break_stack);
+        case AST_Statement_Kind::BREAK:
+        case AST_Statement_Kind::CONTINUE: {
+            assert(stack_count(&task->loop_control_stack));
+            stmt->loop_control_target = stack_top(&task->loop_control_stack);
             break;
         }
 

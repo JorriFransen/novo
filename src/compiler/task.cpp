@@ -97,6 +97,7 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
         case AST_Statement_Kind::WHILE:
         case AST_Statement_Kind::FOR:
         case AST_Statement_Kind::BREAK:
+        case AST_Statement_Kind::CONTINUE:
         case AST_Statement_Kind::BLOCK: {
 
             Resolve_Task task = resolve_task_create(inst, ast_node(stmt), scope, fn);
@@ -144,7 +145,7 @@ Resolve_Task resolve_task_create(Instance *inst, AST_Node node, Scope *scope, AS
     result.waiting_for = nullptr;
 
     // TODO: Dynamic allocator?
-    stack_init(c_allocator(), &result.break_stack, 0);
+    stack_init(c_allocator(), &result.loop_control_stack, 0);
 
     return result;
 }
