@@ -117,8 +117,14 @@ NAPI void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *s
 NAPI u32 ssa_emit_lvalue(SSA_Builder *builder, AST_Expression *lvalue_expr, Scope *scope);
 NAPI s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope);
 
+NAPI u32 ssa_emit_alloc(SSA_Builder *builder, s64 bit_size);
+NAPI void ssa_emit_memcpy(SSA_Builder *builder, u32 dest_ptr_reg, u32 src_ptr_reg, s64 bit_size);
+NAPI void ssa_emit_store_ptr(SSA_Builder *builder, u32 dest_reg, u32 source_reg);
+NAPI u32 ssa_emit_load_param(SSA_Builder *builder, u32 param_index);
+NAPI u32 ssa_emit_load_ptr(SSA_Builder *builder, s64 bit_size, u32 ptr_reg);
 NAPI void ssa_emit_jmp_if(SSA_Builder *builder, u32 cond_reg, u32 true_block, u32 false_block);
 NAPI void ssa_emit_jmp(SSA_Builder *builder, u32 block);
+
 NAPI void ssa_emit_op(SSA_Builder *builder, SSA_Op op);
 NAPI void ssa_emit_8(SSA_Builder *builder, u8 value);
 NAPI void ssa_emit_16(SSA_Builder *builder, u16 value);

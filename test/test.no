@@ -13,7 +13,6 @@
 //  - Defer
 //  - Nested function declarations
 
-
 main :: () -> s64 {
 
     Vec :: struct {
