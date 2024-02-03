@@ -370,7 +370,7 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
                     .scope = scope,
                     .fn_decl = task->fn_decl,
                 };
-                if (!type_expression(inst, &type_task, expr->member.base, scope)) {
+                if (!type_expression(inst, &type_task, expr->member.base, scope, nullptr)) {
                     return false;
                 }
             }

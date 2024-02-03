@@ -80,9 +80,13 @@ void instance_init(Instance *inst, Options options)
     auto void_decl = ast_builtin_type_decl(inst, inst->builtin_type_void, "void");
     scope_add_symbol(inst->global_scope, void_decl->ident->atom, void_decl);
 
+    inst->builtin_type_u8 = integer_type_new(inst, false, 8);
+    auto u8_decl = ast_builtin_type_decl(inst, inst->builtin_type_u8, "u8");
+    scope_add_symbol(inst->global_scope, u8_decl->ident->atom, u8_decl);
+
     inst->builtin_type_s64 = integer_type_new(inst, true, 64);
-    auto int_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
-    scope_add_symbol(inst->global_scope, int_decl->ident->atom, int_decl);
+    auto s64_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
+    scope_add_symbol(inst->global_scope, s64_decl->ident->atom, s64_decl);
 
     inst->builtin_type_bool = boolean_type_new(inst, 8);
     auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");

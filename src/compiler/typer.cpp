@@ -53,26 +53,29 @@ bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Sc
 
         case AST_Declaration_Kind::VARIABLE: {
 
-            if (decl->variable.type_spec && !type_type_spec(inst, task, decl->variable.type_spec, scope)) {
-                return false;
+            Type *result_type = nullptr;
+
+            if (decl->variable.type_spec) {
+                if (!type_type_spec(inst, task, decl->variable.type_spec, scope)) {
+                    return false;
+                }
+
+                result_type = decl->variable.type_spec->resolved_type;
             }
 
-            if (decl->variable.init_expr && !type_expression(inst, task, decl->variable.init_expr, scope)) {
-                return false;
+            if (decl->variable.init_expr) {
+                if (!type_expression(inst, task, decl->variable.init_expr, scope, result_type)) {
+                    return false;
+                }
+
+                if (!result_type) {
+                    result_type = decl->variable.init_expr->resolved_type;
+                }
             }
 
-            Type *type = nullptr;
-            if (decl->variable.type_spec && decl->variable.init_expr) {
-                assert(decl->variable.type_spec->resolved_type == decl->variable.init_expr->resolved_type);
-                type = decl->variable.type_spec->resolved_type;
-            } else if (decl->variable.type_spec) {
-                type = decl->variable.type_spec->resolved_type;
-            } else {
-                type = decl->variable.init_expr->resolved_type;
-            }
-            assert(type);
+            assert(result_type);
 
-            decl->resolved_type = type;
+            decl->resolved_type = result_type;
             break;
         }
 
@@ -180,11 +183,11 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             AST_Expression *lvalue = stmt->assignment.lvalue;
             AST_Expression *rvalue = stmt->assignment.rvalue;
 
-            if (!type_expression(inst, task, lvalue, scope)) {
+            if (!type_expression(inst, task, lvalue, scope, nullptr)) {
                 return false;
             }
 
-            if (!type_expression(inst, task, rvalue, scope)) {
+            if (!type_expression(inst, task, rvalue, scope, lvalue->resolved_type)) {
                 return false;
             }
 
@@ -203,11 +206,11 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             AST_Expression *lvalue = stmt->arithmetic_assignment.lvalue;
             AST_Expression *rvalue = stmt->arithmetic_assignment.rvalue;
 
-            if (!type_expression(inst, task, lvalue, scope)) {
+            if (!type_expression(inst, task, lvalue, scope, nullptr)) {
                 return false;
             }
 
-            if (!type_expression(inst, task, rvalue, scope)) {
+            if (!type_expression(inst, task, rvalue, scope, nullptr)) {
                 return false;
             }
 
@@ -222,7 +225,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
         };
 
         case AST_Statement_Kind::CALL: {
-            if (!type_expression(inst, task, stmt->call, scope)) {
+            if (!type_expression(inst, task, stmt->call, scope, nullptr)) {
                 return false;
             }
 
@@ -231,7 +234,17 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
-                if (!type_expression(inst, task, stmt->return_expr, scope)) {
+
+                Type *result_type = nullptr;
+
+                assert(task->fn_decl);
+                if (task->fn_decl->resolved_type) {
+                    result_type = task->fn_decl->resolved_type->function.return_type;
+                } else if (task->fn_decl->function.return_ts->resolved_type) {
+                    result_type = task->fn_decl->function.return_ts->resolved_type;
+                }
+
+                if (!type_expression(inst, task, stmt->return_expr, scope, result_type)) {
                     return false;
                 }
             }
@@ -244,7 +257,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
                 auto if_block = stmt->if_stmt.blocks[i];
 
-                if (!type_expression(inst, task, if_block.cond, scope)) {
+                if (!type_expression(inst, task, if_block.cond, scope, inst->builtin_type_bool)) {
                     return false;
                 }
 
@@ -263,7 +276,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
         case AST_Statement_Kind::WHILE: {
 
             AST_Expression *cond = stmt->while_stmt.cond;
-            if (!type_expression(inst, task, cond, scope)) {
+            if (!type_expression(inst, task, cond, scope, inst->builtin_type_bool)) {
                 return false;
             }
 
@@ -289,7 +302,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
             }
 
             AST_Expression *cond = stmt->for_stmt.cond;
-            if (!type_expression(inst, task, cond, scope)) {
+            if (!type_expression(inst, task, cond, scope, inst->builtin_type_bool)) {
                 return false;
             }
 
@@ -333,7 +346,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
     return true;
 }
 
-bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scope *scope)
+bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scope *scope, Type *suggested_type)
 {
     if (expr->flags & AST_EXPR_FLAG_TYPED) {
         assert(expr->resolved_type);
@@ -356,11 +369,19 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
         }
 
         case AST_Expression_Kind::BINARY: {
-            if (!type_expression(inst, task, expr->binary.lhs, scope)) {
+            if (suggested_type && suggested_type->kind == Type_Kind::BOOLEAN) {
+                suggested_type = nullptr;
+            }
+
+            if (!type_expression(inst, task, expr->binary.lhs, scope, suggested_type)) {
                 return false;
             }
 
-            if (!type_expression(inst, task, expr->binary.rhs, scope)) {
+            if (!suggested_type) {
+                suggested_type = expr->binary.lhs->resolved_type;
+            }
+
+            if (!type_expression(inst, task, expr->binary.rhs, scope, suggested_type)) {
                 return false;
             }
 
@@ -388,7 +409,7 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
 
         case AST_Expression_Kind::MEMBER: {
 
-            if (!type_expression(inst, task, expr->member.base, scope)) {
+            if (!type_expression(inst, task, expr->member.base, scope, nullptr)) {
                 return false;
             }
 
@@ -407,7 +428,7 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
 
         case AST_Expression_Kind::CALL: {
 
-            if (!type_expression(inst, task, expr->call.base, scope)) {
+            if (!type_expression(inst, task, expr->call.base, scope, nullptr)) {
                 return false;
             }
 
@@ -415,7 +436,7 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
             auto fn_type = expr->call.base->resolved_type;
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (!type_expression(inst, task, expr->call.args[i], scope)) {
+                if (!type_expression(inst, task, expr->call.args[i], scope, fn_type->function.param_types[i])) {
                     return false;
                 }
 
@@ -438,7 +459,38 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
         }
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
-            expr->resolved_type = inst->builtin_type_s64;
+
+            if (suggested_type) {
+                assert(suggested_type->kind == Type_Kind::INTEGER);
+
+                s64 min = I64_MIN;
+
+                if (suggested_type->integer.sign) {
+                    s64 val = (s64)expr->integer_literal;
+                    switch (suggested_type->bit_size) {
+                        default: assert(false); break;
+                        case 8: assert(val >= I8_MIN && val <= I8_MAX); break;
+                        case 16: assert(val >= I16_MIN && val <= I16_MAX); break;
+                        case 32: assert(val >= I32_MIN && val <= I32_MAX); break;
+                        case 64: assert(val >= min && val <= I64_MAX); break;
+                    }
+                } else {
+                    u64 val = (u64)expr->integer_literal;
+                    switch (suggested_type->bit_size) {
+                        default: assert(false); break;
+                        case 8: assert(val <= I8_MAX); break;
+                        case 16: assert(val <= I16_MAX); break;
+                        case 32: assert(val <= I32_MAX); break;
+                        case 64: assert(val <= I64_MAX); break;
+                    }
+                }
+
+                expr->resolved_type = suggested_type;
+
+            } else {
+                expr->resolved_type = inst->builtin_type_s64;
+            }
+
             break;
         }
 

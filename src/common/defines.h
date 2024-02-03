@@ -102,8 +102,8 @@ STATIC_ASSERT(sizeof(r64) == 8, "Expected sizeof(r64) to be 8 bytes");
 #define I16_MAX (32767)
 #define I8_MAX  (127)
 
-#define I64_MIN (-9223372036854775808UL)
-#define I32_MIN (-2147483648)
+#define I64_MIN (-9223372036854775807UL - 1)
+#define I32_MIN (-2147483647 - 1)
 #define I16_MIN (-32768)
 #define I8_MIN  (-128)
 

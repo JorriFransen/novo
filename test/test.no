@@ -16,23 +16,11 @@
 
 main :: () -> s64 {
 
-    i := 0;
-    ii := 0;
+    x : u8;
+    y : u8;
 
-    while (i < 10) {
-        i += 1;
+    x = 1;
 
-        if i == 9 continue;
-
-        ii += 1;
-    }
-
-    jj := 0;
-    for j := 0; j < 10; j += 1; {
-        if j == 9 continue;
-        jj += 1;
-    }
-
-    return ii + jj;
+    return 0;
 }
 
