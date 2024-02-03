@@ -410,6 +410,7 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
 
             u32 lhs = ssa_register_create(builder);
             ssa_emit_op(builder, SSA_OP_LOAD_PTR);
+            ssa_emit_8(builder, stmt->arithmetic_assignment.lvalue->resolved_type->bit_size);
             ssa_emit_32(builder, lhs);
             ssa_emit_32(builder, lvalue);
 
@@ -715,6 +716,7 @@ s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope
                     assert(decl->variable.index >= 0 && decl->variable.index < builder->function->param_count);
                     result = ssa_register_create(builder);
                     ssa_emit_op(builder, SSA_OP_LOAD_PTR);
+                    ssa_emit_8(builder, decl->resolved_type->bit_size);
                     ssa_emit_32(builder, result);
 
                     u32 alloc_reg;
@@ -740,6 +742,7 @@ s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope
                 result = ssa_register_create(builder);
 
                 ssa_emit_op(builder, SSA_OP_LOAD_PTR);
+                ssa_emit_8(builder, expr->resolved_type->bit_size);
 
                 ssa_emit_32(builder, result);
                 ssa_emit_32(builder, lvalue);
@@ -810,6 +813,7 @@ s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope
 
             result = ssa_register_create(builder);
             ssa_emit_op(builder, SSA_OP_LOAD_PTR);
+            ssa_emit_8(builder, expr->resolved_type->bit_size);
             ssa_emit_32(builder, result);
             ssa_emit_32(builder, lvalue);
             break;
@@ -1137,13 +1141,16 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
         }
 
         case SSA_OP_LOAD_PTR: {
+            u8 size_reg = *(u8 *)&bytes[ip];
+            ip += sizeof(u8);
+
             u32 dest_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
             u32 ptr_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
-            string_builder_append(sb, "  %%%u = LOAD_PTR %%%u\n", dest_reg, ptr_reg);
+            string_builder_append(sb, "  %%%u = LOAD_PTR %hu %%%u\n", dest_reg, size_reg, ptr_reg);
             break;
         }
 

@@ -16,11 +16,15 @@
 
 main :: () -> s64 {
 
-    x : u8;
-    y : u8;
+    Vec :: struct {
+        x : u8;
+        y : u8;
+    }
 
-    x = 1;
+    v : Vec;
+    v.x = 1;
+    v.y = 2;
 
-    return 0;
+    return v.y;
 }
 

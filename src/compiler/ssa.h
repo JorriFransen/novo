@@ -40,7 +40,7 @@ enum SSA_Op : u8
 
     SSA_OP_LOAD_IM,     // LOAD_IM [32-bit dest reg] [64-bit immediate]
     SSA_OP_LOAD_PARAM,  // LOAD_PARAM [32-bit dest reg] [32-bit param index]
-    SSA_OP_LOAD_PTR,    // LOAD_PTR [32-bit dest reg] [32-bit ptr_reg]
+    SSA_OP_LOAD_PTR,    // LOAD_PTR [8-bit size reg] [32-bit dest reg] [32-bit ptr_reg]
 
     SSA_OP_STRUCT_OFFSET, // STRUCT_OFFSET [32-bit dest reg] [32-bit base ptr reg] [32-bit offset] [16-bit index]
 

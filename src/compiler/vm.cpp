@@ -172,11 +172,22 @@ u64 vm_run(VM *vm)
             }
 
             case SSA_OP_LOAD_PTR: {
+                u8 size = vm_fetch<u8>(block, &ip);
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 ptr_reg = vm_fetch<u32>(block, &ip);
 
-                u64 *ptr = (u64 *)vm_get_register(vm, ptr_reg);
-                vm_set_register(vm, dest_reg, *ptr);
+                u64 value;
+                u64 ptr_value = vm_get_register(vm, ptr_reg);
+
+                switch (size) {
+                    default: assert(false); break;
+                    case 8 : value = *(u8  *)ptr_value; break;
+                    case 16: value = *(u16 *)ptr_value; break;
+                    case 32: value = *(u32 *)ptr_value; break;
+                    case 64: value = *(u64 *)ptr_value; break;
+                }
+
+                vm_set_register(vm, dest_reg, value);
                 break;
             }
 
