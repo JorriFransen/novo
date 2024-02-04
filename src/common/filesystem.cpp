@@ -46,7 +46,7 @@
 
 namespace Novo {
 
-bool fs_read_entire_file(Allocator *allocator, const String_Ref path, String *out_string)
+bool fs_read_entire_file(Allocator* allocator, const String_Ref path, String* out_string)
 {
     if (!fs_is_file(path)) {
         log_error("Not a regular file: %s\n", path.data);
@@ -64,7 +64,7 @@ bool fs_read_entire_file(Allocator *allocator, const String_Ref path, String *ou
     out_string->data = allocate_array<char>(allocator, size + 1);
     assert(out_string->data);
 
-    u64 read_size = fs_read(&file_handle, size, (u8 *)out_string->data, &read_size);
+    u64 read_size = fs_read(&file_handle, size, (u8*)out_string->data, &read_size);
     assert(read_size == 1);
 
     out_string->data[size] = '\0';
@@ -73,7 +73,7 @@ bool fs_read_entire_file(Allocator *allocator, const String_Ref path, String *ou
     return true;
 }
 
-bool fs_open(const String_Ref path, File_Mode mode, File_Handle *out_handle)
+bool fs_open(const String_Ref path, File_Mode mode, File_Handle* out_handle)
 {
     assert(out_handle);
 
@@ -83,7 +83,7 @@ bool fs_open(const String_Ref path, File_Mode mode, File_Handle *out_handle)
     bool read = (mode & FILE_MODE_READ) != 0;
     bool write = (mode & FILE_MODE_WRITE) != 0;
 
-    const char *mode_str;
+    const char* mode_str;
 
     if (read && write) {
         mode_str = "w+b";
@@ -96,7 +96,7 @@ bool fs_open(const String_Ref path, File_Mode mode, File_Handle *out_handle)
         return false;
     }
 
-    FILE *file = fopen(path.data, mode_str);
+    FILE* file = fopen(path.data, mode_str);
     if (!file) {
         log_error("Error opening file: %s", path.data);
         return false;
@@ -108,23 +108,23 @@ bool fs_open(const String_Ref path, File_Mode mode, File_Handle *out_handle)
     return true;
 }
 
-bool fs_size(File_Handle *handle, u64 *out_size)
+bool fs_size(File_Handle* handle, u64* out_size)
 {
     assert(handle && handle->valid && handle->handle);
     assert(out_size);
 
-    if (fseek((FILE *)handle->handle, 0, SEEK_END) == -1) {
+    if (fseek((FILE*)handle->handle, 0, SEEK_END) == -1) {
         log_error("fseek failed....");
         return false;
     }
 
-    *out_size = ftell((FILE *)handle->handle);
-    rewind((FILE *)handle->handle);
+    *out_size = ftell((FILE*)handle->handle);
+    rewind((FILE*)handle->handle);
 
     return true;
 }
 
-bool fs_read(File_Handle *handle, u64 size, u8 *out_bytes, u64 *out_size)
+bool fs_read(File_Handle* handle, u64 size, u8* out_bytes, u64* out_size)
 {
     assert(handle && handle->valid && handle->handle);
     assert(out_bytes && out_size);
@@ -134,7 +134,7 @@ bool fs_read(File_Handle *handle, u64 size, u8 *out_bytes, u64 *out_size)
         return true;
     }
 
-    *out_size = fread(out_bytes, 1, size, (FILE *)handle->handle);
+    *out_size = fread(out_bytes, 1, size, (FILE*)handle->handle);
     if (*out_size != size) {
         return false;
     }
@@ -165,7 +165,7 @@ bool fs_is_realpath(const String_Ref path)
     return false;
 }
 
-String fs_realpath(Allocator *allocator, const String_Ref path)
+String fs_realpath(Allocator* allocator, const String_Ref path)
 {
     NSTRING_ASSERT_ZERO_TERMINATION(path);
 
@@ -201,7 +201,7 @@ bool fs_is_file(const String_Ref path)
     return false;
 }
 
-String fs_dirname(Allocator *allocator, const String_Ref path)
+String fs_dirname(Allocator* allocator, const String_Ref path)
 {
     return platform_dirname(allocator, path);
 }

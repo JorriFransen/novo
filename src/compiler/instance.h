@@ -28,7 +28,7 @@ struct Instance
 
     String_Ref cwd = "./";
 
-    Allocator *default_allocator = c_allocator();
+    Allocator* default_allocator = c_allocator();
 
     Temp_Allocator temp_allocator_data;
     Allocator temp_allocator;
@@ -42,7 +42,7 @@ struct Instance
     DArray<Type_Task> type_tasks;
     DArray<SSA_Task> ssa_tasks;
 
-    Scope *global_scope;
+    Scope* global_scope;
 
     DArray<Atom> imported_files;
 
@@ -52,27 +52,27 @@ struct Instance
     DArray<Source_Pos> source_positions;
     DArray<Source_Range> source_ranges;
 
-    SSA_Program *ssa_program;
+    SSA_Program* ssa_program;
 
-    Type *builtin_type_void;
-    Type *builtin_type_u8;
-    Type *builtin_type_s64;
-    Type *builtin_type_bool;
+    Type* builtin_type_void;
+    Type* builtin_type_u8;
+    Type* builtin_type_s64;
+    Type* builtin_type_bool;
 
 };
 
-NAPI void instance_init(Instance *inst, Options options);
-NAPI void instance_free(Instance *inst);
+NAPI void instance_init(Instance* inst, Options options);
+NAPI void instance_free(Instance* inst);
 
-NAPI bool instance_start(Instance *inst);
+NAPI bool instance_start(Instance* inst);
 
-NAPI void instance_error(Instance *inst, Source_Pos sp, const char* fmt, ...);
-NAPI void instance_error(Instance *inst, u32 sp_id, const char* fmt, ...);
+NAPI void instance_error(Instance* inst, Source_Pos sp, const char* fmt, ...);
+NAPI void instance_error(Instance* inst, u32 sp_id, const char* fmt, ...);
 
-NAPI void instance_fatal_error(Instance *inst, Source_Pos sp, const char* fmt, ...);
-NAPI void instance_fatal_error(Instance *inst, u32 sp_id, const char* fmt, ...);
+NAPI void instance_fatal_error(Instance* inst, Source_Pos sp, const char* fmt, ...);
+NAPI void instance_fatal_error(Instance* inst, u32 sp_id, const char* fmt, ...);
 
-NAPI void instance_fatal_error_note(Instance *inst, Source_Pos sp, const char* fmt, ...);
-NAPI void instance_fatal_error_note(Instance *inst, u32 sp_id, const char* fmt, ...);
+NAPI void instance_fatal_error_note(Instance* inst, Source_Pos sp, const char* fmt, ...);
+NAPI void instance_fatal_error_note(Instance* inst, u32 sp_id, const char* fmt, ...);
 
 }

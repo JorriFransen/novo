@@ -135,7 +135,7 @@ static void growing()
     free_atoms();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     single_match();
     multiple_match();
     growing();

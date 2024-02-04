@@ -20,10 +20,10 @@ void set_err_log_level(Log_Level level)
     g_err_log_level = level;
 }
 
-static void log_message_va(Log_Level level, const char *fmt, va_list args)
+static void log_message_va(Log_Level level, const char* fmt, va_list args)
 {
-    const char *label = nullptr;
-    FILE *file = stdout;
+    const char* label = nullptr;
+    FILE* file = stdout;
 
     switch (level) {
 
@@ -80,37 +80,37 @@ static void log_message_va(Log_Level level, const char *fmt, va_list args)
     va_end(args);                   \
 }
 
-void log_message(Log_Level level, const char *fmt, ...)
+void log_message(Log_Level level, const char* fmt, ...)
 {
     LOG_MESSAGE(level, fmt);
 }
 
-void log_trace(const char *fmt, ...)
+void log_trace(const char* fmt, ...)
 {
     LOG_MESSAGE(LOG_LEVEL_TRACE, fmt);
 }
 
-void log_debug(const char *fmt, ...)
+void log_debug(const char* fmt, ...)
 {
     LOG_MESSAGE(LOG_LEVEL_DEBUG, fmt);
 }
 
-void log_info(const char *fmt, ...)
+void log_info(const char* fmt, ...)
 {
     LOG_MESSAGE(LOG_LEVEL_INFO, fmt);
 }
 
-void log_warn(const char *fmt, ...)
+void log_warn(const char* fmt, ...)
 {
     LOG_MESSAGE(LOG_LEVEL_WARN, fmt);
 }
 
-void log_error(const char *fmt, ...)
+void log_error(const char* fmt, ...)
 {
     LOG_MESSAGE(LOG_LEVEL_ERROR, fmt);
 }
 
-void log_fatal(const char *fmt, ...)
+void log_fatal(const char* fmt, ...)
 {
     LOG_MESSAGE(LOG_LEVEL_FATAL, fmt);
     exit(1);

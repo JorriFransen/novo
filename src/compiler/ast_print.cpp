@@ -15,16 +15,16 @@
 
 namespace Novo {
 
-static void ast_print_pos(Instance *instance, String_Builder *sb, u32 pos_id_a, u32 pos_id_b);
-static void ast_print_pos(Instance *instance, String_Builder *sb, u32 range_id);
+static void ast_print_pos(Instance* instance, String_Builder* sb, u32 pos_id_a, u32 pos_id_b);
+static void ast_print_pos(Instance* instance, String_Builder* sb, u32 range_id);
 
-static void ast_print_indent(String_Builder *sb, int indent);
-static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Declaration *decl, int indent = 0);
-static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_Statement *stmt, int indent = 0);
-static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expression *expr, int indent = 0);
-static void ast_ts_to_string(Instance *instance, String_Builder *sb, AST_Type_Spec *ts, int indent = 0);
+static void ast_print_indent(String_Builder* sb, int indent);
+static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Declaration* decl, int indent = 0);
+static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_Statement* stmt, int indent = 0);
+static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expression* expr, int indent = 0);
+static void ast_ts_to_string(Instance* instance, String_Builder* sb, AST_Type_Spec* ts, int indent = 0);
 
-String ast_to_string(Instance *instance, AST_File *file, String_Builder *sb)
+String ast_to_string(Instance* instance, AST_File* file, String_Builder* sb)
 {
     for (s64 i = 0; i < file->nodes.count; i++) {
         auto &node = file->nodes[i];
@@ -54,7 +54,7 @@ String ast_to_string(Instance *instance, AST_File *file, String_Builder *sb)
     return string_builder_to_string(sb);
 }
 
-String ast_to_string(Instance *instance, AST_File *file, Allocator *allocator)
+String ast_to_string(Instance* instance, AST_File* file, Allocator* allocator)
 {
     String_Builder sb;
     string_builder_init(&sb, allocator);
@@ -66,7 +66,7 @@ String ast_to_string(Instance *instance, AST_File *file, Allocator *allocator)
     return result;
 }
 
-static void ast_print_pos(Instance *instance, String_Builder *sb, u32 pos_id_a, u32 pos_id_b)
+static void ast_print_pos(Instance* instance, String_Builder* sb, u32 pos_id_a, u32 pos_id_b)
 {
     assert(pos_id_a > 0 && pos_id_a < instance->source_positions.count);
     assert(pos_id_b > 0 && pos_id_b < instance->source_positions.count);
@@ -82,7 +82,7 @@ static void ast_print_pos(Instance *instance, String_Builder *sb, u32 pos_id_a, 
     }
 }
 
-static void ast_print_pos(Instance *instance, String_Builder *sb, u32 range_id)
+static void ast_print_pos(Instance* instance, String_Builder* sb, u32 range_id)
 {
     if (range_id) {
 
@@ -95,14 +95,14 @@ static void ast_print_pos(Instance *instance, String_Builder *sb, u32 range_id)
     }
 }
 
-static void ast_print_indent(String_Builder *sb, int indent)
+static void ast_print_indent(String_Builder* sb, int indent)
 {
     for (int i = 0; i < indent; i++) {
         string_builder_append(sb, " ");
     }
 }
 
-static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Declaration *decl, int indent/*=0*/)
+static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Declaration* decl, int indent/*=0*/)
 {
     ast_print_pos(instance, sb, decl->range_id);
 
@@ -178,7 +178,7 @@ static void ast_decl_to_string(Instance *instance, String_Builder *sb, AST_Decla
     }
 }
 
-static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_Statement *stmt, int indent/*=0*/)
+static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_Statement* stmt, int indent/*=0*/)
 {
 
     switch (stmt->kind) {
@@ -358,7 +358,7 @@ static void ast_stmt_to_string(Instance *instance, String_Builder *sb, AST_State
     }
 }
 
-static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expression *expr, int indent/*=0*/)
+static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expression* expr, int indent/*=0*/)
 {
     ast_print_pos(instance, sb, expr->range_id);
 
@@ -440,7 +440,7 @@ static void ast_expr_to_string(Instance *instance, String_Builder *sb, AST_Expre
     }
 }
 
-static void ast_ts_to_string(Instance *instance, String_Builder *sb, AST_Type_Spec *ts, int indent/*=0*/)
+static void ast_ts_to_string(Instance* instance, String_Builder* sb, AST_Type_Spec* ts, int indent/*=0*/)
 {
     ast_print_pos(instance, sb, ts->range_id);
     ast_print_indent(sb, indent);

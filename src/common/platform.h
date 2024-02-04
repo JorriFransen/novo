@@ -15,6 +15,6 @@ namespace Novo {
 
 struct Allocator;
 
-NAPI String platform_dirname(Allocator *allocator, const String_Ref path);
+NAPI String platform_dirname(Allocator* allocator, const String_Ref path);
 
 }

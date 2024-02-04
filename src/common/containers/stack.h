@@ -10,17 +10,17 @@ namespace Novo {
 template <typename Element_Type>
 struct Stack
 {
-    Element_Type *buffer = nullptr;
+    Element_Type* buffer = nullptr;
     s64 sp = -1;
     s64 capacity = -1;
 
-    Allocator *allocator = nullptr;
+    Allocator* allocator = nullptr;
 };
 
 #define ZODIAC_STACK_DEFAULT_CAP 8
 
 template <typename Element_Type>
-void stack_init(Allocator *allocator, Stack<Element_Type> *stack, s64 initial_cap = ZODIAC_STACK_DEFAULT_CAP)
+void stack_init(Allocator* allocator, Stack<Element_Type> *stack, s64 initial_cap = ZODIAC_STACK_DEFAULT_CAP)
 {
     assert(allocator);
     assert(stack);
@@ -88,7 +88,7 @@ Element_Type stack_peek(Stack<Element_Type> *stack, s64 offset = 0)
 }
 
 template <typename Element_Type>
-Element_Type *stack_peek_ptr(Stack<Element_Type> *stack, s64 offset = 0)
+Element_Type* stack_peek_ptr(Stack<Element_Type> *stack, s64 offset = 0)
 {
     assert(stack);
     assert(stack->sp >= 1);
@@ -106,7 +106,7 @@ Element_Type stack_top(Stack<Element_Type> *stack)
 }
 
 template <typename Element_Type>
-Element_Type *stack_top_ptr(Stack<Element_Type> *stack)
+Element_Type* stack_top_ptr(Stack<Element_Type> *stack)
 {
     return stack_peek_ptr(stack);
 }

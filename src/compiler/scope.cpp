@@ -7,9 +7,9 @@
 
 namespace Novo {
 
-Scope *scope_new(Instance *instance, Scope_Kind kind, Scope *parent/*=nullptr*/)
+Scope* scope_new(Instance* instance, Scope_Kind kind, Scope* parent/*=nullptr*/)
 {
-    Scope *result = allocate<Scope>(&instance->scope_allocator);
+    Scope* result = allocate<Scope>(&instance->scope_allocator);
     result->kind = kind;
     result->parent = parent;
 
@@ -18,7 +18,7 @@ Scope *scope_new(Instance *instance, Scope_Kind kind, Scope *parent/*=nullptr*/)
     return result;
 }
 
-bool scope_add_symbol(Scope *scope, Atom atom, AST_Declaration *decl, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
+bool scope_add_symbol(Scope* scope, Atom atom, AST_Declaration* decl, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
 {
     if (scope_find_symbol(scope, atom, nullptr, opts)) {
         return false;
@@ -28,7 +28,7 @@ bool scope_add_symbol(Scope *scope, Atom atom, AST_Declaration *decl, Scope_Find
     return true;
 }
 
-AST_Declaration *scope_find_symbol(Scope *scope, Atom atom, Scope **found_in_scope, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
+AST_Declaration* scope_find_symbol(Scope* scope, Atom atom, Scope **found_in_scope, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
 {
     if (opts & SCOPE_FIND_OPTS_LIMIT_TO_STRUCT && scope->kind != Scope_Kind::STRUCT) {
         return nullptr;
@@ -49,7 +49,7 @@ AST_Declaration *scope_find_symbol(Scope *scope, Atom atom, Scope **found_in_sco
     return nullptr;
 }
 
-bool scope_is_parent(Scope *child, Scope *parent)
+bool scope_is_parent(Scope* child, Scope* parent)
 {
     if (!child->parent) return false;
     if (child->parent == parent) return true;

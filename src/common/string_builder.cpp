@@ -11,16 +11,16 @@ namespace Novo {
 
 struct String_Builder_Block
 {
-    char *cursor;
-    const char *end;
+    char* cursor;
+    const char* end;
 
-    String_Builder_Block *next_block;
+    String_Builder_Block* next_block;
 };
 
 
-static String_Builder_Block *string_builder_block(Allocator *allocator, u64 size);
+static String_Builder_Block* string_builder_block(Allocator* allocator, u64 size);
 
-void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_block_size/*=NOVO_SB_INITAL_BLOCK_SIZE*/)
+void string_builder_init(String_Builder* sb, Allocator* allocator, u64 initial_block_size/*=NOVO_SB_INITAL_BLOCK_SIZE*/)
 {
     sb->allocator = allocator;
     auto ta = allocate<Temp_Allocator>(allocator);
@@ -31,9 +31,9 @@ void string_builder_init(String_Builder *sb, Allocator *allocator, u64 initial_b
     sb->current_block = sb->first_block;
 }
 
-void string_builder_free(String_Builder *sb)
+void string_builder_free(String_Builder* sb)
 {
-    auto ta = (Temp_Allocator *)sb->temp_allocator.user_data;
+    auto ta = (Temp_Allocator*)sb->temp_allocator.user_data;
 
     if (!(sb->temp_allocator.flags & ALLOCATOR_FLAG_CANT_FREE)) {
         free(sb->allocator, ta->linear_allocator_data.buffer);
@@ -48,7 +48,7 @@ void string_builder_free(String_Builder *sb)
     }
 }
 
-void string_builder_reset(String_Builder *sb)
+void string_builder_reset(String_Builder* sb)
 {
     sb->current_block = sb->first_block;
 
@@ -56,12 +56,12 @@ void string_builder_reset(String_Builder *sb)
 
     while (block) {
         auto next = block->next_block;
-        block->cursor = (char *)&block[1];
+        block->cursor = (char*)&block[1];
         block = next;
     }
 }
 
-void string_builder_append(String_Builder *sb, const String_Ref fmt, ...)
+void string_builder_append(String_Builder* sb, const String_Ref fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -71,9 +71,9 @@ void string_builder_append(String_Builder *sb, const String_Ref fmt, ...)
     va_end(args);
 }
 
-void string_builder_append_va(String_Builder *sb, const String_Ref fmt, va_list args)
+void string_builder_append_va(String_Builder* sb, const String_Ref fmt, va_list args)
 {
-    auto ta = (Temp_Allocator *)sb->temp_allocator.user_data;
+    auto ta = (Temp_Allocator*)sb->temp_allocator.user_data;
     auto mark = temp_allocator_get_mark(ta);
 
     String temp_result = string_format_va_list(&sb->temp_allocator, fmt, args);
@@ -119,19 +119,19 @@ void string_builder_append_va(String_Builder *sb, const String_Ref fmt, va_list 
     temp_allocator_reset(ta, mark);
 }
 
-static String_Builder_Block *string_builder_block(Allocator *allocator, u64 size)
+static String_Builder_Block* string_builder_block(Allocator* allocator, u64 size)
 {
     u64 alloc_size = sizeof(String_Builder_Block) + size;
 
-    auto result = (String_Builder_Block *)allocate(allocator, alloc_size);
-    result->cursor = (char *)&result[1];
+    auto result = (String_Builder_Block*)allocate(allocator, alloc_size);
+    result->cursor = (char*)&result[1];
     result->end = &result->cursor[size];
     result->next_block = nullptr;
 
     return result;
 }
 
-String string_builder_to_string(String_Builder *sb, Allocator *allocator)
+String string_builder_to_string(String_Builder* sb, Allocator* allocator)
 {
     s64 size = 0;
 
@@ -139,7 +139,7 @@ String string_builder_to_string(String_Builder *sb, Allocator *allocator)
     while (block) {
         auto next = block->next_block;
 
-        auto start = (char *)&block[1];
+        auto start = (char*)&block[1];
         auto block_size = block->cursor - start;
         size += block_size;
 
@@ -157,7 +157,7 @@ String string_builder_to_string(String_Builder *sb, Allocator *allocator)
     while (block) {
         auto next = block->next_block;
 
-        auto start = (char *)&block[1];
+        auto start = (char*)&block[1];
         auto block_size = block->cursor - start;
 
         memcpy(cursor, start, block_size);
@@ -171,7 +171,7 @@ String string_builder_to_string(String_Builder *sb, Allocator *allocator)
     return result;
 }
 
-String string_builder_to_string(String_Builder *sb)
+String string_builder_to_string(String_Builder* sb)
 {
     return string_builder_to_string(sb, sb->allocator);
 }

@@ -9,7 +9,7 @@
 
 namespace Novo {
 
-void add_parse_task(Instance *inst, Atom path)
+void add_parse_task(Instance* inst, Atom path)
 {
     Parse_Task task = {
         .file_name = path,
@@ -19,7 +19,7 @@ void add_parse_task(Instance *inst, Atom path)
     darray_append(&inst->imported_files, path);
 }
 
-void add_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
+void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)
 {
     for (s64 i = 0; i < file->nodes.count; i++) {
 
@@ -45,7 +45,7 @@ void add_resolve_tasks(Instance *inst, AST_File *file, Scope *scope)
     }
 }
 
-void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_Declaration *fn)
+void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_Declaration* fn)
 {
     switch (decl->kind) {
 
@@ -58,7 +58,7 @@ void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_
 
         case AST_Declaration_Kind::FUNCTION: {
 
-            Scope *fn_scope = decl->function.scope;
+            Scope* fn_scope = decl->function.scope;
 
             for (s64 i = 0; i < decl->function.params.count; i++) {
                 add_resolve_tasks(inst, decl->function.params[i], fn_scope, decl);
@@ -82,7 +82,7 @@ void add_resolve_tasks(Instance *inst, AST_Declaration *decl, Scope *scope, AST_
     darray_append(&inst->resolve_tasks, decl_task);
 }
 
-void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_Declaration *fn)
+void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_Declaration* fn)
 {
     switch (stmt->kind) {
 
@@ -109,13 +109,13 @@ void add_resolve_tasks(Instance *inst, AST_Statement *stmt, Scope *scope, AST_De
     }
 }
 
-void add_resolve_tasks(Instance *inst, AST_Type_Spec *ts, Scope *scope)
+void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope)
 {
     Resolve_Task task = resolve_task_create(inst, ast_node(ts), scope, nullptr);
     darray_append(&inst->resolve_tasks, task);
 }
 
-void add_type_task(Instance *inst, AST_Node node, Scope *scope, AST_Declaration *fn)
+void add_type_task(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn)
 {
     Type_Task task = {
         .node = node,
@@ -125,7 +125,7 @@ void add_type_task(Instance *inst, AST_Node node, Scope *scope, AST_Declaration 
     darray_append(&inst->type_tasks, task);
 }
 
-void add_ssa_task(Instance *inst, AST_Node node)
+void add_ssa_task(Instance* inst, AST_Node node)
 {
     assert(node.kind == AST_Node_Kind::DECLARATION);
     assert(node.declaration->kind == AST_Declaration_Kind::FUNCTION);
@@ -136,7 +136,7 @@ void add_ssa_task(Instance *inst, AST_Node node)
     darray_append(&inst->ssa_tasks, task);
 }
 
-Resolve_Task resolve_task_create(Instance *inst, AST_Node node, Scope *scope, AST_Declaration *fn_decl)
+Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl)
 {
     Resolve_Task result;
     result.node = node;

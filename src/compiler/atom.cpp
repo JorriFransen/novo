@@ -10,23 +10,23 @@ namespace Novo {
 Atom_Table g_atoms;
 bool g_atoms_initialized = false;
 
-void initialize_atoms(Allocator *allocator, s64 capacity)
+void initialize_atoms(Allocator* allocator, s64 capacity)
 {
     g_atoms.allocator = allocator;
 
     g_atoms.capacity = capacity;
 
-    g_atoms.hashes = (u64 *)allocate(allocator, capacity * (sizeof(g_atoms.hashes[0]) + sizeof(g_atoms.ids[0])));
-    g_atoms.ids = (u32 *)&g_atoms.hashes[capacity];
+    g_atoms.hashes = (u64*)allocate(allocator, capacity * (sizeof(g_atoms.hashes[0]) + sizeof(g_atoms.ids[0])));
+    g_atoms.ids = (u32*)&g_atoms.hashes[capacity];
 
     darray_init(allocator, &g_atoms.strings);
 
     auto string_block_buffer_size = NOVO_ATOM_TABLE_DEFAULT_STRING_BLOCK_SIZE;
     g_atoms.next_block_size = string_block_buffer_size;
     auto string_block_size = sizeof(Atom_String_Memory_Block) + string_block_buffer_size;
-    g_atoms.first_sting_block = (Atom_String_Memory_Block *)allocate(allocator, string_block_size);
+    g_atoms.first_sting_block = (Atom_String_Memory_Block*)allocate(allocator, string_block_size);
 
-    g_atoms.first_sting_block->mem = &((char *)g_atoms.first_sting_block)[sizeof(Atom_String_Memory_Block)];
+    g_atoms.first_sting_block->mem = &((char*)g_atoms.first_sting_block)[sizeof(Atom_String_Memory_Block)];
     g_atoms.first_sting_block->end = g_atoms.first_sting_block->mem + string_block_buffer_size;
     g_atoms.first_sting_block->next_block = nullptr;
 
@@ -57,8 +57,8 @@ static void atom_table_grow()
     auto old_hashes = g_atoms.hashes;
     auto old_ids = g_atoms.ids;
 
-    auto new_hashes = (u64 *)allocate(g_atoms.allocator, new_cap * (sizeof(g_atoms.hashes[0]) + sizeof(g_atoms.ids[0])));
-    auto new_ids = (u32 *)&new_hashes[new_cap];
+    auto new_hashes = (u64*)allocate(g_atoms.allocator, new_cap * (sizeof(g_atoms.hashes[0]) + sizeof(g_atoms.ids[0])));
+    auto new_ids = (u32*)&new_hashes[new_cap];
 
     g_atoms.capacity = new_cap;
     g_atoms.hashes = new_hashes;
@@ -89,7 +89,7 @@ static void atom_table_grow()
     free(g_atoms.allocator, old_hashes);
 }
 
-static char *atom_table_add_string(const String_Ref &str)
+static char* atom_table_add_string(const String_Ref &str)
 {
     auto sb = g_atoms.current_string_block;
 
@@ -99,7 +99,7 @@ static char *atom_table_add_string(const String_Ref &str)
     if (required > remaining) {
 
         // Try to find an existing block first
-        Atom_String_Memory_Block *ex_block = nullptr;
+        Atom_String_Memory_Block* ex_block = nullptr;
         auto cb = g_atoms.first_sting_block;
 
         // sb should be the last block in the chain
@@ -124,9 +124,9 @@ static char *atom_table_add_string(const String_Ref &str)
             g_atoms.next_block_size = new_block_size;
 
             auto total_size = new_block_size + sizeof(Atom_String_Memory_Block);
-            auto new_block = (Atom_String_Memory_Block *)allocate(g_atoms.allocator, total_size);
+            auto new_block = (Atom_String_Memory_Block*)allocate(g_atoms.allocator, total_size);
 
-            new_block->mem = &((char *)new_block)[sizeof(Atom_String_Memory_Block)];
+            new_block->mem = &((char*)new_block)[sizeof(Atom_String_Memory_Block)];
             new_block->end = new_block->mem + new_block_size;
             new_block->next_block = nullptr;
 
@@ -140,7 +140,7 @@ static char *atom_table_add_string(const String_Ref &str)
     memcpy(sb->mem, str.data, required);
     sb->mem[str.length] = '\0';
 
-    char *result = sb->mem;
+    char* result = sb->mem;
     sb->mem += required;
     return result;
 }
@@ -188,7 +188,7 @@ Atom atom_get(const String_Ref &str)
     return atom_get(str);
 }
 
-Atom atom_get(const char *start, s64 length)
+Atom atom_get(const char* start, s64 length)
 {
     return atom_get(String_Ref(start, length));
 }

@@ -17,7 +17,7 @@ namespace Novo
 
 #if NPLATFORM_LINUX
 
-String platform_dirname(Allocator *allocator, const String_Ref path)
+String platform_dirname(Allocator* allocator, const String_Ref path)
 {
     auto path_copy = string_copy(allocator, path);
     NSTRING_ASSERT_ZERO_TERMINATION(path_copy);
@@ -35,7 +35,7 @@ String platform_dirname(Allocator *allocator, const String_Ref path)
 
 #elif NPLATFORM_WINDOWS
 
-String platform_dirname(Allocator *allocator, const String_Ref path)
+String platform_dirname(Allocator* allocator, const String_Ref path)
 {
     char drive[_MAX_DRIVE];
     char dir[_MAX_DIR];

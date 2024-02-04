@@ -18,7 +18,7 @@ namespace Novo {
 
 #define expect_token(p, k) if (!expect_token_internal((p), (k))) return {};
 
-AST_File *parse_file(Instance *instance, const String_Ref file_path)
+AST_File* parse_file(Instance* instance, const String_Ref file_path)
 {
     Lexer lexer;
     lexer_create(instance, &lexer);
@@ -83,9 +83,9 @@ AST_File *parse_file(Instance *instance, const String_Ref file_path)
     return result;
 }
 
-AST_Declaration *parse_declaration(Parser *parser, Scope *scope, bool eat_semi)
+AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi)
 {
-    AST_Identifier *ident = parse_identifier(parser);
+    AST_Identifier* ident = parse_identifier(parser);
 
     // Report redeclarations in higher level scopes first
     if (scope_find_symbol(scope, ident->atom, nullptr)) {
@@ -105,14 +105,14 @@ AST_Declaration *parse_declaration(Parser *parser, Scope *scope, bool eat_semi)
     return parse_declaration(parser, ident, scope, eat_semi);
 }
 
-AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope *scope, bool eat_semi)
+AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi)
 {
-    AST_Declaration *result = nullptr;
+    AST_Declaration* result = nullptr;
     u64 end = 0;
 
     expect_token(parser, ':');
 
-    AST_Type_Spec *ts = nullptr;
+    AST_Type_Spec* ts = nullptr;
     if (!is_token(parser, ':') && !is_token(parser, '=')) {
         ts = parse_type_spec(parser);
         end = source_range_end(parser->instance, ts->range_id);
@@ -133,7 +133,7 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
 
     } else {
 
-        AST_Expression *init_expr = nullptr;
+        AST_Expression* init_expr = nullptr;
         if (match_token(parser, '=')) {
             init_expr = parse_expression(parser);
             if (!init_expr) return nullptr;
@@ -169,18 +169,18 @@ AST_Declaration *parse_declaration(Parser *parser, AST_Identifier *ident, Scope 
     return result;
 }
 
-AST_Declaration *parse_struct_declaration(Parser *parser, AST_Identifier *ident, Scope *scope)
+AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident, Scope* scope)
 {
     expect_token(parser, '{');
 
     auto fields = temp_array_create<AST_Declaration *>(&parser->instance->temp_allocator, 8);
-    Scope *struct_scope = scope_new(parser->instance, Scope_Kind::STRUCT, scope);
+    Scope* struct_scope = scope_new(parser->instance, Scope_Kind::STRUCT, scope);
 
     while (!is_token(parser, '}')) {
 
-        AST_Identifier *name = parse_identifier(parser);
+        AST_Identifier* name = parse_identifier(parser);
         expect_token(parser, ':');
-        AST_Type_Spec *ts = parse_type_spec(parser);
+        AST_Type_Spec* ts = parse_type_spec(parser);
 
         AST_Expression* default_value = nullptr;
         if (match_token(parser, '=')) {
@@ -225,13 +225,13 @@ AST_Declaration *parse_struct_declaration(Parser *parser, AST_Identifier *ident,
     return ast_struct_declaration(parser->instance, ident, fields_array, struct_scope, range_id);
 }
 
-AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *ident, Scope *scope)
+AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* ident, Scope* scope)
 {
     assert(scope->kind == Scope_Kind::GLOBAL);
 
     auto params = temp_array_create<AST_Declaration *>(&parser->instance->temp_allocator, 2);
 
-    Scope *fn_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
+    Scope* fn_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
     u32 arg_index = 0;
 
@@ -241,7 +241,7 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
             expect_token(parser, ',');
         }
 
-        AST_Declaration *param_decl = parse_declaration(parser, fn_scope, false);
+        AST_Declaration* param_decl = parse_declaration(parser, fn_scope, false);
         if (!param_decl) return nullptr;
 
         // TODO: report error
@@ -255,7 +255,7 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
 
     auto params_array = temp_array_finalize(&parser->instance->ast_allocator, &params);
 
-    AST_Type_Spec *return_ts = nullptr;
+    AST_Type_Spec* return_ts = nullptr;
     if (match_token(parser, TOK_RIGHT_ARROW)) {
         return_ts = parse_type_spec(parser);
     }
@@ -282,7 +282,7 @@ AST_Declaration *parse_function_declaration(Parser *parser, AST_Identifier *iden
     return ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope, range);
 }
 
-AST_Expression *parse_leaf_expression(Parser *parser)
+AST_Expression* parse_leaf_expression(Parser* parser)
 {
     auto ct = parser->lexer->token;
     auto range_start = ct.source_pos_id;
@@ -292,7 +292,7 @@ AST_Expression *parse_leaf_expression(Parser *parser)
         return nullptr;
     }
 
-    AST_Expression *result = nullptr;
+    AST_Expression* result = nullptr;
 
     if (is_token(parser, TOK_INT)) {
         next_token(parser->lexer);
@@ -307,7 +307,7 @@ AST_Expression *parse_leaf_expression(Parser *parser)
         result = ast_char_literal_expression(parser->instance, ct.character, range);
 
     } else if (is_token(parser, TOK_NAME)) {
-        AST_Identifier *ident = parse_identifier(parser);
+        AST_Identifier* ident = parse_identifier(parser);
 
         result = ast_identifier_expression(parser->instance, ident, range);
 
@@ -348,7 +348,7 @@ AST_Expression *parse_leaf_expression(Parser *parser)
                     expect_token(parser, ',');
                 }
 
-                AST_Expression *arg_expr = parse_expression(parser);
+                AST_Expression* arg_expr = parse_expression(parser);
                 darray_append(&args_temp, arg_expr);
             }
             end = parser->lexer->token.source_pos_id;
@@ -362,7 +362,7 @@ AST_Expression *parse_leaf_expression(Parser *parser)
         } else if (match_token(parser, '.')) {
 
             auto end = parser->lexer->token.source_pos_id;
-            AST_Identifier *member_name = parse_identifier(parser);
+            AST_Identifier* member_name = parse_identifier(parser);
 
             auto member_range = source_range(parser->instance, range_start, end);
 
@@ -373,7 +373,7 @@ AST_Expression *parse_leaf_expression(Parser *parser)
     return result;
 }
 
-static AST_Expression *parse_increasing_precedence(Parser *parser, AST_Expression *left, u64 min_prec)
+static AST_Expression* parse_increasing_precedence(Parser* parser, AST_Expression* left, u64 min_prec)
 {
     auto op_token = parser->lexer->token;
 
@@ -395,7 +395,7 @@ static AST_Expression *parse_increasing_precedence(Parser *parser, AST_Expressio
     }
 }
 
-AST_Expression *parse_expression(Parser *parser, u64 min_prec/*=0*/)
+AST_Expression* parse_expression(Parser* parser, u64 min_prec/*=0*/)
 {
     auto left = parse_leaf_expression(parser);
 
@@ -407,7 +407,7 @@ AST_Expression *parse_expression(Parser *parser, u64 min_prec/*=0*/)
     }
 }
 
-AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi)
+AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 {
     if (parser->lexer->token.kind == TOK_ERROR) return nullptr;
 
@@ -415,11 +415,11 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi)
 
     if (match_token(parser, '{')) {
 
-        Scope *block_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
+        Scope* block_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
         auto stmts = temp_array_create<AST_Statement *>(&parser->instance->temp_allocator, 8);
         while (!is_token(parser, '}')) {
-            AST_Statement *stmt = parse_statement(parser, block_scope, true);
+            AST_Statement* stmt = parse_statement(parser, block_scope, true);
             darray_append(&stmts, stmt);
         }
 
@@ -435,7 +435,7 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi)
     }
 
     // Remaining options start with (unary?) expression
-    AST_Expression *expr = parse_leaf_expression(parser);
+    AST_Expression* expr = parse_leaf_expression(parser);
     if (!expr) return nullptr;
 
     if (expr->kind == AST_Expression_Kind::CALL) {
@@ -463,7 +463,7 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi)
         next_token(parser->lexer);
         expect_token(parser, '=');
 
-        AST_Expression *rhs = parse_expression(parser);
+        AST_Expression* rhs = parse_expression(parser);
 
         if (eat_semi) expect_token(parser, ';');
 
@@ -479,27 +479,27 @@ AST_Statement *parse_statement(Parser *parser, Scope *scope, bool eat_semi)
     assert(false);
 }
 
-AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
+AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
 {
     auto ct = parser->lexer->token;
 
     if (match_keyword(parser, g_keyword_if)) {
 
-        AST_Expression *cond = parse_expression(parser);
-        AST_Statement *then_stmt = parse_statement(parser, scope, true);
+        AST_Expression* cond = parse_expression(parser);
+        AST_Statement* then_stmt = parse_statement(parser, scope, true);
 
         auto if_blocks = temp_array_create<AST_If_Block>(&parser->instance->temp_allocator);
 
         darray_append(&if_blocks, { cond, then_stmt });
 
-        AST_Statement *else_stmt = nullptr;
+        AST_Statement* else_stmt = nullptr;
 
         while (match_keyword(parser, g_keyword_else)) {
 
             if (match_keyword(parser, g_keyword_if)) {
 
-                AST_Expression *elif_cond = parse_expression(parser);
-                AST_Statement *elif_stmt = parse_statement(parser, scope, true);
+                AST_Expression* elif_cond = parse_expression(parser);
+                AST_Statement* elif_stmt = parse_statement(parser, scope, true);
 
                 darray_append(&if_blocks, { elif_cond, elif_stmt });
             } else {
@@ -530,13 +530,13 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
 
         bool expect_close_paren = match_token(parser, '(');
 
-        AST_Expression *cond = parse_expression(parser);
+        AST_Expression* cond = parse_expression(parser);
 
         if (expect_close_paren) {
             expect_token(parser, ')');
         }
 
-        AST_Statement *stmt = parse_statement(parser, scope, true);
+        AST_Statement* stmt = parse_statement(parser, scope, true);
 
         auto end = source_range_end(parser->instance, stmt->range_id);
         auto range = source_range(parser->instance, ct.source_pos_id, end);
@@ -546,12 +546,12 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
 
         bool expect_close_paren = match_token(parser, '(');
 
-        Scope *for_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
+        Scope* for_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
-        AST_Statement *init_stmt = parse_statement(parser, for_scope, true);
-        AST_Expression *cond = parse_expression(parser);
+        AST_Statement* init_stmt = parse_statement(parser, for_scope, true);
+        AST_Expression* cond = parse_expression(parser);
         expect_token(parser, ';');
-        AST_Statement *step_stmt = parse_statement(parser, for_scope, false);
+        AST_Statement* step_stmt = parse_statement(parser, for_scope, false);
 
         if (expect_close_paren) {
             expect_token(parser, ')');
@@ -559,7 +559,7 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
             expect_token(parser, ';');
         }
 
-        AST_Statement *do_stmt = parse_statement(parser, for_scope, true);
+        AST_Statement* do_stmt = parse_statement(parser, for_scope, true);
 
         assert(init_stmt);
         assert(cond);
@@ -586,7 +586,7 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
 
     } else if (match_keyword(parser, g_keyword_return)) {
 
-        AST_Expression *expr = nullptr;
+        AST_Expression* expr = nullptr;
         if (!is_token(parser, ';')) {
             expr = parse_expression(parser);
         }
@@ -603,7 +603,7 @@ AST_Statement *parse_keyword_statement(Parser *parser, Scope *scope)
     return nullptr;
 }
 
-AST_Identifier *parse_identifier(Parser *parser)
+AST_Identifier* parse_identifier(Parser* parser)
 {
     auto ident_tok = parser->lexer->token;
 
@@ -613,10 +613,10 @@ AST_Identifier *parse_identifier(Parser *parser)
     return ast_identifier(parser->instance, ident_tok.atom, range);
 }
 
-AST_Type_Spec *parse_type_spec(Parser *parser)
+AST_Type_Spec* parse_type_spec(Parser* parser)
 {
     if (is_token(parser, TOK_NAME)) {
-        AST_Identifier *ident = parse_identifier(parser);
+        AST_Identifier* ident = parse_identifier(parser);
         return ast_identifier_type_spec(parser->instance, ident);
     }
 
@@ -624,7 +624,7 @@ AST_Type_Spec *parse_type_spec(Parser *parser)
     return nullptr;
 }
 
-bool expect_token_internal(Parser *parser, Token_Kind kind)
+bool expect_token_internal(Parser* parser, Token_Kind kind)
 {
     auto ct = parser->lexer->token;
     if (ct.kind != kind) {
@@ -638,11 +638,11 @@ bool expect_token_internal(Parser *parser, Token_Kind kind)
     return true;
 }
 
-bool expect_token_internal(Parser *parser, char c) {
+bool expect_token_internal(Parser* parser, char c) {
     return expect_token_internal(parser, (Token_Kind)c);
 }
 
-bool match_token(Parser *parser, Token_Kind kind)
+bool match_token(Parser* parser, Token_Kind kind)
 {
     if (parser->lexer->token.kind == kind) {
         next_token(parser->lexer);
@@ -652,12 +652,12 @@ bool match_token(Parser *parser, Token_Kind kind)
     return false;
 }
 
-bool match_token(Parser *parser, char c)
+bool match_token(Parser* parser, char c)
 {
     return match_token(parser, (Token_Kind)c);
 }
 
-bool match_name(Parser *parser, const char *name)
+bool match_name(Parser* parser, const char* name)
 {
     if (parser->lexer->token.kind == TOK_NAME && parser->lexer->token.atom == atom_get(name)) {
         next_token(parser->lexer);
@@ -667,7 +667,7 @@ bool match_name(Parser *parser, const char *name)
     return false;
 }
 
-bool match_keyword(Parser *parser, Atom kw_atom)
+bool match_keyword(Parser* parser, Atom kw_atom)
 {
     if (parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom) {
         next_token(parser->lexer);
@@ -677,17 +677,17 @@ bool match_keyword(Parser *parser, Atom kw_atom)
     return false;
 }
 
-bool is_token(Parser *parser, Token_Kind kind)
+bool is_token(Parser* parser, Token_Kind kind)
 {
     return is_token(parser->lexer, kind);
 }
 
-bool is_token(Parser *parser, char c)
+bool is_token(Parser* parser, char c)
 {
     return is_token(parser->lexer, c);
 }
 
-bool is_keyword(Parser *parser, Atom kw_atom)
+bool is_keyword(Parser* parser, Atom kw_atom)
 {
     return parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom;
 }

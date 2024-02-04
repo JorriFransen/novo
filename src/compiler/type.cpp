@@ -9,7 +9,7 @@
 
 namespace Novo {
 
-Type *type_new(Instance *instance, Type_Kind kind, u32 bit_size)
+Type* type_new(Instance* instance, Type_Kind kind, u32 bit_size)
 {
     auto result = allocate<Type>(&instance->ast_allocator);
     result->kind = kind;
@@ -17,26 +17,26 @@ Type *type_new(Instance *instance, Type_Kind kind, u32 bit_size)
     return result;
 }
 
-Type *void_type_new(Instance *inst)
+Type* void_type_new(Instance* inst)
 {
     auto result = type_new(inst, Type_Kind::VOID, 0);
     return result;
 }
 
-Type *integer_type_new(Instance *instance, bool sign, u32 bit_size)
+Type* integer_type_new(Instance* instance, bool sign, u32 bit_size)
 {
     auto result = type_new(instance, Type_Kind::INTEGER, bit_size);
     result->integer.sign = sign;
     return result;
 }
 
-Type *boolean_type_new(Instance *inst, u32 bit_size)
+Type* boolean_type_new(Instance* inst, u32 bit_size)
 {
     auto result = type_new(inst, Type_Kind::BOOLEAN, bit_size);
     return result;
 }
 
-Type *function_type_new(Instance *inst, DArray<Type *> param_types, Type *return_type)
+Type* function_type_new(Instance* inst, DArray<Type *> param_types, Type* return_type)
 {
     auto result = type_new(inst, Type_Kind::FUNCTION, 64);
     result->function.param_types = param_types;
@@ -44,7 +44,7 @@ Type *function_type_new(Instance *inst, DArray<Type *> param_types, Type *return
     return result;
 }
 
-Type *struct_type_new(Instance *inst, Array_Ref<Type *> member_types, Scope *scope)
+Type* struct_type_new(Instance* inst, Array_Ref<Type *> member_types, Scope* scope)
 {
     DArray<Type_Struct_Member> members;
     darray_init(&inst->ast_allocator, &members, member_types.count);
@@ -70,7 +70,7 @@ Type *struct_type_new(Instance *inst, Array_Ref<Type *> member_types, Scope *sco
     return result;
 }
 
-Type *function_type_get(Instance *inst, Temp_Array<Type *> param_types, Type *return_type)
+Type* function_type_get(Instance* inst, Temp_Array<Type *> param_types, Type* return_type)
 {
     for (s64 i = 0; i < inst->function_types.count; i++) {
 
@@ -93,12 +93,12 @@ Type *function_type_get(Instance *inst, Temp_Array<Type *> param_types, Type *re
         return fn_type;
     }
 
-    Type *new_type = function_type_new(inst, temp_array_finalize(&inst->ast_allocator, &param_types), return_type);
+    Type* new_type = function_type_new(inst, temp_array_finalize(&inst->ast_allocator, &param_types), return_type);
     darray_append(&inst->function_types, new_type);
     return new_type;
 }
 
-String temp_type_string(Instance *inst, Type *type)
+String temp_type_string(Instance* inst, Type* type)
 {
     String_Builder sb;
     string_builder_init(&sb, &inst->temp_allocator, 64);
@@ -108,7 +108,7 @@ String temp_type_string(Instance *inst, Type *type)
     return string_builder_to_string(&sb);
 }
 
-void type_to_string(String_Builder *sb, Type *type)
+void type_to_string(String_Builder* sb, Type* type)
 {
     switch (type->kind) {
 

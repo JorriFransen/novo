@@ -16,7 +16,7 @@
 
 namespace Novo {
 
-bool type_node(Instance *inst, Type_Task *task, AST_Node *node, Scope *scope)
+bool type_node(Instance* inst, Type_Task* task, AST_Node* node, Scope* scope)
 {
     switch (node->kind) {
 
@@ -41,7 +41,7 @@ bool type_node(Instance *inst, Type_Task *task, AST_Node *node, Scope *scope)
     return false;
 }
 
-bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Scope *scope)
+bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Scope* scope)
 {
     if (decl->flags & AST_DECL_FLAG_TYPED) {
         assert(decl->resolved_type);
@@ -53,7 +53,7 @@ bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Sc
 
         case AST_Declaration_Kind::VARIABLE: {
 
-            Type *result_type = nullptr;
+            Type* result_type = nullptr;
 
             if (decl->variable.type_spec) {
                 if (!type_type_spec(inst, task, decl->variable.type_spec, scope)) {
@@ -91,7 +91,7 @@ bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Sc
 
         case AST_Declaration_Kind::STRUCT: {
 
-            Scope *struct_scope = decl->structure.scope;
+            Scope* struct_scope = decl->structure.scope;
             auto &fields = decl->structure.fields;
 
             for (s64 i = 0; i < fields.count; i++) {
@@ -142,7 +142,7 @@ bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Sc
                 darray_append(&param_types, decl->function.params[i]->resolved_type);
             }
 
-            Type *return_type = decl->function.return_ts ? decl->function.return_ts->resolved_type : inst->builtin_type_void;
+            Type* return_type = decl->function.return_ts ? decl->function.return_ts->resolved_type : inst->builtin_type_void;
 
             decl->resolved_type = function_type_get(inst, param_types, return_type);
 
@@ -158,7 +158,7 @@ bool type_declaration(Instance *inst, Type_Task *task, AST_Declaration *decl, Sc
     return true;
 }
 
-bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope *scope)
+bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope* scope)
 {
     if (stmt->flags & AST_TS_FLAG_TYPED) {
         return true;
@@ -180,8 +180,8 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
 
         case AST_Statement_Kind::ASSIGNMENT: {
 
-            AST_Expression *lvalue = stmt->assignment.lvalue;
-            AST_Expression *rvalue = stmt->assignment.rvalue;
+            AST_Expression* lvalue = stmt->assignment.lvalue;
+            AST_Expression* rvalue = stmt->assignment.rvalue;
 
             if (!type_expression(inst, task, lvalue, scope, nullptr)) {
                 return false;
@@ -203,8 +203,8 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
 
         case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
 
-            AST_Expression *lvalue = stmt->arithmetic_assignment.lvalue;
-            AST_Expression *rvalue = stmt->arithmetic_assignment.rvalue;
+            AST_Expression* lvalue = stmt->arithmetic_assignment.lvalue;
+            AST_Expression* rvalue = stmt->arithmetic_assignment.rvalue;
 
             if (!type_expression(inst, task, lvalue, scope, nullptr)) {
                 return false;
@@ -235,7 +235,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
 
-                Type *result_type = nullptr;
+                Type* result_type = nullptr;
 
                 assert(task->fn_decl);
                 if (task->fn_decl->resolved_type) {
@@ -275,7 +275,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
 
         case AST_Statement_Kind::WHILE: {
 
-            AST_Expression *cond = stmt->while_stmt.cond;
+            AST_Expression* cond = stmt->while_stmt.cond;
             if (!type_expression(inst, task, cond, scope, inst->builtin_type_bool)) {
                 return false;
             }
@@ -286,7 +286,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
                                      temp_type_string(inst, cond->resolved_type).data);
             }
 
-            AST_Statement *while_stmt = stmt->while_stmt.stmt;
+            AST_Statement* while_stmt = stmt->while_stmt.stmt;
             if (!type_statement(inst, task, while_stmt, scope)) {
                 return false;
             }
@@ -296,12 +296,12 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
 
         case AST_Statement_Kind::FOR: {
 
-            AST_Statement *init = stmt->for_stmt.init;
+            AST_Statement* init = stmt->for_stmt.init;
             if (!type_statement(inst, task, init, scope)) {
                 return false;
             }
 
-            AST_Expression *cond = stmt->for_stmt.cond;
+            AST_Expression* cond = stmt->for_stmt.cond;
             if (!type_expression(inst, task, cond, scope, inst->builtin_type_bool)) {
                 return false;
             }
@@ -312,12 +312,12 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
                                      temp_type_string(inst, cond->resolved_type).data);
             }
 
-            AST_Statement *step = stmt->for_stmt.step;
+            AST_Statement* step = stmt->for_stmt.step;
             if (!type_statement(inst, task, step, scope)) {
                 return false;
             }
 
-            AST_Statement *for_stmt = stmt->for_stmt.stmt;
+            AST_Statement* for_stmt = stmt->for_stmt.stmt;
             if (!type_statement(inst, task, for_stmt, scope)) {
                 return false;
             }
@@ -346,7 +346,7 @@ bool type_statement(Instance *inst, Type_Task *task, AST_Statement *stmt, Scope 
     return true;
 }
 
-bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scope *scope, Type *suggested_type)
+bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scope* scope, Type* suggested_type)
 {
     if (expr->flags & AST_EXPR_FLAG_TYPED) {
         assert(expr->resolved_type);
@@ -413,14 +413,14 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
                 return false;
             }
 
-            Type *struct_type = expr->member.base->resolved_type;
+            Type* struct_type = expr->member.base->resolved_type;
             assert(struct_type->kind == Type_Kind::STRUCT);
 
-            AST_Declaration *field = scope_find_symbol(struct_type->structure.scope, expr->member.member_name->atom, nullptr);
+            AST_Declaration* field = scope_find_symbol(struct_type->structure.scope, expr->member.member_name->atom, nullptr);
             u32 index = field->variable.index;
             assert(index >= 0 && index < struct_type->structure.members.count);
 
-            Type *mem_type = struct_type->structure.members[index].type;
+            Type* mem_type = struct_type->structure.members[index].type;
 
             expr->resolved_type = mem_type;
             break;
@@ -510,7 +510,7 @@ bool type_expression(Instance *inst, Type_Task *task, AST_Expression *expr, Scop
     return true;
 }
 
-bool type_type_spec(Instance *inst, Type_Task *task, AST_Type_Spec *ts, Scope *scope)
+bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* scope)
 {
     if (ts->flags & AST_TS_FLAG_TYPED) {
         assert(ts->resolved_type);

@@ -13,7 +13,7 @@
 
 using namespace Novo;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     Instance instance;
     instance_init(&instance, default_options());

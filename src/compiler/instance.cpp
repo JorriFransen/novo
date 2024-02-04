@@ -25,7 +25,7 @@
 
 namespace Novo {
 
-void instance_init(Instance *inst, Options options)
+void instance_init(Instance* inst, Options options)
 {
     inst->options = options;
 
@@ -93,7 +93,7 @@ void instance_init(Instance *inst, Options options)
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
 }
 
-void instance_free(Instance *inst)
+void instance_free(Instance* inst)
 {
 
     darray_free(&inst->parse_tasks);
@@ -113,7 +113,7 @@ void instance_free(Instance *inst)
     linear_allocator_free(&inst->ast_allocator_data);
 }
 
-bool instance_start(Instance *inst)
+bool instance_start(Instance* inst)
 {
     auto first_file_name = String_Ref(inst->options.input_file);
     if (!first_file_name.length) {
@@ -146,7 +146,7 @@ bool instance_start(Instance *inst)
         for (s64 i = 0; i < inst->parse_tasks.count; i++) {
             Parse_Task task = inst->parse_tasks[i];
 
-            AST_File *parsed_file = parse_file(inst, atom_string(task.file_name));
+            AST_File* parsed_file = parse_file(inst, atom_string(task.file_name));
             if (parsed_file)
             {
                 darray_remove_unordered(&inst->parse_tasks, i);
@@ -167,7 +167,7 @@ bool instance_start(Instance *inst)
         }
 
         for (s64 i = 0; i < inst->resolve_tasks.count; i++) {
-            Resolve_Task *task_ptr = &inst->resolve_tasks[i];
+            Resolve_Task* task_ptr = &inst->resolve_tasks[i];
             auto task = *task_ptr;
 
             bool success = resolve_node(inst, task_ptr, &task_ptr->node, task_ptr->scope);
@@ -266,7 +266,7 @@ bool instance_start(Instance *inst)
     return true;
 }
 
-static void instance_error_va(Instance *inst, Source_Pos sp, const char *fmt, va_list args)
+static void instance_error_va(Instance* inst, Source_Pos sp, const char* fmt, va_list args)
 {
     inst->fatal_error = true;
 
@@ -275,7 +275,7 @@ static void instance_error_va(Instance *inst, Source_Pos sp, const char *fmt, va
     fprintf(stderr, "\n");
 }
 
-static void instance_error_note_va(Instance *inst, Source_Pos sp, const char *fmt, va_list args)
+static void instance_error_note_va(Instance* inst, Source_Pos sp, const char* fmt, va_list args)
 {
     inst->fatal_error = true;
 
@@ -284,7 +284,7 @@ static void instance_error_note_va(Instance *inst, Source_Pos sp, const char *fm
     fprintf(stderr, "\n");
 }
 
-void instance_error(Instance *inst, Source_Pos sp, const char* fmt, ...)
+void instance_error(Instance* inst, Source_Pos sp, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -294,7 +294,7 @@ void instance_error(Instance *inst, Source_Pos sp, const char* fmt, ...)
     va_end(args);
 }
 
-void instance_error(Instance *inst, u32 sp_id, const char* fmt, ...)
+void instance_error(Instance* inst, u32 sp_id, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -307,7 +307,7 @@ void instance_error(Instance *inst, u32 sp_id, const char* fmt, ...)
     va_end(args);
 }
 
-void instance_fatal_error(Instance *inst, Source_Pos sp, const char* fmt, ...)
+void instance_fatal_error(Instance* inst, Source_Pos sp, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -319,7 +319,7 @@ void instance_fatal_error(Instance *inst, Source_Pos sp, const char* fmt, ...)
     exit(1);
 }
 
-void instance_fatal_error(Instance *inst, u32 sp_id, const char* fmt, ...)
+void instance_fatal_error(Instance* inst, u32 sp_id, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -334,7 +334,7 @@ void instance_fatal_error(Instance *inst, u32 sp_id, const char* fmt, ...)
     exit(1);
 }
 
-void instance_fatal_error_note(Instance *inst, Source_Pos sp, const char* fmt, ...)
+void instance_fatal_error_note(Instance* inst, Source_Pos sp, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -346,7 +346,7 @@ void instance_fatal_error_note(Instance *inst, Source_Pos sp, const char* fmt, .
     exit(1);
 }
 
-void instance_fatal_error_note(Instance *inst, u32 sp_id, const char* fmt, ...)
+void instance_fatal_error_note(Instance* inst, u32 sp_id, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);

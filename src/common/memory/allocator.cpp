@@ -9,7 +9,7 @@ namespace Novo {
 bool g_c_allocator_initialized = false;
 Allocator g_c_allocator;
 
-Allocator *c_allocator()
+Allocator* c_allocator()
 {
     if (!g_c_allocator_initialized) {
         g_c_allocator = { c_allocator_fn, nullptr, ALLOCATOR_FLAG_CANT_REALLOC };
@@ -24,9 +24,9 @@ FN_ALLOCATOR(c_allocator_fn)
     switch (mode) {
 
     case Allocator_Mode::ALLOCATE: {
-        s64 actual_size = size + (align - 1) + sizeof(void *);
-        u8 *mem = (u8 *)malloc(actual_size);
-        void **ptr = (void **)get_aligned((u64)mem + sizeof(void *), align);
+        s64 actual_size = size + (align - 1) + sizeof(void*);
+        u8* mem = (u8*)malloc(actual_size);
+        void **ptr = (void**)get_aligned((u64)mem + sizeof(void*), align);
 
         // Store the pointer returned by malloc
         ptr[-1] = mem;
@@ -40,7 +40,7 @@ FN_ALLOCATOR(c_allocator_fn)
     }
 
     case Allocator_Mode::FREE: {
-        auto old = (void **)old_pointer;
+        auto old = (void**)old_pointer;
         auto _old = old[-1];
         ::free(_old);
         break;

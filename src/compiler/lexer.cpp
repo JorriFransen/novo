@@ -15,10 +15,10 @@
 
 namespace Novo {
 
-static bool lex_int(Lexer *lexer);
-static bool lex_real(Lexer *lexer);
+static bool lex_int(Lexer* lexer);
+static bool lex_real(Lexer* lexer);
 
-void lexer_create(Instance *instance, Lexer *out_lexer)
+void lexer_create(Instance* instance, Lexer* out_lexer)
 {
     out_lexer->instance = instance;
     out_lexer->stream_start = nullptr;
@@ -28,7 +28,7 @@ void lexer_create(Instance *instance, Lexer *out_lexer)
     out_lexer->token = {};
 }
 
-void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref stream_name)
+void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref stream_name)
 {
     lexer->stream_name = stream_name;
 
@@ -47,14 +47,14 @@ void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref s
     next_token(lexer);
 }
 
-void lexer_destroy(Lexer *lexer)
+void lexer_destroy(Lexer* lexer)
 {
     assert(lexer && lexer->stream_start && lexer->stream);
 
     *lexer = {};
 }
 
-bool next_token(Lexer *lex)
+bool next_token(Lexer* lex)
 {
     if (lex->token.kind == TOK_ERROR) {
         return false;
@@ -222,7 +222,7 @@ case (first_char): {                                                \
     if (length) {
 
             if (lex->token.kind == TOK_STRING) {
-                const char *err_char = nullptr;
+                const char* err_char = nullptr;
                 String str_lit = convert_escape_characters_to_special_characters(&lex->instance->temp_allocator, String_Ref(start, length), &err_char);
                 if (err_char) {
                     instance_fatal_error(lex->instance, lex->pos, "Invalid escape sequence in string literal: '\\%c'", *err_char);
@@ -254,17 +254,17 @@ case (first_char): {                                                \
     return true;
 }
 
-bool is_token(Lexer *lexer, Token_Kind kind)
+bool is_token(Lexer* lexer, Token_Kind kind)
 {
     return lexer->token.kind == kind;
 }
 
-bool is_token(Lexer *lexer, char c)
+bool is_token(Lexer* lexer, char c)
 {
     return is_token(lexer, (Token_Kind)c);
 }
 
-NINLINE const char *token_kind_to_string(Token_Kind kind) {
+NINLINE const char* token_kind_to_string(Token_Kind kind) {
     switch (kind) {
         case TOK_INVALID: return "INVALID";
         case TOK_INT: return "INT";
@@ -348,7 +348,7 @@ NINLINE u8 char_to_digit(int i) {
     }
 }
 
-static bool lex_int(Lexer *lexer)
+static bool lex_int(Lexer* lexer)
 {
     assert(lexer);
 
@@ -422,11 +422,11 @@ static bool lex_int(Lexer *lexer)
     return true;
 }
 
-static bool lex_real(Lexer *lexer)
+static bool lex_real(Lexer* lexer)
 {
     assert(lexer);
 
-    const char *start = lexer->stream;
+    const char* start = lexer->stream;
 
     // NOTE:
     // The scanning we do here is to leave the stream in the correct position when done.
@@ -463,7 +463,7 @@ static bool lex_real(Lexer *lexer)
     }
 
     Real_Value result;
-    char *err;
+    char* err;
 
     result.r32 = strtof(start, &err);
     if (result.r32 == 0.0 && err == start) {

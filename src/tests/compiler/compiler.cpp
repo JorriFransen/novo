@@ -13,7 +13,7 @@ using namespace Novo;
 
 struct Test_Case
 {
-    const char *file_path;
+    const char* file_path;
     u64 return_code;
 };
 
@@ -40,7 +40,7 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/020_continue_while_for.no", .return_code = 18 },
 };
 
-static bool run_test_case(Test_Case *tc)
+static bool run_test_case(Test_Case* tc)
 {
     Options options = default_options();
     options.print_ast = true;
@@ -72,7 +72,7 @@ static bool run_test_case(Test_Case *tc)
     return result;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 
     s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
     s64 test_success_count = 0;

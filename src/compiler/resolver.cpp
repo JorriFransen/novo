@@ -22,7 +22,7 @@ namespace Novo {
 
 enum Token_Kind : u32;
 
-bool resolve_node(Instance *inst, Resolve_Task *task, AST_Node *node, Scope *scope)
+bool resolve_node(Instance* inst, Resolve_Task* task, AST_Node* node, Scope* scope)
 {
     switch (node->kind) {
 
@@ -47,7 +47,7 @@ bool resolve_node(Instance *inst, Resolve_Task *task, AST_Node *node, Scope *sco
     return false;
 }
 
-bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *decl, Scope *scope)
+bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* decl, Scope* scope)
 {
     if (decl->flags & AST_DECL_FLAG_RESOLVED) {
         return true;
@@ -89,7 +89,7 @@ bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *de
 
         case AST_Declaration_Kind::STRUCT: {
 
-            Scope *struct_scope = decl->structure.scope;
+            Scope* struct_scope = decl->structure.scope;
 
             for (s64 i = 0; i < decl->structure.fields.count; i++) {
                 auto field = decl->structure.fields[i];
@@ -130,7 +130,7 @@ bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *de
     return true;
 }
 
-bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, Scope *scope)
+bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, Scope* scope)
 {
     if (stmt->flags & AST_STMT_FLAG_RESOLVED) {
         return true;
@@ -176,7 +176,7 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
         }
 
         case AST_Statement_Kind::ASSIGNMENT: {
-            AST_Expression *lvalue = stmt->assignment.lvalue;
+            AST_Expression* lvalue = stmt->assignment.lvalue;
 
             if (!resolve_expression(inst, task, lvalue, scope)) {
                 return false;
@@ -196,7 +196,7 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
 
         case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
 
-            AST_Expression *lvalue = stmt->arithmetic_assignment.lvalue;
+            AST_Expression* lvalue = stmt->arithmetic_assignment.lvalue;
 
             if (!resolve_expression(inst, task, lvalue, scope)) {
                 return false;
@@ -276,7 +276,7 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
 
         case AST_Statement_Kind::FOR: {
 
-            Scope *for_scope = stmt->for_stmt.scope;
+            Scope* for_scope = stmt->for_stmt.scope;
 
             if (!resolve_statement(inst, task, stmt->for_stmt.init, for_scope)) {
                 return false;
@@ -311,7 +311,7 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
         case AST_Statement_Kind::BLOCK: {
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
-                AST_Statement *block_stmt = stmt->block.statements[i];
+                AST_Statement* block_stmt = stmt->block.statements[i];
 
                 if (!resolve_statement(inst, task, block_stmt, scope)) {
                     return false;
@@ -328,7 +328,7 @@ bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, 
     return true;
 }
 
-bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr, Scope *scope)
+bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr, Scope* scope)
 {
     if (expr->flags & AST_EXPR_FLAG_RESOLVED) {
         return true;
@@ -375,10 +375,10 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
                 }
             }
 
-            Type *struct_type = expr->member.base->resolved_type;
+            Type* struct_type = expr->member.base->resolved_type;
             assert(struct_type->kind == Type_Kind::STRUCT);
 
-            Scope *struct_scope = struct_type->structure.scope;
+            Scope* struct_scope = struct_type->structure.scope;
 
             if (!resolve_identifier(inst, task, expr->member.member_name, struct_scope)) {
                 return false;
@@ -393,7 +393,7 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
                 return false;
             }
 
-            AST_Declaration *callee_decl = nullptr;
+            AST_Declaration* callee_decl = nullptr;
             if (expr->call.base->kind == AST_Expression_Kind::IDENTIFIER) {
                 auto callee_decl = expr->call.base->identifier->decl;
                 assert(callee_decl);
@@ -428,7 +428,7 @@ bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr
     return true;
 }
 
-bool resolve_ts(Instance *inst, Resolve_Task *task, AST_Type_Spec *ts, Scope *scope)
+bool resolve_ts(Instance* inst, Resolve_Task* task, AST_Type_Spec* ts, Scope* scope)
 {
     if (ts->flags & AST_TS_FLAG_RESOLVED) {
         return true;
@@ -452,14 +452,14 @@ bool resolve_ts(Instance *inst, Resolve_Task *task, AST_Type_Spec *ts, Scope *sc
     return result;
 }
 
-bool resolve_identifier(Instance *inst, Resolve_Task *task, AST_Identifier *ident, Scope *scope)
+bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* ident, Scope* scope)
 {
     task->waiting_for = nullptr;
 
     if (ident->decl) return true;
 
-    Scope *found_in_scope;
-    if (AST_Declaration *found_decl = scope_find_symbol(scope, ident->atom, &found_in_scope)) {
+    Scope* found_in_scope;
+    if (AST_Declaration* found_decl = scope_find_symbol(scope, ident->atom, &found_in_scope)) {
 
         if (task->fn_decl &&
             (found_in_scope == task->fn_decl->function.scope ||

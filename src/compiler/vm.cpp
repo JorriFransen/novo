@@ -10,7 +10,7 @@
 
 namespace Novo {
 
-void vm_init(VM *vm, Allocator *allocator)
+void vm_init(VM* vm, Allocator* allocator)
 {
     vm->allocator = allocator;
     vm->current_program = nullptr;
@@ -30,22 +30,22 @@ void vm_init(VM *vm, Allocator *allocator)
 }
 
 template <typename T>
-NINLINE T vm_fetch(SSA_Block *block, s64 *ip)
+NINLINE T vm_fetch(SSA_Block* block, s64* ip)
 {
     assert(*ip + (s64)sizeof(T) - 1 < block->bytes.count);
-    T result = *(T *)&block->bytes[*ip];
+    T result = *(T*)&block->bytes[*ip];
     *ip += sizeof(T);
     return result;
 }
 
-NINLINE void vm_stack_push(VM *vm, u64 value)
+NINLINE void vm_stack_push(VM* vm, u64 value)
 {
     assert(vm->sp < vm->stack_size);
     vm->stack[vm->sp] = value;
     vm->sp += 1;
 }
 
-NINLINE u64 vm_stack_pop(VM *vm)
+NINLINE u64 vm_stack_pop(VM* vm)
 {
     assert(vm->sp >= 1);
     u64 result = vm->stack[vm->sp - 1];
@@ -53,21 +53,21 @@ NINLINE u64 vm_stack_pop(VM *vm)
     return result;
 }
 
-NINLINE void vm_set_register(VM *vm, u32 reg, u64 value)
+NINLINE void vm_set_register(VM* vm, u32 reg, u64 value)
 {
     auto index = vm->register_offset + reg;
     assert(index < vm->register_count);
     vm->registers[index] = value;
 }
 
-NINLINE u64 vm_get_register(VM *vm, u32 reg)
+NINLINE u64 vm_get_register(VM* vm, u32 reg)
 {
     auto index = vm->register_offset + reg;
     assert(index < vm->register_count);
     return vm->registers[vm->register_offset + reg];
 }
 
-u64 vm_run(VM *vm, SSA_Program *program)
+u64 vm_run(VM* vm, SSA_Program* program)
 {
     assert(program->entry_fn_index >= 0 && program->entry_fn_index < program->functions.count);
 
@@ -85,10 +85,10 @@ u64 vm_run(VM *vm, SSA_Program *program)
     return vm_run(vm);
 }
 
-u64 vm_run(VM *vm)
+u64 vm_run(VM* vm)
 {
-    SSA_Function *fn = &vm->current_program->functions[vm->fn_index];
-    SSA_Block *block = &fn->blocks[vm->block_index];
+    SSA_Function* fn = &vm->current_program->functions[vm->fn_index];
+    SSA_Block* block = &fn->blocks[vm->block_index];
 
     s64 ip = 0;
 
@@ -138,8 +138,8 @@ u64 vm_run(VM *vm)
                 u32 src_ptr_reg = vm_fetch<u32>(block, &ip);
                 u32 size = vm_fetch<u32>(block, &ip);
 
-                auto dest = (void *)vm_get_register(vm, dest_ptr_reg);
-                auto src = (void *)vm_get_register(vm, src_ptr_reg);
+                auto dest = (void*)vm_get_register(vm, dest_ptr_reg);
+                auto src = (void*)vm_get_register(vm, src_ptr_reg);
 
                 memcpy(dest, src, size);
                 break;
@@ -225,9 +225,9 @@ u64 vm_run(VM *vm)
                 u32 offset = vm_fetch<u32>(block, &ip);
                 /*u16 index =*/ vm_fetch<u16>(block, &ip);
 
-                u8 *ptr = (u8 *)vm_get_register(vm, ptr_reg);
+                u8* ptr = (u8*)vm_get_register(vm, ptr_reg);
 
-                u8 *result = ptr + offset;
+                u8* result = ptr + offset;
 
                 vm_set_register(vm, dest_reg, (u64)result);
                 break;

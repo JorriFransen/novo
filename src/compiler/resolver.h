@@ -14,11 +14,11 @@ struct Instance;
 struct Scope;
 struct Resolve_Task;
 
-NAPI bool resolve_node(Instance *inst, Resolve_Task *task, AST_Node *node, Scope *scope);
-NAPI bool resolve_declaration(Instance *inst, Resolve_Task *task, AST_Declaration *decl, Scope *scope);
-NAPI bool resolve_statement(Instance *inst, Resolve_Task *task, AST_Statement *stmt, Scope *scope);
-NAPI bool resolve_expression(Instance *inst, Resolve_Task *task, AST_Expression *expr, Scope *scope);
-NAPI bool resolve_ts(Instance *inst, Resolve_Task *task, AST_Type_Spec *ts, Scope *scope);
-NAPI bool resolve_identifier(Instance *inst, Resolve_Task *task, AST_Identifier *ident, Scope *scope);
+NAPI bool resolve_node(Instance* inst, Resolve_Task* task, AST_Node* node, Scope* scope);
+NAPI bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* decl, Scope* scope);
+NAPI bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, Scope* scope);
+NAPI bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr, Scope* scope);
+NAPI bool resolve_ts(Instance* inst, Resolve_Task* task, AST_Type_Spec* ts, Scope* scope);
+NAPI bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* ident, Scope* scope);
 
 }

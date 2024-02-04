@@ -10,13 +10,13 @@ using namespace Novo;
 
 struct Allocator_Info
 {
-    Allocator *allocator;
+    Allocator* allocator;
     bool can_free;
 };
 
 bool test_align(Allocator_Info info);
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
     Linear_Allocator linear_allocator_data;
@@ -47,7 +47,7 @@ bool test_align(Allocator_Info info)
             s64 size = align * i;
             printf("align: %llu, size: %lld\n", align, size);
 
-            void *ptr = allocate_aligned(info.allocator, size, align);
+            void* ptr = allocate_aligned(info.allocator, size, align);
             assert((u64)ptr % align == 0);
 
             if (info.can_free) free(info.allocator, ptr);

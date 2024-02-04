@@ -61,25 +61,25 @@ struct Token
 
 struct Lexer
 {
-    Instance *instance;
+    Instance* instance;
 
     String_Ref stream_name;
 
-    const char *stream_start;
-    const char *stream;
-    const char *line_start;
+    const char* stream_start;
+    const char* stream;
+    const char* line_start;
 
     Token token;
     Source_Pos pos;
 };
 
-NAPI void lexer_create(Instance *instance, Lexer *out_lexer);
-NAPI void lexer_init_stream(Lexer *lexer, const String_Ref stream, const String_Ref stream_name);
-NAPI void lexer_destroy(Lexer *lexer);
+NAPI void lexer_create(Instance* instance, Lexer* out_lexer);
+NAPI void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref stream_name);
+NAPI void lexer_destroy(Lexer* lexer);
 
-NAPI bool next_token(Lexer *lexer);
-NAPI bool is_token(Lexer *lexer, Token_Kind kind);
-NAPI bool is_token(Lexer *lexer, char c);
+NAPI bool next_token(Lexer* lexer);
+NAPI bool is_token(Lexer* lexer, Token_Kind kind);
+NAPI bool is_token(Lexer* lexer, char c);
 
 NAPI String_Ref tmp_token_str(Token token);
 NAPI String_Ref tmp_token_kind_str(Token_Kind kind);

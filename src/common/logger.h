@@ -19,13 +19,13 @@ enum Log_Level
 NAPI void set_min_log_level(Log_Level level);
 NAPI void set_err_log_level(Log_Level level);
 
-NAPI void log_message(Log_Level level, const char *fmt, ...);
+NAPI void log_message(Log_Level level, const char* fmt, ...);
 
-NAPI void log_trace(const char *fmt, ...);
-NAPI void log_debug(const char *fmt, ...);
-NAPI void log_info(const char *fmt, ...);
-NAPI void log_warn(const char *fmt, ...);
-NAPI void log_error(const char *fmt, ...);
-NAPI void log_fatal(const char *fmt, ...);
+NAPI void log_trace(const char* fmt, ...);
+NAPI void log_debug(const char* fmt, ...);
+NAPI void log_info(const char* fmt, ...);
+NAPI void log_warn(const char* fmt, ...);
+NAPI void log_error(const char* fmt, ...);
+NAPI void log_fatal(const char* fmt, ...);
 
 }

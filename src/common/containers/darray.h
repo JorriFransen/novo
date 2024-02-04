@@ -14,7 +14,7 @@ namespace Novo {
 template <typename Element_Type>
 struct DArray
 {
-    Element_Type *data = nullptr;
+    Element_Type* data = nullptr;
     s64 count = 0;
     s64 capacity = 0;
     Allocator* backing_allocator = nullptr;
@@ -36,19 +36,19 @@ struct Temp_Array;
 template <typename Element_Type>
 struct Array_Ref
 {
-    Element_Type *data = nullptr;
+    Element_Type* data = nullptr;
     s64 count = 0;
 
     Array_Ref() = default;
 
     Array_Ref(const DArray<Element_Type> &dyn_arr) : data(dyn_arr.data), count(dyn_arr.count) { }
     Array_Ref(const Temp_Array<Element_Type> &temp_arr) : data(temp_arr.array.data), count(temp_arr.array.count) { }
-    Array_Ref(Element_Type *data, s64 count) : data(data), count(count) { }
+    Array_Ref(Element_Type* data, s64 count) : data(data), count(count) { }
 
     template <std::size_t N>
-    constexpr Array_Ref(const Element_Type (&c_arr)[N]) : data((Element_Type *)c_arr), count(N) {}
+    constexpr Array_Ref(const Element_Type (&c_arr)[N]) : data((Element_Type*)c_arr), count(N) {}
 
-    Array_Ref(const Element_Type *begin, const Element_Type *end) : data(begin), count(end - begin) {}
+    Array_Ref(const Element_Type* begin, const Element_Type* end) : data(begin), count(end - begin) {}
 
     Element_Type& operator[](s64 index) {
         assert(index >= 0 && index < count);
@@ -62,7 +62,7 @@ struct Array_Ref
 };
 
 template <typename Element_Type>
-void darray_init(Allocator *backing_allocator, DArray<Element_Type> *out_array, s64 capacity = NOVO_DARRAY_DEFAULT_CAPACITY)
+void darray_init(Allocator* backing_allocator, DArray<Element_Type>* out_array, s64 capacity = NOVO_DARRAY_DEFAULT_CAPACITY)
 {
     assert(backing_allocator && out_array);
     assert(capacity >= 0);
@@ -76,7 +76,7 @@ void darray_init(Allocator *backing_allocator, DArray<Element_Type> *out_array, 
 }
 
 template <typename Element_Type>
-void darray_free(DArray<Element_Type> *array)
+void darray_free(DArray<Element_Type>* array)
 {
     if (array->data) {
         assert(array->capacity);
@@ -94,7 +94,7 @@ void darray_grow(DArray<Element_Type> *array)
     s64 new_cap = max(array->capacity * 2, (s64)1);
     assert(new_cap);
 
-    Element_Type *new_data = allocate_array<Element_Type>(array->backing_allocator, new_cap);
+    Element_Type* new_data = allocate_array<Element_Type>(array->backing_allocator, new_cap);
     assert(new_data);
     if (array->capacity) {
         memcpy(new_data, array->data, sizeof(Element_Type) * array->count);
@@ -111,7 +111,7 @@ void darray_grow(DArray<Element_Type> *array)
 }
 
 template <typename Element_Type>
-Element_Type *darray_append(DArray<Element_Type> *array, Element_Type element)
+Element_Type* darray_append(DArray<Element_Type> *array, Element_Type element)
 {
     if (array->count >= array->capacity) {
         darray_grow(array);
@@ -127,7 +127,7 @@ Element_Type *darray_append(DArray<Element_Type> *array, Element_Type element)
 }
 
 template <typename Element_Type>
-Element_Type *darray_insert(DArray<Element_Type> *array, Element_Type element, s64 index = 0)
+Element_Type* darray_insert(DArray<Element_Type> *array, Element_Type element, s64 index = 0)
 {
     assert(index >= 0 && index <= array->count);
 
@@ -145,7 +145,7 @@ Element_Type *darray_insert(DArray<Element_Type> *array, Element_Type element, s
 }
 
 template <typename Element_Type>
-DArray<Element_Type> darray_copy(const Array_Ref<Element_Type> &source, Allocator *allocator)
+DArray<Element_Type> darray_copy(const Array_Ref<Element_Type> &source, Allocator* allocator)
 {
     if (source.count == 0) return {};
 
@@ -159,7 +159,7 @@ DArray<Element_Type> darray_copy(const Array_Ref<Element_Type> &source, Allocato
 }
 
 template <typename Element_Type>
-DArray<Element_Type> darray_copy(DArray<Element_Type> *source, Allocator *allocator)
+DArray<Element_Type> darray_copy(DArray<Element_Type> *source, Allocator* allocator)
 {
     return darray_copy(Array_Ref<Element_Type>(*source), allocator);
 }
@@ -210,11 +210,11 @@ struct Temp_Array
 };
 
 template <typename T>
-static Temp_Array<T> temp_array_create(Allocator *allocator, s64 cap = 0)
+static Temp_Array<T> temp_array_create(Allocator* allocator, s64 cap = 0)
 {
     Temp_Array<T> result;
 
-    auto tas = (Temp_Allocator *)allocator->user_data;
+    auto tas = (Temp_Allocator*)allocator->user_data;
     assert(tas);
 
     result.mark = temp_allocator_get_mark(tas);
@@ -225,14 +225,14 @@ static Temp_Array<T> temp_array_create(Allocator *allocator, s64 cap = 0)
 template <typename T>
 static void temp_array_destroy(Temp_Array<T> *ta)
 {
-    auto tas = (Temp_Allocator *)ta->array.backing_allocator->user_data;
+    auto tas = (Temp_Allocator*)ta->array.backing_allocator->user_data;
     assert(tas);
 
     temp_allocator_reset(tas, ta->mark);
 }
 
 template <typename T>
-static DArray<T> temp_array_finalize(Allocator *allocator, Temp_Array<T> *ta)
+static DArray<T> temp_array_finalize(Allocator* allocator, Temp_Array<T> *ta)
 {
     auto result = darray_copy(&ta->array, allocator);
     temp_array_destroy(ta);

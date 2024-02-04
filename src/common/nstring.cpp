@@ -16,8 +16,8 @@ char &String::operator[](s64 index)
 }
 
 String_Ref::String_Ref() : data(nullptr), length(0) {}
-String_Ref::String_Ref(const char *cstr) : data(cstr), length(cstr ? strlen(cstr) : 0) {}
-String_Ref::String_Ref(const char *cstr, s64 length) : data(cstr), length(length) {}
+String_Ref::String_Ref(const char* cstr) : data(cstr), length(cstr ? strlen(cstr) : 0) {}
+String_Ref::String_Ref(const char* cstr, s64 length) : data(cstr), length(length) {}
 String_Ref::String_Ref(const String &str) : data(str.data), length(str.length) {}
 
 const char &String_Ref::operator[](s64 index) const
@@ -26,7 +26,7 @@ const char &String_Ref::operator[](s64 index) const
     return data[index];
 }
 
-String string(char *data, s64 length)
+String string(char* data, s64 length)
 {
     return String { data, length };
 }
@@ -47,7 +47,7 @@ bool string_equal(const String_Ref &a, const String_Ref &b)
     return memcmp(a.data, b.data, a.length) == 0;
 }
 
-bool string_equal(const char *a, const char *b)
+bool string_equal(const char* a, const char* b)
 {
     return strcmp(a, b) == 0;
 }
@@ -76,7 +76,7 @@ bool string_ends_with(const String_Ref &str, const String_Ref &end)
     return string_equal(substr, end);
 }
 
-String string_copy(Allocator *allocator, const char *a_buf, s64 a_length)
+String string_copy(Allocator* allocator, const char* a_buf, s64 a_length)
 {
     String result = {
         allocate_array<char>(allocator, a_length + 1),
@@ -89,7 +89,7 @@ String string_copy(Allocator *allocator, const char *a_buf, s64 a_length)
     return result;
 }
 
-String string_append_internal(Allocator *allocator, const char *a_buf, s64 a_length, const char *b_buf, s64 b_length)
+String string_append_internal(Allocator* allocator, const char* a_buf, s64 a_length, const char* b_buf, s64 b_length)
 {
     if (a_length <= 0) {
         return string_copy(allocator, b_buf, b_length);
@@ -108,7 +108,7 @@ String string_append_internal(Allocator *allocator, const char *a_buf, s64 a_len
 
 }
 
-String string_format(Allocator *allocator, const String_Ref fmt, ...)
+String string_format(Allocator* allocator, const String_Ref fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -120,7 +120,7 @@ String string_format(Allocator *allocator, const String_Ref fmt, ...)
     return result;
 }
 
-const String string_format_va_list(Allocator *allocator, const String_Ref fmt, va_list args)
+const String string_format_va_list(Allocator* allocator, const String_Ref fmt, va_list args)
 {
     va_list args_copy;
     va_copy(args_copy, args);
@@ -130,7 +130,7 @@ const String string_format_va_list(Allocator *allocator, const String_Ref fmt, v
 
     va_end(args_copy);
 
-    char *buf = allocate_array<char>(allocator, size + 1);
+    char* buf = allocate_array<char>(allocator, size + 1);
     assert(buf);
 
     auto written_size = vsnprintf(buf, (size_t)size + 1, fmt.data, args);
@@ -141,7 +141,7 @@ const String string_format_va_list(Allocator *allocator, const String_Ref fmt, v
     return string(buf, size);
 }
 
-s32 string_format(char *dest, const String_Ref fmt, ...)
+s32 string_format(char* dest, const String_Ref fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -154,7 +154,7 @@ s32 string_format(char *dest, const String_Ref fmt, ...)
     return out_length;
 }
 
-s32 string_format(char *dest, const String_Ref fmt, va_list args)
+s32 string_format(char* dest, const String_Ref fmt, va_list args)
 {
     static char buffer[ZSTRING_FORMAT_STACK_BUFFER_SIZE];
 
@@ -197,7 +197,7 @@ s64 is_escape_character(char c)
     return -1;
 }
 
-String convert_special_characters_to_escape_characters(Allocator *allocator, const String_Ref str)
+String convert_special_characters_to_escape_characters(Allocator* allocator, const String_Ref str)
 {
     if (str.length <= 0) {
         return { nullptr, 0 };
@@ -237,7 +237,7 @@ String convert_special_characters_to_escape_characters(Allocator *allocator, con
     return string(data, new_length);
 }
 
-String convert_escape_characters_to_special_characters(Allocator *allocator, const String_Ref str, const char **err_char/*=nullptr*/)
+String convert_escape_characters_to_special_characters(Allocator* allocator, const String_Ref str, const char **err_char/*=nullptr*/)
 {
     s64 escape_count = 0;
 
@@ -285,7 +285,7 @@ String convert_escape_characters_to_special_characters(Allocator *allocator, con
 }
 
 
-u64 hash_string(const char *cstr, u64 length)
+u64 hash_string(const char* cstr, u64 length)
 {
     u64 hash = 14695981039346656037u;
 
@@ -298,7 +298,7 @@ u64 hash_string(const char *cstr, u64 length)
     return hash;
 }
 
-u64 hash_string(const char *cstr)
+u64 hash_string(const char* cstr)
 {
     return hash_string(cstr, strlen(cstr));
 }
