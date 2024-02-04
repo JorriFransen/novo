@@ -8,27 +8,24 @@
 //  - #run
 //  - #insert
 //  - Flag for lvalue expressions?
-//  - Constant expressions
 //  - Constant variables
 //  - Defer
 //  - Nested function declarations
 
+Vec :: struct {
+    x : s64;
+    y : s64;
+}
+
+add :: (a: Vec, b: Vec) -> Vec {
+    // r : Vec = { a.x + b.x, a.y + b.y };
+    // return r;
+    return { a.x + b.x, a.y + b.y };
+}
+
 main :: () -> s64 {
-
-    Vec :: struct {
-        x : u8;
-        y : u8;
-    }
-
-    v : Vec;
-    v = { 1, 2 };
-
-    // x := 11;
-    // y := 22;
-    //
-    // v2 : Vec;
-    // v2 = { x, y };
-
-    return v.x + v.y;
+    a : Vec = { 1, 2 };
+    r := add(a, { 11, 22 });
+    return r.x + r.y;
 }
 

@@ -335,7 +335,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
                 expect_token(parser, ',');
             }
 
-            AST_Expression *expr = parse_expression(parser);
+            AST_Expression* expr = parse_expression(parser);
             darray_append(&exprs, expr);
         }
 

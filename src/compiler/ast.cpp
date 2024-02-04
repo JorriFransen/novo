@@ -222,11 +222,11 @@ AST_Statement* ast_block_statement(Instance* instance, DArray<AST_Statement*> st
     return result;
 }
 
-AST_Expression* ast_expression(Instance* instance, AST_Expression_Kind kind, u32 range_id)
+AST_Expression* ast_expression(Instance* instance, AST_Expression_Kind kind, u32 range_id, AST_Expression_Flags flags/*=AST_EXPR_FLAG_NONE*/)
 {
     auto result = allocate<AST_Expression>(&instance->ast_allocator);
     result->kind = kind;
-    result->flags = AST_EXPR_FLAG_NONE;
+    result->flags = flags;
     result->resolved_type = nullptr;
     result->range_id = range_id;
     return result;
@@ -264,7 +264,7 @@ AST_Expression* ast_call_expression(Instance* instance, AST_Expression* base_exp
     return result;
 }
 
-AST_Expression* ast_compound_expression(Instance *instance, DArray<AST_Expression*> expressions, u32 range_id)
+AST_Expression* ast_compound_expression(Instance* instance, DArray<AST_Expression*> expressions, u32 range_id)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::COMPOUND, range_id);
     result->compound.expressions = expressions;
@@ -273,35 +273,35 @@ AST_Expression* ast_compound_expression(Instance *instance, DArray<AST_Expressio
 
 AST_Expression* ast_integer_literal_expression(Instance* instance, u64 i, u32 range_id)
 {
-    auto result = ast_expression(instance, AST_Expression_Kind::INTEGER_LITERAL, range_id);
+    auto result = ast_expression(instance, AST_Expression_Kind::INTEGER_LITERAL, range_id, AST_EXPR_FLAG_CONST);
     result->integer_literal = i;
     return result;
 }
 
 AST_Expression* ast_real_literal_expression(Instance* instance, Real_Value rv, u32 range_id)
 {
-    auto result = ast_expression(instance, AST_Expression_Kind::REAL_LITERAL, range_id);
+    auto result = ast_expression(instance, AST_Expression_Kind::REAL_LITERAL, range_id, AST_EXPR_FLAG_CONST);
     result->real_literal = rv;
     return result;
 }
 
 AST_Expression* ast_char_literal_expression(Instance* instance, char c, u32 range_id)
 {
-    auto result = ast_expression(instance, AST_Expression_Kind::CHAR_LITERAL, range_id);
+    auto result = ast_expression(instance, AST_Expression_Kind::CHAR_LITERAL, range_id, AST_EXPR_FLAG_CONST);
     result->char_literal = c;
     return result;
 }
 
 AST_Expression* ast_bool_literal_expression(Instance* instance, bool b, u32 range_id)
 {
-    auto result = ast_expression(instance, AST_Expression_Kind::BOOL_LITERAL, range_id);
+    auto result = ast_expression(instance, AST_Expression_Kind::BOOL_LITERAL, range_id, AST_EXPR_FLAG_CONST);
     result->bool_literal = b;
     return result;
 }
 
 AST_Expression* ast_string_literal_expression(Instance* instance, Atom atom, u32 range_id)
 {
-    auto result = ast_expression(instance, AST_Expression_Kind::STRING_LITERAL, range_id);
+    auto result = ast_expression(instance, AST_Expression_Kind::STRING_LITERAL, range_id, AST_EXPR_FLAG_CONST);
     result->string_literal = atom;
     return result;
 }

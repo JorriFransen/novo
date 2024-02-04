@@ -583,33 +583,17 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::MEMBER: {
             auto base_lvalue = ssa_emit_lvalue(builder, lvalue_expr->member.base, scope);
 
-            u32 result_reg = ssa_register_create(builder);
-            ssa_emit_op(builder, SSA_OP_STRUCT_OFFSET);
-            ssa_emit_32(builder, result_reg);
-            ssa_emit_32(builder, base_lvalue);
-
-
             auto field = lvalue_expr->member.member_name->decl;
             assert(field);
             assert(field->kind == AST_Declaration_Kind::STRUCT_MEMBER);
 
             auto index = field->variable.index;
-            assert(index >= 0 && index < U16_MAX);
-
 
             Type* struct_type = lvalue_expr->member.base->resolved_type;
             assert(struct_type->kind == Type_Kind::STRUCT);
-
             auto offset = struct_type->structure.members[index].offset;
-            assert(offset % 8 == 0);
-            offset = offset / 8;
-            assert(offset >= 0 && offset < U32_MAX);
 
-
-            ssa_emit_32(builder, (u32)offset);
-            ssa_emit_16(builder, (u16)index);
-
-            return result_reg;
+            return ssa_emit_struct_offset(builder, base_lvalue, offset, index);
         }
 
         case AST_Expression_Kind::CALL: {
@@ -618,7 +602,26 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             return ssa_emit_expression(builder, lvalue_expr, scope);
         }
 
-        case AST_Expression_Kind::COMPOUND: assert(false); break;
+        case AST_Expression_Kind::COMPOUND: {
+
+            u32 compound_alloc_reg;
+            bool found = ssa_find_alloc(builder, lvalue_expr, &compound_alloc_reg);
+            assert(found);
+
+            s64 offset = 0;
+            for (s64 i = 0; i < lvalue_expr->compound.expressions.count; i++) {
+
+                AST_Expression* expr = lvalue_expr->compound.expressions[i];
+                u32 value_reg = ssa_emit_expression(builder, expr, scope);
+
+                u32 ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, offset, i);
+                offset += expr->resolved_type->bit_size;
+
+                ssa_emit_store_ptr(builder, expr->resolved_type->bit_size, ptr_reg, value_reg);
+            }
+
+            return compound_alloc_reg;
+        }
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
@@ -817,6 +820,8 @@ void ssa_emit_memcpy(SSA_Builder* builder, u32 dest_ptr_reg, u32 src_ptr_reg, s6
     auto size = bit_size / 8;
     assert(size < U32_MAX);
 
+    if (dest_ptr_reg == src_ptr_reg) return;
+
     ssa_emit_op(builder, SSA_OP_MEMCPY);
     ssa_emit_32(builder, dest_ptr_reg);
     ssa_emit_32(builder, src_ptr_reg);
@@ -881,6 +886,24 @@ u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg)
     ssa_emit_32(builder, ptr_reg);
 
     return dest_reg;
+}
+
+u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, s64 bit_offset, s64 index)
+{
+    assert(bit_offset % 8 == 0);
+    auto offset = bit_offset / 8;
+    assert(offset >= 0 && offset <= U32_MAX);
+    assert(index >= 0 && index <= U16_MAX);
+
+
+    ssa_emit_op(builder, SSA_OP_STRUCT_OFFSET);
+    u32 result = ssa_register_create(builder);
+    ssa_emit_32(builder, result);
+    ssa_emit_32(builder, struct_ptr_reg);
+    ssa_emit_32(builder, (u32)offset);
+    ssa_emit_16(builder, (u16)index);
+
+    return result;
 }
 
 void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u32 false_block)
@@ -1101,25 +1124,25 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
                 case 1: {
                     u8 value = *(u8*)&bytes[ip];
                     ip += sizeof(u8);
-                    string_builder_append(sb, " %hhu\n", value);
+                    string_builder_append(sb, "%hhu\n", value);
                     break;
                 }
                 case 2: {
                     u16 value = *(u16*)&bytes[ip];
                     ip += sizeof(u16);
-                    string_builder_append(sb, " %hu\n", value);
+                    string_builder_append(sb, "%hu\n", value);
                     break;
                 }
                 case 4: {
                     u32 value = *(u32*)&bytes[ip];
                     ip += sizeof(u32);
-                    string_builder_append(sb, " %lu\n", value);
+                    string_builder_append(sb, "%lu\n", value);
                     break;
                 }
                 case 8: {
                     u64 value = *(u64*)&bytes[ip];
                     ip += sizeof(u64);
-                    string_builder_append(sb, " %llu\n", value);
+                    string_builder_append(sb, "%llu\n", value);
                     break;
                 }
             }

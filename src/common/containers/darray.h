@@ -41,8 +41,8 @@ struct Array_Ref
 
     Array_Ref() = default;
 
-    Array_Ref(const DArray<Element_Type> &dyn_arr) : data(dyn_arr.data), count(dyn_arr.count) { }
-    Array_Ref(const Temp_Array<Element_Type> &temp_arr) : data(temp_arr.array.data), count(temp_arr.array.count) { }
+    Array_Ref(const DArray<Element_Type>& dyn_arr) : data(dyn_arr.data), count(dyn_arr.count) { }
+    Array_Ref(const Temp_Array<Element_Type>& temp_arr) : data(temp_arr.array.data), count(temp_arr.array.count) { }
     Array_Ref(Element_Type* data, s64 count) : data(data), count(count) { }
 
     template <std::size_t N>
@@ -89,7 +89,7 @@ void darray_free(DArray<Element_Type>* array)
 }
 
 template <typename Element_Type>
-void darray_grow(DArray<Element_Type> *array)
+void darray_grow(DArray<Element_Type>* array)
 {
     s64 new_cap = max(array->capacity * 2, (s64)1);
     assert(new_cap);
@@ -111,7 +111,7 @@ void darray_grow(DArray<Element_Type> *array)
 }
 
 template <typename Element_Type>
-Element_Type* darray_append(DArray<Element_Type> *array, Element_Type element)
+Element_Type* darray_append(DArray<Element_Type>* array, Element_Type element)
 {
     if (array->count >= array->capacity) {
         darray_grow(array);
@@ -127,7 +127,19 @@ Element_Type* darray_append(DArray<Element_Type> *array, Element_Type element)
 }
 
 template <typename Element_Type>
-Element_Type* darray_insert(DArray<Element_Type> *array, Element_Type element, s64 index = 0)
+Element_Type* darray_append_unique(DArray<Element_Type>* array, Element_Type element) {
+
+    for (s64 i = 0; i < array->count; i++) {
+        if (array->data[i] == element) {
+            return &array->data[i];
+        }
+    }
+
+    return darray_append(array, element);
+}
+
+template <typename Element_Type>
+Element_Type* darray_insert(DArray<Element_Type>* array, Element_Type element, s64 index = 0)
 {
     assert(index >= 0 && index <= array->count);
 
@@ -145,7 +157,7 @@ Element_Type* darray_insert(DArray<Element_Type> *array, Element_Type element, s
 }
 
 template <typename Element_Type>
-DArray<Element_Type> darray_copy(const Array_Ref<Element_Type> &source, Allocator* allocator)
+DArray<Element_Type> darray_copy(const Array_Ref<Element_Type>& source, Allocator* allocator)
 {
     if (source.count == 0) return {};
 
@@ -159,13 +171,13 @@ DArray<Element_Type> darray_copy(const Array_Ref<Element_Type> &source, Allocato
 }
 
 template <typename Element_Type>
-DArray<Element_Type> darray_copy(DArray<Element_Type> *source, Allocator* allocator)
+DArray<Element_Type> darray_copy(DArray<Element_Type>* source, Allocator* allocator)
 {
     return darray_copy(Array_Ref<Element_Type>(*source), allocator);
 }
 
 template <typename Element_Type>
-void darray_remove_unordered(DArray<Element_Type> *array, s64 index)
+void darray_remove_unordered(DArray<Element_Type>* array, s64 index)
 {
     assert(array);
     assert(index >= 0);
@@ -176,7 +188,7 @@ void darray_remove_unordered(DArray<Element_Type> *array, s64 index)
 }
 
 template <typename Element_Type>
-void darray_remove_ordered(DArray< Element_Type> *array, s64 index)
+void darray_remove_ordered(DArray< Element_Type>* array, s64 index)
 {
     assert(array && array->data && array->count);
     assert(index >= 0 && index <= array->count);
@@ -223,7 +235,7 @@ static Temp_Array<T> temp_array_create(Allocator* allocator, s64 cap = 0)
 }
 
 template <typename T>
-static void temp_array_destroy(Temp_Array<T> *ta)
+static void temp_array_destroy(Temp_Array<T>* ta)
 {
     auto tas = (Temp_Allocator*)ta->array.backing_allocator->user_data;
     assert(tas);
@@ -232,7 +244,7 @@ static void temp_array_destroy(Temp_Array<T> *ta)
 }
 
 template <typename T>
-static DArray<T> temp_array_finalize(Allocator* allocator, Temp_Array<T> *ta)
+static DArray<T> temp_array_finalize(Allocator* allocator, Temp_Array<T>* ta)
 {
     auto result = darray_copy(&ta->array, allocator);
     temp_array_destroy(ta);
@@ -240,7 +252,7 @@ static DArray<T> temp_array_finalize(Allocator* allocator, Temp_Array<T> *ta)
 }
 
 template <typename T>
-static void darray_append(Temp_Array<T> *ta, T element) {
+static void darray_append(Temp_Array<T>* ta, T element) {
     darray_append(&ta->array, element);
 }
 

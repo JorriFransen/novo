@@ -343,16 +343,26 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 return false;
             }
 
+            // TODO: Mark constant when referring to constant declarations
+            assert(expr->identifier->decl);
+
             break;
         }
 
         case AST_Expression_Kind::BINARY: {
-            if (!resolve_expression(inst, task, expr->binary.lhs, scope)) {
+            AST_Expression* lhs = expr->binary.lhs;
+            AST_Expression* rhs = expr->binary.rhs;
+
+            if (!resolve_expression(inst, task, lhs, scope)) {
                 return false;
             }
 
-            if (!resolve_expression(inst, task, expr->binary.rhs, scope)) {
+            if (!resolve_expression(inst, task, rhs, scope)) {
                 return false;
+            }
+
+            if (lhs->flags & AST_EXPR_FLAG_CONST && lhs->flags & AST_EXPR_FLAG_CONST) {
+                expr->flags |= AST_EXPR_FLAG_CONST;
             }
 
             break;
@@ -417,10 +427,23 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
         case AST_Expression_Kind::COMPOUND: {
 
+            bool all_const = false;
+
             for (s64 i = 0; i < expr->compound.expressions.count; i++) {
-                if (!resolve_expression(inst, task, expr->compound.expressions[i], scope)) {
+
+                AST_Expression* cexpr = expr->compound.expressions[i];
+
+                if (!resolve_expression(inst, task, cexpr, scope)) {
                     return false;
                 }
+
+                if (!(cexpr->flags & AST_EXPR_FLAG_CONST)) {
+                    all_const = false;
+                }
+            }
+
+            if (all_const) {
+                expr->flags |= AST_EXPR_FLAG_CONST;
             }
 
             break;

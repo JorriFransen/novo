@@ -123,6 +123,7 @@ NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, u32 dest_reg, u
 NAPI u32 ssa_emit_load_immediate(SSA_Builder* builder, s64 bit_size, u64 immediate_value);
 NAPI u32 ssa_emit_load_param(SSA_Builder* builder, u32 param_index);
 NAPI u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg);
+NAPI u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, s64 bit_offset, s64 index);
 NAPI void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u32 false_block);
 NAPI void ssa_emit_jmp(SSA_Builder* builder, u32 block);
 

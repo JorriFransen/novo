@@ -20,7 +20,7 @@ struct Stack
 #define ZODIAC_STACK_DEFAULT_CAP 8
 
 template <typename Element_Type>
-void stack_init(Allocator* allocator, Stack<Element_Type> *stack, s64 initial_cap = ZODIAC_STACK_DEFAULT_CAP)
+void stack_init(Allocator* allocator, Stack<Element_Type>* stack, s64 initial_cap = ZODIAC_STACK_DEFAULT_CAP)
 {
     assert(allocator);
     assert(stack);
@@ -38,7 +38,7 @@ void stack_init(Allocator* allocator, Stack<Element_Type> *stack, s64 initial_ca
 }
 
 template <typename Element_Type>
-void stack_free(Stack<Element_Type> *stack)
+void stack_free(Stack<Element_Type>* stack)
 {
     if (stack->buffer) {
         assert(stack->capacity);
@@ -49,7 +49,7 @@ void stack_free(Stack<Element_Type> *stack)
 }
 
 template <typename Element_Type>
-void stack_ensure_capacity(Stack<Element_Type> *stack)
+void stack_ensure_capacity(Stack<Element_Type>* stack)
 {
     if (stack->sp >= stack->capacity || stack->sp == -1) {
         auto new_cap = max(stack->capacity * 2, (s64)1);
@@ -68,7 +68,7 @@ void stack_ensure_capacity(Stack<Element_Type> *stack)
 }
 
 template <typename Element_Type>
-void stack_push(Stack<Element_Type> *stack, Element_Type element)
+void stack_push(Stack<Element_Type>* stack, Element_Type element)
 {
     stack_ensure_capacity(stack);
 
@@ -77,7 +77,7 @@ void stack_push(Stack<Element_Type> *stack, Element_Type element)
 }
 
 template <typename Element_Type>
-Element_Type stack_peek(Stack<Element_Type> *stack, s64 offset = 0)
+Element_Type stack_peek(Stack<Element_Type>* stack, s64 offset = 0)
 {
     assert(stack);
     assert(stack->sp >= 1);
@@ -88,7 +88,7 @@ Element_Type stack_peek(Stack<Element_Type> *stack, s64 offset = 0)
 }
 
 template <typename Element_Type>
-Element_Type* stack_peek_ptr(Stack<Element_Type> *stack, s64 offset = 0)
+Element_Type* stack_peek_ptr(Stack<Element_Type>* stack, s64 offset = 0)
 {
     assert(stack);
     assert(stack->sp >= 1);
@@ -100,20 +100,20 @@ Element_Type* stack_peek_ptr(Stack<Element_Type> *stack, s64 offset = 0)
 }
 
 template <typename Element_Type>
-Element_Type stack_top(Stack<Element_Type> *stack)
+Element_Type stack_top(Stack<Element_Type>* stack)
 {
     return stack_peek(stack);
 }
 
 template <typename Element_Type>
-Element_Type* stack_top_ptr(Stack<Element_Type> *stack)
+Element_Type* stack_top_ptr(Stack<Element_Type>* stack)
 {
     return stack_peek_ptr(stack);
 }
 
 // Returns the element that is popped of first
 template <typename Element_Type>
-Element_Type stack_pop(Stack<Element_Type> *stack, s64 count)
+Element_Type stack_pop(Stack<Element_Type>* stack, s64 count)
 {
     if (count == 0) return {};
 
@@ -127,7 +127,7 @@ Element_Type stack_pop(Stack<Element_Type> *stack, s64 count)
 }
 
 template <typename Element_Type>
-Element_Type stack_pop(Stack<Element_Type> *stack)
+Element_Type stack_pop(Stack<Element_Type>* stack)
 {
     assert(stack->sp >= 1);
 
@@ -138,7 +138,7 @@ Element_Type stack_pop(Stack<Element_Type> *stack)
 }
 
 template <typename Element_Type>
-s64 stack_count(Stack<Element_Type> *stack)
+s64 stack_count(Stack<Element_Type>* stack)
 {
     if (stack->sp < 0) return 0;
     return stack->sp;

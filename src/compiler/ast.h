@@ -218,9 +218,10 @@ enum class AST_Expression_Kind : u32
 typedef u32 AST_Expression_Flags;
 enum AST_Expression_Flag
 {
-    AST_EXPR_FLAG_NONE     = 0x00,
-    AST_EXPR_FLAG_RESOLVED = 0x01,
-    AST_EXPR_FLAG_TYPED    = 0x02,
+    AST_EXPR_FLAG_NONE      = 0x00,
+    AST_EXPR_FLAG_RESOLVED  = 0x01,
+    AST_EXPR_FLAG_TYPED     = 0x02,
+    AST_EXPR_FLAG_CONST     = 0x04,
 };
 
 struct AST_Expression
@@ -332,12 +333,12 @@ NAPI AST_Statement* ast_break_statement(Instance* instance, u32 range_id);
 NAPI AST_Statement* ast_continue_statement(Instance* instance, u32 range_id);
 NAPI AST_Statement* ast_block_statement(Instance* instance, DArray<AST_Statement *> stmts, Scope* scope, u32 range_id);
 
-NAPI AST_Expression* ast_expression(Instance* instance, AST_Expression_Kind kind, u32 range_id);
+NAPI AST_Expression* ast_expression(Instance* instance, AST_Expression_Kind kind, u32 range_id, AST_Expression_Flags flags = AST_EXPR_FLAG_NONE);
 NAPI AST_Expression* ast_identifier_expression(Instance* instance, AST_Identifier* ident, u32 range_id);
 NAPI AST_Expression* ast_binary_expression(Instance* instance, u32 op, AST_Expression* lhs, AST_Expression* rhs, u32 range_id);
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name, u32 range_id);
 NAPI AST_Expression* ast_call_expression(Instance* instance, AST_Expression* base_expr, DArray<AST_Expression *> args, u32 range_id);
-NAPI AST_Expression* ast_compound_expression(Instance *instance, DArray<AST_Expression*> expressions, u32 range_id);
+NAPI AST_Expression* ast_compound_expression(Instance* instance, DArray<AST_Expression*> expressions, u32 range_id);
 NAPI AST_Expression* ast_integer_literal_expression(Instance* instance, u64 i, u32 range_id);
 NAPI AST_Expression* ast_real_literal_expression(Instance* instance, Real_Value rv, u32 range_id);
 NAPI AST_Expression* ast_char_literal_expression(Instance* instance, char c, u32 range_id);

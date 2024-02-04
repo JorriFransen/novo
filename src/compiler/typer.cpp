@@ -447,13 +447,13 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             assert(task->fn_decl);
             for (s64 i = 0; i < expr->call.args.count; i++) {
                 if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT) {
-                    darray_append(&task->fn_decl->function.temp_structs, expr->call.args[i]);
+                    darray_append_unique(&task->fn_decl->function.temp_structs, expr->call.args[i]);
                 }
             }
 
             if (expr->resolved_type->kind == Type_Kind::STRUCT) {
                 assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
-                darray_append(&task->fn_decl->function.temp_structs, expr);
+                darray_append_unique(&task->fn_decl->function.temp_structs, expr);
             }
             break;
         }
@@ -470,6 +470,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 }
             }
 
+            darray_append_unique(&task->fn_decl->function.temp_structs, expr);
             expr->resolved_type = suggested_type;
             break;
         }
