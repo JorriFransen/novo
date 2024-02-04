@@ -41,7 +41,7 @@ struct Type
         } integer;
 
         struct {
-            DArray<Type *> param_types;
+            DArray<Type*> param_types;
             Type* return_type;
         } function;
 
@@ -56,10 +56,10 @@ NAPI Type* type_new(Instance* inst, Type_Kind kind, u32 bit_size);
 NAPI Type* void_type_new(Instance* inst);
 NAPI Type* integer_type_new(Instance* inst, bool sign, u32 bit_size);
 NAPI Type* boolean_type_new(Instance* inst, u32 bit_size);
-NAPI Type* function_type_new(Instance* inst, DArray<Type *> param_types, Type* return_type);
-NAPI Type* struct_type_new(Instance* inst, Array_Ref<Type *> member_types, Scope* scope);
+NAPI Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type);
+NAPI Type* struct_type_new(Instance* inst, Array_Ref<Type*> member_types, Scope* scope);
 
-NAPI Type* function_type_get(Instance* inst, Temp_Array<Type *> param_types, Type* return_type);
+NAPI Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type);
 
 NAPI String temp_type_string(Instance* inst, Type* type);
 NAPI void type_to_string(String_Builder* sb, Type* type);

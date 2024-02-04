@@ -618,6 +618,8 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             return ssa_emit_expression(builder, lvalue_expr, scope);
         }
 
+        case AST_Expression_Kind::COMPOUND: assert(false); break;
+
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
@@ -771,6 +773,8 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             }
             break;
         }
+
+        case AST_Expression_Kind::COMPOUND: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
             result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);

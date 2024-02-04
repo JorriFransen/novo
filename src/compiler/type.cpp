@@ -36,7 +36,7 @@ Type* boolean_type_new(Instance* inst, u32 bit_size)
     return result;
 }
 
-Type* function_type_new(Instance* inst, DArray<Type *> param_types, Type* return_type)
+Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type)
 {
     auto result = type_new(inst, Type_Kind::FUNCTION, 64);
     result->function.param_types = param_types;
@@ -44,7 +44,7 @@ Type* function_type_new(Instance* inst, DArray<Type *> param_types, Type* return
     return result;
 }
 
-Type* struct_type_new(Instance* inst, Array_Ref<Type *> member_types, Scope* scope)
+Type* struct_type_new(Instance* inst, Array_Ref<Type*> member_types, Scope* scope)
 {
     DArray<Type_Struct_Member> members;
     darray_init(&inst->ast_allocator, &members, member_types.count);
@@ -70,7 +70,7 @@ Type* struct_type_new(Instance* inst, Array_Ref<Type *> member_types, Scope* sco
     return result;
 }
 
-Type* function_type_get(Instance* inst, Temp_Array<Type *> param_types, Type* return_type)
+Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type)
 {
     for (s64 i = 0; i < inst->function_types.count; i++) {
 

@@ -412,6 +412,15 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
             break;
         }
 
+        case AST_Expression_Kind::COMPOUND: {
+            string_builder_append(sb, "EXPR_COMPOUND: (%d members)\n", expr->compound.expressions.count);
+
+            for (s64 i = 0; i < expr->compound.expressions.count; i++) {
+                ast_expr_to_string(instance, sb, expr->compound.expressions[i], indent + 1);
+            }
+            break;
+        }
+
         case AST_Expression_Kind::INTEGER_LITERAL: {
             string_builder_append(sb, "EXPR_INT: %llu\n", expr->integer_literal);
             break;

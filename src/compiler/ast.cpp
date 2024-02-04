@@ -79,7 +79,7 @@ AST_Declaration* ast_struct_member_declaration(Instance* instance, AST_Identifie
     return result;
 }
 
-AST_Declaration* ast_struct_declaration(Instance* instance, AST_Identifier* ident, DArray<AST_Declaration *> fields, Scope* scope, u32 range_id)
+AST_Declaration* ast_struct_declaration(Instance* instance, AST_Identifier* ident, DArray<AST_Declaration*> fields, Scope* scope, u32 range_id)
 {
     auto result = ast_declaration(instance, AST_Declaration_Kind::STRUCT, ident, range_id);
     result->structure.scope = scope;
@@ -87,7 +87,7 @@ AST_Declaration* ast_struct_declaration(Instance* instance, AST_Identifier* iden
     return result;
 }
 
-AST_Declaration* ast_function_declaration(Instance* instance, AST_Identifier* ident, DArray<AST_Declaration *> param_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec* return_ts, Scope* scope, u32 range_id)
+AST_Declaration* ast_function_declaration(Instance* instance, AST_Identifier* ident, DArray<AST_Declaration*> param_decls, DArray<AST_Statement*> body_stmts, AST_Type_Spec* return_ts, Scope* scope, u32 range_id)
 {
     auto result = ast_declaration(instance, AST_Declaration_Kind::FUNCTION, ident, range_id);
     result->function.params = param_decls;
@@ -214,7 +214,7 @@ AST_Statement* ast_continue_statement(Instance* instance, u32 range_id)
     return result;
 }
 
-AST_Statement* ast_block_statement(Instance* instance, DArray<AST_Statement *> stmts, Scope* scope, u32 range_id)
+AST_Statement* ast_block_statement(Instance* instance, DArray<AST_Statement*> stmts, Scope* scope, u32 range_id)
 {
     auto result = ast_statement(instance, AST_Statement_Kind::BLOCK, range_id);
     result->block.statements = stmts;
@@ -256,11 +256,18 @@ AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_
     return result;
 }
 
-AST_Expression* ast_call_expression(Instance* instance, AST_Expression* base_expr, DArray<AST_Expression *> args, u32 range_id)
+AST_Expression* ast_call_expression(Instance* instance, AST_Expression* base_expr, DArray<AST_Expression*> args, u32 range_id)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::CALL, range_id);
     result->call.base = base_expr;
     result->call.args = args;
+    return result;
+}
+
+AST_Expression* ast_compound_expression(Instance *instance, DArray<AST_Expression*> expressions, u32 range_id)
+{
+    auto result = ast_expression(instance, AST_Expression_Kind::COMPOUND, range_id);
+    result->compound.expressions = expressions;
     return result;
 }
 

@@ -415,6 +415,17 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             break;
         }
 
+        case AST_Expression_Kind::COMPOUND: {
+
+            for (s64 i = 0; i < expr->compound.expressions.count; i++) {
+                if (!resolve_expression(inst, task, expr->compound.expressions[i], scope)) {
+                    return false;
+                }
+            }
+
+            break;
+        }
+
         case AST_Expression_Kind::INTEGER_LITERAL:
         case AST_Expression_Kind::BOOL_LITERAL: break;
 

@@ -21,7 +21,7 @@ struct Resolve_Task
     AST_Node node;
     Scope* scope;
 
-    Stack<AST_Statement *> loop_control_stack;
+    Stack<AST_Statement*> loop_control_stack;
 
     AST_Declaration* fn_decl;
     AST_Identifier* waiting_for;

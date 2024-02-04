@@ -46,7 +46,7 @@ struct Instance
 
     DArray<Atom> imported_files;
 
-    DArray<Type *> function_types;
+    DArray<Type*> function_types;
 
     bool fatal_error;
     DArray<Source_Pos> source_positions;

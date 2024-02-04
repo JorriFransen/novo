@@ -173,7 +173,7 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
 {
     expect_token(parser, '{');
 
-    auto fields = temp_array_create<AST_Declaration *>(&parser->instance->temp_allocator, 8);
+    auto fields = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 8);
     Scope* struct_scope = scope_new(parser->instance, Scope_Kind::STRUCT, scope);
 
     while (!is_token(parser, '}')) {
@@ -229,7 +229,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 {
     assert(scope->kind == Scope_Kind::GLOBAL);
 
-    auto params = temp_array_create<AST_Declaration *>(&parser->instance->temp_allocator, 2);
+    auto params = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 2);
 
     Scope* fn_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
@@ -260,7 +260,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         return_ts = parse_type_spec(parser);
     }
 
-    auto stmts = temp_array_create<AST_Statement *>(&parser->instance->temp_allocator, 4);
+    auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 4);
 
     expect_token(parser, '{');
     while (!is_token(parser, '}')) {
@@ -323,6 +323,30 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         next_token(parser->lexer);
         result = ast_bool_literal_expression(parser->instance, false, range);
 
+    } else if (is_token(parser, '{')) {
+
+        next_token(parser->lexer);
+
+        auto exprs = temp_array_create<AST_Expression*>(&parser->instance->temp_allocator, 4);
+
+        while (!is_token(parser, '}')) {
+
+            if (exprs.array.count) {
+                expect_token(parser, ',');
+            }
+
+            AST_Expression *expr = parse_expression(parser);
+            darray_append(&exprs, expr);
+        }
+
+        auto end = parser->lexer->token.source_pos_id;
+        expect_token(parser, '}');
+
+        DArray<AST_Expression*> expr_array = temp_array_finalize(&parser->instance->ast_allocator, &exprs);
+
+        auto range = source_range(parser->instance, ct.source_pos_id, end);
+        result = ast_compound_expression(parser->instance, expr_array, range);
+
     } else if (is_token(parser, '(')) {
         next_token(parser->lexer);
         result = parse_expression(parser);
@@ -339,7 +363,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
         if (match_token(parser, '(')) {
 
-            auto args_temp = temp_array_create<AST_Expression *>(&parser->instance->temp_allocator);
+            auto args_temp = temp_array_create<AST_Expression*>(&parser->instance->temp_allocator);
 
             u32 end = ct.source_pos_id;
 
@@ -417,7 +441,7 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
         Scope* block_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
-        auto stmts = temp_array_create<AST_Statement *>(&parser->instance->temp_allocator, 8);
+        auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 8);
         while (!is_token(parser, '}')) {
             AST_Statement* stmt = parse_statement(parser, block_scope, true);
             darray_append(&stmts, stmt);

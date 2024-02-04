@@ -102,7 +102,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
             }
 
-            auto member_types = temp_array_create<Type *>(&inst->temp_allocator, fields.count);
+            auto member_types = temp_array_create<Type*>(&inst->temp_allocator, fields.count);
 
             for (s64 i = 0; i < fields.count; i++) {
                 auto field = fields[i];
@@ -136,7 +136,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
             }
 
             auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-            auto param_types = temp_array_create<Type *>(&inst->temp_allocator, decl->function.params.count);
+            auto param_types = temp_array_create<Type*>(&inst->temp_allocator, decl->function.params.count);
 
             for (s64 i = 0; i < decl->function.params.count; i++) {
                 darray_append(&param_types, decl->function.params[i]->resolved_type);
@@ -455,6 +455,22 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
                 darray_append(&task->fn_decl->function.temp_structs, expr);
             }
+            break;
+        }
+
+        case AST_Expression_Kind::COMPOUND: {
+            assert(suggested_type);
+            assert(suggested_type->kind == Type_Kind::STRUCT);
+
+            assert(suggested_type->structure.members.count == expr->compound.expressions.count);
+
+            for (s64 i = 0; i < expr->compound.expressions.count; i++) {
+                if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->structure.members[i].type)) {
+                    return false;
+                }
+            }
+
+            expr->resolved_type = suggested_type;
             break;
         }
 

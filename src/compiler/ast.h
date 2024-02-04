@@ -206,6 +206,8 @@ enum class AST_Expression_Kind : u32
     MEMBER,
     CALL,
 
+    COMPOUND,
+
     INTEGER_LITERAL,
     REAL_LITERAL,
     CHAR_LITERAL,
@@ -249,6 +251,10 @@ struct AST_Expression
             AST_Expression* base;
             DArray<AST_Expression *> args;
         } call;
+
+        struct {
+            DArray<AST_Expression*> expressions;
+        } compound;
 
         u64 integer_literal;
         Real_Value real_literal;
@@ -331,6 +337,7 @@ NAPI AST_Expression* ast_identifier_expression(Instance* instance, AST_Identifie
 NAPI AST_Expression* ast_binary_expression(Instance* instance, u32 op, AST_Expression* lhs, AST_Expression* rhs, u32 range_id);
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name, u32 range_id);
 NAPI AST_Expression* ast_call_expression(Instance* instance, AST_Expression* base_expr, DArray<AST_Expression *> args, u32 range_id);
+NAPI AST_Expression* ast_compound_expression(Instance *instance, DArray<AST_Expression*> expressions, u32 range_id);
 NAPI AST_Expression* ast_integer_literal_expression(Instance* instance, u64 i, u32 range_id);
 NAPI AST_Expression* ast_real_literal_expression(Instance* instance, Real_Value rv, u32 range_id);
 NAPI AST_Expression* ast_char_literal_expression(Instance* instance, char c, u32 range_id);
