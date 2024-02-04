@@ -11,10 +11,9 @@
 #include "type.h"
 
 #include <assert.h>
+#include <string.h>
 
 namespace Novo {
-
-struct Instance;
 
 struct SSA_Alloc
 {
@@ -709,6 +708,8 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
             switch (expr->binary.op) {
                 case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
+                case '-': ssa_emit_op(builder, SSA_OP_SUB); break;
+                case '*': ssa_emit_op(builder, SSA_OP_MUL); break;
                 case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
                 case '<': ssa_emit_op(builder, SSA_OP_LT); break;
                 case '>': ssa_emit_op(builder, SSA_OP_GT); break;
@@ -1219,6 +1220,8 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
 }
 
         BINOP_CASE(ADD);
+        BINOP_CASE(SUB);
+        BINOP_CASE(MUL);
         BINOP_CASE(DIV);
         BINOP_CASE(LT);
         BINOP_CASE(GT);

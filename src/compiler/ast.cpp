@@ -61,8 +61,16 @@ AST_Declaration* ast_builtin_type_decl(Instance* instance, Type* type, const cha
     return result;
 }
 
-AST_Declaration* ast_variable_declaration(Instance* instance, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init, u32 range_id)
+AST_Declaration* ast_variable_declaration(Instance* instance, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init)
 {
+    assert(ts || init);
+
+    auto start_id = source_range_start(instance, ident->range_id);
+    auto end_id = init ?
+                    source_range_end(instance, init->range_id) :
+                    source_range_end(instance, ts->range_id);
+    auto range_id = source_range(instance, start_id, end_id);
+
     auto result = ast_declaration(instance, AST_Declaration_Kind::VARIABLE, ident, range_id);
     result->variable.type_spec = ts;
     result->variable.init_expr = init;
@@ -87,7 +95,7 @@ AST_Declaration* ast_struct_declaration(Instance* instance, AST_Identifier* iden
     return result;
 }
 
-AST_Declaration* ast_function_declaration(Instance* instance, AST_Identifier* ident, DArray<AST_Declaration*> param_decls, DArray<AST_Statement*> body_stmts, AST_Type_Spec* return_ts, Scope* scope, u32 range_id)
+AST_Declaration* ast_function_declaration(Instance* instance, AST_Identifier* ident, DArray<AST_Declaration*> param_decls, DArray<AST_Statement*> body_stmts, AST_Type_Spec* return_ts, Scope* scope, u32 range_id, u32 body_start_id)
 {
     auto result = ast_declaration(instance, AST_Declaration_Kind::FUNCTION, ident, range_id);
     result->function.params = param_decls;
@@ -107,9 +115,8 @@ AST_Declaration* ast_function_declaration(Instance* instance, AST_Identifier* id
     }
 
     if (body_stmts.count) {
-        auto start = source_range_start(instance, body_stmts[0]->range_id);
-        auto end = source_range_end(instance, body_stmts[body_stmts.count - 1]->range_id);
-        result->function.body_range_id = source_range(instance, start, end);
+        auto end = source_range_end(instance, range_id);
+        result->function.body_range_id = source_range(instance, body_start_id, end);
     } else {
         result->function.body_range_id = 0;
     }
@@ -133,23 +140,31 @@ AST_Statement* ast_import_statement(Instance* instance, String_Ref path, u32 ran
     return result;
 }
 
-AST_Statement* ast_declaration_statement(Instance* instance, AST_Declaration* decl, u32 range_id)
+AST_Statement* ast_declaration_statement(Instance* instance, AST_Declaration* decl)
 {
-    auto result = ast_statement(instance, AST_Statement_Kind::DECLARATION, range_id);
+    auto result = ast_statement(instance, AST_Statement_Kind::DECLARATION, decl->range_id);
     result->declaration = decl;
     return result;
 }
 
-AST_Statement* ast_assignment_statement(Instance* inst, AST_Expression* lvalue, AST_Expression* rvalue, u32 range_id)
+AST_Statement* ast_assignment_statement(Instance* inst, AST_Expression* lvalue, AST_Expression* rvalue)
 {
+    auto start_id = source_range_start(inst, lvalue->range_id);
+    auto end_id = source_range_end(inst, rvalue->range_id);
+    auto range_id = source_range(inst, start_id, end_id);
+
     auto result = ast_statement(inst, AST_Statement_Kind::ASSIGNMENT, range_id);
     result->assignment.lvalue = lvalue;
     result->assignment.rvalue = rvalue;
     return result;
 }
 
-AST_Statement* ast_arithmetic_assignment_statement(Instance* inst, u32 op, AST_Expression* lvalue, AST_Expression* rvalue, u32 range_id)
+AST_Statement* ast_arithmetic_assignment_statement(Instance* inst, u32 op, AST_Expression* lvalue, AST_Expression* rvalue)
 {
+    auto start_id = source_range_start(inst, lvalue->range_id);
+    auto end_id = source_range_end(inst, rvalue->range_id);
+    auto range_id = source_range(inst, start_id, end_id);
+
     auto result = ast_statement(inst, AST_Statement_Kind::ARITHMETIC_ASSIGNMENT, range_id);
     result->arithmetic_assignment.op = op;
     result->arithmetic_assignment.lvalue = lvalue;
@@ -166,31 +181,48 @@ AST_Statement* ast_call_expr_statement(Instance* instance, AST_Expression* call)
     return result;
 }
 
-AST_Statement* ast_return_statement(Instance* instance, AST_Expression* expr, u32 range_id)
+AST_Statement* ast_return_statement(Instance* instance, AST_Expression* expr, u32 start_id)
 {
+    auto end_id = source_range_end(instance, expr->range_id);
+    auto range_id = source_range(instance, start_id, end_id);
+
     auto result = ast_statement(instance, AST_Statement_Kind::RETURN, range_id);
     result->return_expr = expr;
     return result;
 }
 
-AST_Statement* ast_if_statement(Instance* instance, DArray<AST_If_Block> if_blocks, AST_Statement* else_stmt, u32 range_id)
+AST_Statement* ast_if_statement(Instance* instance, DArray<AST_If_Block> if_blocks, AST_Statement* else_stmt, u32 start_id)
 {
+    assert(if_blocks.count);
+
+    u32 end_id = else_stmt ?
+                    source_range_end(instance, else_stmt->range_id) :
+                    source_range_end(instance, if_blocks[if_blocks.count - 1].then->range_id);
+
+    auto range_id = source_range(instance, start_id, end_id);
+
     auto result = ast_statement(instance, AST_Statement_Kind::IF, range_id);
     result->if_stmt.blocks = if_blocks;
     result->if_stmt.else_stmt = else_stmt;
     return result;
 }
 
-AST_Statement* ast_while_statement(Instance* instance, AST_Expression* cond, AST_Statement* stmt, u32 range_id)
+AST_Statement* ast_while_statement(Instance* instance, AST_Expression* cond, AST_Statement* stmt, u32 start_id)
 {
+    auto end_id = source_range_end(instance, stmt->range_id);
+    auto range_id = source_range(instance, start_id, end_id);
+
     auto result = ast_statement(instance, AST_Statement_Kind::WHILE, range_id);
     result->while_stmt.cond = cond;
     result->while_stmt.stmt = stmt;
     return result;
 }
 
-AST_Statement* ast_for_statement(Instance* instance, AST_Statement* init, AST_Expression* cond, AST_Statement* step, AST_Statement* stmt, Scope* scope, u32 range_id)
+AST_Statement* ast_for_statement(Instance* instance, AST_Statement* init, AST_Expression* cond, AST_Statement* step, AST_Statement* stmt, Scope* scope, u32 start_id)
 {
+    auto end_id = source_range_end(instance, stmt->range_id);
+    auto range_id = source_range(instance, start_id, end_id);
+
     auto result = ast_statement(instance, AST_Statement_Kind::FOR, range_id);
     result->for_stmt.init = init;
     result->for_stmt.cond = cond;
@@ -232,15 +264,19 @@ AST_Expression* ast_expression(Instance* instance, AST_Expression_Kind kind, u32
     return result;
 }
 
-AST_Expression* ast_identifier_expression(Instance* instance, AST_Identifier* ident, u32 range_id)
+AST_Expression* ast_identifier_expression(Instance* instance, AST_Identifier* ident)
 {
-    auto result = ast_expression(instance, AST_Expression_Kind::IDENTIFIER, range_id);
+    auto result = ast_expression(instance, AST_Expression_Kind::IDENTIFIER, ident->range_id);
     result->identifier = ident;
     return result;
 }
 
-NAPI AST_Expression* ast_binary_expression(Instance* instance, u32 op, AST_Expression* lhs, AST_Expression* rhs, u32 range_id)
+NAPI AST_Expression* ast_binary_expression(Instance* instance, u32 op, AST_Expression* lhs, AST_Expression* rhs)
 {
+    auto start_id = source_range_start(instance, lhs->range_id);
+    auto end_id = source_range_end(instance, rhs->range_id);
+    auto range_id = source_range(instance, start_id, end_id);
+
     auto result = ast_expression(instance, AST_Expression_Kind::BINARY, range_id);
     result->binary.op = op;
     result->binary.lhs = lhs;
@@ -248,8 +284,12 @@ NAPI AST_Expression* ast_binary_expression(Instance* instance, u32 op, AST_Expre
     return result;
 }
 
-AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name, u32 range_id)
+AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name)
 {
+    auto start_id = source_range_start(inst, base->range_id);
+    auto end_id = source_range_end(inst, member_name->range_id);
+    auto range_id = source_range(inst, start_id, end_id);
+
     auto result = ast_expression(inst, AST_Expression_Kind::MEMBER, range_id);
     result->member.base = base;
     result->member.member_name = member_name;

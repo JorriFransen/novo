@@ -108,14 +108,12 @@ AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi)
 AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi)
 {
     AST_Declaration* result = nullptr;
-    u64 end = 0;
 
     expect_token(parser, ':');
 
     AST_Type_Spec* ts = nullptr;
     if (!is_token(parser, ':') && !is_token(parser, '=')) {
         ts = parse_type_spec(parser);
-        end = source_range_end(parser->instance, ts->range_id);
     }
 
     if (match_token(parser, ':')) {
@@ -137,18 +135,13 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
         if (match_token(parser, '=')) {
             init_expr = parse_expression(parser);
             if (!init_expr) return nullptr;
-
-            end = source_range_end(parser->instance, init_expr->range_id);
         }
 
         if (eat_semi) {
-            end = parser->lexer->token.source_pos_id;
             expect_token(parser, ';');
         }
 
-        auto start = source_range_start(parser->instance, ident->range_id);
-        auto range_id = source_range(parser->instance, start, end);
-        result = ast_variable_declaration(parser->instance, ident, ts, init_expr, range_id);
+        result = ast_variable_declaration(parser->instance, ident, ts, init_expr);
     }
 
     if (!result) return nullptr;
@@ -262,6 +255,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
     auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 4);
 
+    auto body_start_id = parser->lexer->token.source_pos_id;
     expect_token(parser, '{');
     while (!is_token(parser, '}')) {
 
@@ -279,7 +273,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
     auto start = source_range_start(parser->instance, ident->range_id);
     auto range = source_range(parser->instance, start, end);
 
-    return ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope, range);
+    return ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope, range, body_start_id);
 }
 
 AST_Expression* parse_leaf_expression(Parser* parser)
@@ -314,8 +308,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case TOK_NAME: {
-            AST_Identifier* ident = parse_identifier(parser);
-            result = ast_identifier_expression(parser->instance, ident, range);
+            result = ast_identifier_expression(parser->instance, parse_identifier(parser));
             break;
         }
 
@@ -414,12 +407,9 @@ AST_Expression* parse_leaf_expression(Parser* parser)
             case '.': {
                 next_token(parser->lexer);
 
-                auto end = parser->lexer->token.source_pos_id;
                 AST_Identifier* member_name = parse_identifier(parser);
 
-                auto member_range = source_range(parser->instance, range_start, end);
-
-                result = ast_member_expression(parser->instance, result, member_name, member_range);
+                result = ast_member_expression(parser->instance, result, member_name);
                 break;
             }
 
@@ -446,11 +436,7 @@ static AST_Expression* parse_increasing_precedence(Parser* parser, AST_Expressio
         next_token(parser->lexer);
         auto right = parse_expression(parser, new_prec);
 
-        auto start = source_range_start(parser->instance, left->range_id);
-        auto end = source_range_end(parser->instance, right->range_id);
-        auto range = source_range(parser->instance, start, end);
-
-        return ast_binary_expression(parser->instance, op_token.kind, left, right, range);
+        return ast_binary_expression(parser->instance, op_token.kind, left, right);
     }
 }
 
@@ -505,16 +491,14 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
     } else if (expr->kind == AST_Expression_Kind::IDENTIFIER && is_token(parser, ':')) {
         auto decl = parse_declaration(parser, expr->identifier, scope,true);
         if (!decl) return nullptr;
-        return ast_declaration_statement(parser->instance, decl, decl->range_id);
+        return ast_declaration_statement(parser->instance, decl);
 
     } else if (match_token(parser, '=')) {
         auto value = parse_expression(parser);
 
-        auto end = parser->lexer->token.source_pos_id;
         if (eat_semi) expect_token(parser, ';');
 
-        auto sr_id = source_range(parser->instance, source_range_start(parser->instance, expr->range_id), end);
-        return ast_assignment_statement(parser->instance, expr, value, sr_id);
+        return ast_assignment_statement(parser->instance, expr, value);
 
     } else if (is_binary_arithmetic_op(parser->lexer->token.kind)) {
 
@@ -526,9 +510,7 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
         if (eat_semi) expect_token(parser, ';');
 
-        auto end = source_range_end(parser->instance, rhs->range_id);
-        auto range = source_range(parser->instance, source_range_start(parser->instance, expr->range_id), end);
-        return ast_arithmetic_assignment_statement(parser->instance, op, expr, rhs, range);
+        return ast_arithmetic_assignment_statement(parser->instance, op, expr, rhs);
 
     } else {
         assert(false);
@@ -569,20 +551,9 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
             }
         }
 
-        u32 end;
-        if (else_stmt) {
-            end = source_range_end(parser->instance, else_stmt->range_id);
-        } else if (if_blocks.array.count) {
-            end = source_range_end(parser->instance, if_blocks.array[if_blocks.array.count - 1].then->range_id);
-        } else {
-            end = source_range_end(parser->instance, then_stmt->range_id);
-        }
-
-        auto range = source_range(parser->instance, ct.source_pos_id, end);
-
         auto if_blocks_array = temp_array_finalize(&parser->instance->ast_allocator, &if_blocks);
 
-        return ast_if_statement(parser->instance, if_blocks_array, else_stmt, range);
+        return ast_if_statement(parser->instance, if_blocks_array, else_stmt, ct.source_pos_id);
 
 
     } else if (match_keyword(parser, g_keyword_while)) {
@@ -597,9 +568,7 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
 
         AST_Statement* stmt = parse_statement(parser, scope, true);
 
-        auto end = source_range_end(parser->instance, stmt->range_id);
-        auto range = source_range(parser->instance, ct.source_pos_id, end);
-        return ast_while_statement(parser->instance, cond, stmt, range);
+        return ast_while_statement(parser->instance, cond, stmt, ct.source_pos_id);
 
     } else if (match_keyword(parser, g_keyword_for)) {
 
@@ -625,9 +594,7 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
         assert(step_stmt);
         assert(do_stmt);
 
-        auto end = source_range_end(parser->instance, do_stmt->range_id);
-        auto range = source_range(parser->instance, ct.source_pos_id, end);
-        return ast_for_statement(parser->instance, init_stmt, cond, step_stmt, do_stmt, for_scope, range);
+        return ast_for_statement(parser->instance, init_stmt, cond, step_stmt, do_stmt, for_scope, ct.source_pos_id);
 
     } else if (match_keyword(parser, g_keyword_break)) {
 
@@ -649,11 +616,9 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
         if (!is_token(parser, ';')) {
             expr = parse_expression(parser);
         }
-        auto end = parser->lexer->token.source_pos_id;
         expect_token(parser, ';');
 
-        auto range = source_range(parser->instance, ct.source_pos_id, end);
-        return ast_return_statement(parser->instance, expr, range);
+        return ast_return_statement(parser->instance, expr, ct.source_pos_id);
     }
 
     instance_fatal_error(parser->instance, ct.source_pos_id, "Unexpected keyword '%s'", atom_string(ct.atom).data);

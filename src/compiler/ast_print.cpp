@@ -78,7 +78,12 @@ static void ast_print_pos(Instance* instance, String_Builder* sb, u32 pos_id_a, 
     } else {
         auto end = &instance->source_positions[pos_id_b];
 
-        string_builder_append(sb, "%03d:%03d-%03d:%03d  ", start->line, start->offset, end->line, end->offset);
+        int end_offset = end->offset;
+        if (end->length > 1) {
+            end_offset += (end->length - 1);
+        }
+
+        string_builder_append(sb, "%03d:%03d-%03d:%03d  ", start->line, start->offset, end->line, end_offset);
     }
 }
 
