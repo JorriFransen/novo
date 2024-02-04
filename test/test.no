@@ -24,8 +24,7 @@ main :: () -> s64 {
     v.x = 1;
     v.y = 2;
 
-    v2 := v;
 
-    return v.y;
+    return v.x + v.y;
 }
 

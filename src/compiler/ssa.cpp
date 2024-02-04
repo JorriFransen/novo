@@ -370,6 +370,11 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
                 case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
             }
 
+            assert(bit_size % 8 == 0);
+            auto size = bit_size / 8;
+            assert(size >= 0 && size <= U8_MAX);
+            ssa_emit_8(builder, (u8)size);
+
             u32 result = ssa_register_create(builder);
             ssa_emit_32(builder, result);
             ssa_emit_32(builder, lhs);
@@ -665,53 +670,28 @@ s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope
         }
 
         case AST_Expression_Kind::BINARY: {
+            assert(expr->binary.lhs->resolved_type == expr->binary.rhs->resolved_type);
+
             u32 left = ssa_emit_expression(builder, expr->binary.lhs, scope);
             u32 right = ssa_emit_expression(builder, expr->binary.rhs, scope);
 
             switch (expr->binary.op) {
-                case '+': {
-                    ssa_emit_op(builder, SSA_OP_ADD);
-                    break;
-                }
-
-                case '/': {
-                    ssa_emit_op(builder, SSA_OP_DIV);
-                    break;
-                }
-
-                case '<': {
-                    ssa_emit_op(builder, SSA_OP_LT);
-                    break;
-                }
-
-                case '>': {
-                    ssa_emit_op(builder, SSA_OP_GT);
-                    break;
-                }
-
-                case TOK_EQ: {
-                    ssa_emit_op(builder, SSA_OP_EQ);
-                    break;
-                }
-
-                case TOK_NEQ: {
-                    ssa_emit_op(builder, SSA_OP_NEQ);
-                    break;
-                }
-
-                case TOK_LTEQ: {
-                    ssa_emit_op(builder, SSA_OP_LTEQ);
-                    break;
-                }
-
-                case TOK_GTEQ: {
-                    ssa_emit_op(builder, SSA_OP_GTEQ);
-                    break;
-                }
-
+                case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
+                case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
+                case '<': ssa_emit_op(builder, SSA_OP_LT); break;
+                case '>': ssa_emit_op(builder, SSA_OP_GT); break;
+                case TOK_EQ: ssa_emit_op(builder, SSA_OP_EQ); break;
+                case TOK_NEQ: ssa_emit_op(builder, SSA_OP_NEQ); break;
+                case TOK_LTEQ: ssa_emit_op(builder, SSA_OP_LTEQ); break;
+                case TOK_GTEQ: ssa_emit_op(builder, SSA_OP_GTEQ); break;
                 default: assert(false);
             }
 
+            assert(expr->binary.lhs->resolved_type->bit_size % 8 == 0);
+            auto size = expr->binary.lhs->resolved_type->bit_size / 8;
+            assert(size >= 0 && size <= U8_MAX);
+
+            ssa_emit_8(builder, (u8)size);
 
             result = ssa_register_create(builder);
             ssa_emit_32(builder, result);
@@ -793,12 +773,7 @@ s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope
         }
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
-            ssa_emit_op(builder, SSA_OP_LOAD_IM);
-
-            result = ssa_register_create(builder);
-            ssa_emit_32(builder, result);
-
-            ssa_emit_64(builder, expr->integer_literal);
+            result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);
             break;
         }
 
@@ -806,11 +781,7 @@ s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *scope
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
 
         case AST_Expression_Kind::BOOL_LITERAL: {
-            ssa_emit_op(builder, SSA_OP_LOAD_IM);
-
-            result = ssa_register_create(builder);
-            ssa_emit_32(builder, result);
-            ssa_emit_64(builder, expr->bool_literal);
+            result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->bool_literal);
             break;
         }
 
@@ -858,6 +829,28 @@ NAPI void ssa_emit_store_ptr(SSA_Builder *builder, s64 bit_size, u32 dest_reg, u
     ssa_emit_8(builder, size);
     ssa_emit_32(builder, dest_reg);
     ssa_emit_32(builder, source_reg);
+}
+
+u32 ssa_emit_load_immediate(SSA_Builder *builder, s64 bit_size, u64 immediate_value)
+{
+    assert(bit_size % 8 == 0);
+    auto size = bit_size / 8;
+    assert(size >= 0 && size < U8_MAX);
+
+    ssa_emit_op(builder, SSA_OP_LOAD_IM);
+    ssa_emit_8(builder, size);
+    u32 result = ssa_register_create(builder);
+    ssa_emit_32(builder, result);
+
+    switch (size) {
+        default: assert(false); break;
+        case 1: ssa_emit_8(builder, (u8)immediate_value); break;
+        case 2: ssa_emit_16(builder, (u16)immediate_value); break;
+        case 4: ssa_emit_32(builder, (u32)immediate_value); break;
+        case 8: ssa_emit_64(builder, (u64)immediate_value); break;
+    }
+
+    return result;
 }
 
 u32 ssa_emit_load_param(SSA_Builder *builder, u32 param_index)
@@ -1028,13 +1021,15 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
         case SSA_OP_NOP: assert(false); break;
 
 #define BINOP_CASE(op) case SSA_OP_##op: { \
-    u32 dest_reg = *(u32 *)&bytes[ip]; \
+    u8 size_reg = *(u8*)&bytes[ip]; \
+    ip += sizeof(u8); \
+    u32 dest_reg = *(u32*)&bytes[ip]; \
     ip += sizeof(u32); \
-    u32 left = *(u32 *)&bytes[ip]; \
+    u32 left = *(u32*)&bytes[ip]; \
     ip += sizeof(u32); \
-    u32 right = *(u32 *)&bytes[ip]; \
+    u32 right = *(u32*)&bytes[ip]; \
     ip += sizeof(u32); \
-    string_builder_append(sb, "  %%%u = "#op" %%%u %%%u\n", dest_reg, left, right); \
+    string_builder_append(sb, "  %%%u = "#op" %hhu %%%u %%%u\n", dest_reg, size_reg, left, right); \
     break; \
 }
 
@@ -1084,18 +1079,46 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
             u32 value_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
-            string_builder_append(sb, "  STORE_PTR %hu %%%u %%%u\n", size_reg, ptr_reg, value_reg);
+            string_builder_append(sb, "  STORE_PTR %hhu %%%u %%%u\n", size_reg, ptr_reg, value_reg);
             break;
         }
 
         case SSA_OP_LOAD_IM: {
+            u32 size = *(u8*)&bytes[ip];
+            ip += sizeof(u8);
+
             u32 dest_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
-            u64 value = *(u64 *)&bytes[ip];
-            ip += sizeof(u64);
+            string_builder_append(sb, "  %%%u = LOAD_IM %hhu ", dest_reg, size);
 
-            string_builder_append(sb, "  %%%u = LOAD_IM %llu\n", dest_reg, value);
+            switch (size) {
+                default: assert(false); break;
+                case 1: {
+                    u8 value = *(u8*)&bytes[ip];
+                    ip += sizeof(u8);
+                    string_builder_append(sb, " %hhu\n", value);
+                    break;
+                }
+                case 2: {
+                    u16 value = *(u16*)&bytes[ip];
+                    ip += sizeof(u16);
+                    string_builder_append(sb, " %hu\n", value);
+                    break;
+                }
+                case 4: {
+                    u32 value = *(u32*)&bytes[ip];
+                    ip += sizeof(u32);
+                    string_builder_append(sb, " %lu\n", value);
+                    break;
+                }
+                case 8: {
+                    u64 value = *(u64*)&bytes[ip];
+                    ip += sizeof(u64);
+                    string_builder_append(sb, " %llu\n", value);
+                    break;
+                }
+            }
 
             break;
         }
@@ -1121,7 +1144,7 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
             u32 ptr_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
-            string_builder_append(sb, "  %%%u = LOAD_PTR %hu %%%u\n", dest_reg, size_reg, ptr_reg);
+            string_builder_append(sb, "  %%%u = LOAD_PTR %hhu %%%u\n", dest_reg, size_reg, ptr_reg);
             break;
         }
 
@@ -1138,7 +1161,7 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
             u16 index = *(u16 *)&bytes[ip];
             ip += sizeof(u16);
 
-            string_builder_append(sb, "  %%%u = STRUCT_OFFSET %%%u %u %hu\n", dest_reg, ptr_reg, offset, index);
+            string_builder_append(sb, "  %%%u = STRUCT_OFFSET %%%u %u %hhu\n", dest_reg, ptr_reg, offset, index);
             break;
         }
 

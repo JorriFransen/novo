@@ -101,12 +101,22 @@ u64 vm_run(VM *vm)
             case SSA_OP_NOP: assert(false); break;
 
 #define BINOP_CASE(op_name, op) case SSA_OP_##op_name: { \
+    u8 size = vm_fetch<u8>(block, &ip); \
+    assert(size); \
     u32 dest_reg = vm_fetch<u32>(block, &ip); \
     u32 left_reg = vm_fetch<u32>(block, &ip); \
     u32 right_reg = vm_fetch<u32>(block, &ip); \
     u64 left_value = vm_get_register(vm, left_reg); \
     u64 right_value = vm_get_register(vm, right_reg); \
-    vm_set_register(vm, dest_reg, left_value op right_value); \
+    u64 result; \
+    switch (size) { \
+        default: assert(false); break; \
+        case 1: result = (u8)left_value op (u8)right_value; break; \
+        case 2: result = (u16)left_value op (u16)right_value; break; \
+        case 4: result = (u32)left_value op (u32)right_value; break; \
+        case 8: result = (u64)left_value op (u64)right_value; break; \
+    } \
+    vm_set_register(vm, dest_reg, result); \
     break; \
 }
 
@@ -163,8 +173,17 @@ u64 vm_run(VM *vm)
             }
 
             case SSA_OP_LOAD_IM: {
+                u8 size = vm_fetch<u8>(block, &ip);
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u64 value = vm_fetch<u64>(block, &ip);
+
+                u64 value;
+                switch (size) {
+                    default: assert(false); break;
+                    case 1: value = vm_fetch<u8>(block, &ip); break;
+                    case 2: value = vm_fetch<u16>(block, &ip); break;
+                    case 4: value = vm_fetch<u32>(block, &ip); break;
+                    case 8: value = vm_fetch<u64>(block, &ip); break;
+                }
 
                 vm_set_register(vm, dest_reg, value);
                 break;
