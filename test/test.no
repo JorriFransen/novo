@@ -13,28 +13,20 @@
 //  - Defer
 //  - Nested function declarations
 
+
 Vec :: struct {
     x: s64;
     y: s64;
 }
 
-AABB :: struct {
-    pos: Vec;
-    size: Vec;
-}
-
-add :: (a: AABB, b: AABB) -> s64 {
-    return a.pos.x + a.pos.y + a.size.x + a.size.y +
-           b.pos.x + b.pos.y + b.size.x + b.size.y;
+vec :: (x: s64, y: s64) -> Vec {
+    return { x, y };
 }
 
 main :: () -> s64 {
 
-    r : AABB;
-    r.pos = { 1, 2 };
-    r.size = { 3, 4 };
+    v1 : Vec = { 1, 2 };
+    v2 : Vec = { 1, 2 };
 
-    r2 : AABB = { { 11, 22 }, { 33, 44 } };
-
-    return add(r, r2);
+    return 0;
 }

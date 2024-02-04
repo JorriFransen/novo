@@ -89,18 +89,15 @@ void darray_free(DArray<Element_Type>* array)
 }
 
 template <typename Element_Type>
-void darray_grow(DArray<Element_Type>* array)
+void darray_grow(DArray<Element_Type>* array, s64 new_cap)
 {
-    s64 new_cap = max(array->capacity * 2, (s64)1);
-    assert(new_cap);
+    assert(new_cap > array->capacity);
 
     Element_Type* new_data = allocate_array<Element_Type>(array->backing_allocator, new_cap);
     assert(new_data);
     if (array->capacity) {
         memcpy(new_data, array->data, sizeof(Element_Type) * array->count);
-    }
 
-    if (array->capacity) {
         assert(array->data);
         if (!(array->backing_allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
             free(array->backing_allocator, array->data);
@@ -111,10 +108,21 @@ void darray_grow(DArray<Element_Type>* array)
 }
 
 template <typename Element_Type>
+void darray_reserve(DArray<Element_Type>*array, s64 capacity)
+{
+    if (array->capacity < capacity) {
+        darray_grow(array, capacity);
+    }
+}
+
+template <typename Element_Type>
 Element_Type* darray_append(DArray<Element_Type>* array, Element_Type element)
 {
     if (array->count >= array->capacity) {
-        darray_grow(array);
+        s64 new_cap = max(array->capacity * 2, (s64)1);
+        assert(new_cap);
+
+        darray_grow(array, new_cap);
         assert(array->capacity > array->count);
     }
 
@@ -124,6 +132,16 @@ Element_Type* darray_append(DArray<Element_Type>* array, Element_Type element)
     array->count += 1;
 
     return &array->data[index];
+}
+
+template <typename Element_Type>
+void darray_append_array(DArray<Element_Type>* array, const Array_Ref<Element_Type>& elements)
+{
+    darray_reserve(array, array->count + elements.count);
+
+    memcpy(&array->data[array->count], elements.data, elements.count * sizeof(Element_Type));
+    array->count += elements.count;
+    assert(array->count <= array->capacity);
 }
 
 template <typename Element_Type>

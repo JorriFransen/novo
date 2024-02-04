@@ -14,6 +14,8 @@
 
 namespace Novo {
 
+struct Instance;
+
 struct SSA_Alloc
 {
     AST_Node ast_node;
@@ -28,6 +30,7 @@ struct SSA_Break_Info
 
 struct SSA_Builder
 {
+    Instance *instance;
     SSA_Program* program;
     SSA_Function* function;
     s64 block_index;
@@ -35,12 +38,18 @@ struct SSA_Builder
     Stack<SSA_Break_Info> break_info_stack;
 };
 
+struct SSA_Constant
+{
+    Type *type;
+    u32 offset;
+};
 
 void ssa_program_init(SSA_Program* program, Allocator* allocator)
 {
     program->allocator = allocator;
     program->entry_fn_index = -1;
     darray_init(allocator, &program->constant_memory);
+    darray_init(allocator, &program->constants);
     darray_init(allocator, &program->functions);
 }
 
@@ -141,6 +150,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     ssa_function_init(program, &func, decl->ident->atom, decl->function.params.count, sret);
 
     SSA_Builder local_builder;
+    local_builder.instance = inst;
     local_builder.program = program;
     local_builder.function = &func;
     local_builder.block_index = 0;
@@ -1034,12 +1044,22 @@ void ssa_emit_64(DArray<u8> *bytes, u64 value)
     darray_append(bytes, (u8)((value >> 56) & 0xFF));
 }
 
-u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr)
+u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u8> *bytes/*=nullptr*/)
 {
     assert(const_expr->flags & AST_EXPR_FLAG_CONST);
 
-    s64 offset = builder->program->constant_memory.count;
-    assert(offset <= U32_MAX);
+    s64 byte_size = const_expr->resolved_type->bit_size / 8;
+
+    bool own_bytes = false;
+    Temp_Array<u8> temp_bytes;
+    if (!bytes) {
+        own_bytes = true;
+
+        temp_bytes = temp_array_create<u8>(&builder->instance->temp_allocator, byte_size);
+        bytes = &temp_bytes.array;
+    }
+
+    s64 old_byte_count = bytes->count;
 
     switch (const_expr->kind) {
 
@@ -1053,7 +1073,7 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr)
             assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
 
             for (s64 i = 0; i < const_expr->compound.expressions.count; i++) {
-                ssa_emit_constant(builder, const_expr->compound.expressions[i]);
+                ssa_emit_constant(builder, const_expr->compound.expressions[i], bytes);
             }
             break;
         }
@@ -1064,10 +1084,10 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr)
 
             switch (inttype->bit_size) {
                 default: assert(false); break;
-                case 8: ssa_emit_8(&builder->program->constant_memory, (u8)const_expr->integer_literal); break;
-                case 16: ssa_emit_16(&builder->program->constant_memory, (u16)const_expr->integer_literal); break;
-                case 32: ssa_emit_32(&builder->program->constant_memory, (u32)const_expr->integer_literal); break;
-                case 64: ssa_emit_64(&builder->program->constant_memory, (u64)const_expr->integer_literal); break;
+                case 8: ssa_emit_8(bytes, (u8)const_expr->integer_literal); break;
+                case 16: ssa_emit_16(bytes, (u16)const_expr->integer_literal); break;
+                case 32: ssa_emit_32(bytes, (u32)const_expr->integer_literal); break;
+                case 64: ssa_emit_64(bytes, (u64)const_expr->integer_literal); break;
             }
 
             break;
@@ -1079,7 +1099,36 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr)
         case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
     }
 
-    return offset;
+    assert(bytes->count - old_byte_count == byte_size);
+
+    u32 result = 0;
+
+    if (own_bytes) {
+
+        bool match = false;
+        for (s64 i = 0; i < builder->program->constants.count; i++) {
+            SSA_Constant constant = builder->program->constants[i];
+
+            if (constant.type == const_expr->resolved_type) {
+                if (memcmp(&builder->program->constant_memory[constant.offset], bytes->data, byte_size) == 0) {
+                    match = true;
+                    result = constant.offset;
+                    break;
+                }
+            }
+        }
+
+        if (!match) {
+            result = builder->program->constant_memory.count;
+            darray_append(&builder->program->constants, { const_expr->resolved_type, result });
+
+            darray_append_array(&builder->program->constant_memory, Array_Ref<u8>(*bytes));
+        }
+
+        temp_array_destroy(&temp_bytes);
+    }
+
+    return result;
 }
 
 String ssa_to_string(Allocator* allocator, SSA_Program* program)
@@ -1104,8 +1153,9 @@ void ssa_print(String_Builder* sb, SSA_Program* program)
 
             if (newline) string_builder_append(sb, "0x%.8x: ", i);
             newline = (i + 1) % 8 == 0;
+            bool extra_space = (i + 1) % 4 == 0;
 
-            string_builder_append(sb, "%.2x ", program->constant_memory[i]);
+            string_builder_append(sb, "%.2x %s", program->constant_memory[i], extra_space ? " " : "");
 
             if (newline) string_builder_append(sb, "\n");
         }
