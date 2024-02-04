@@ -244,6 +244,10 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                     result_type = task->fn_decl->function.return_ts->resolved_type;
                 }
 
+                if (!result_type) {
+                    return false;
+                }
+
                 if (!type_expression(inst, task, stmt->return_expr, scope, result_type)) {
                     return false;
                 }
@@ -470,7 +474,9 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 }
             }
 
-            darray_append_unique(&task->fn_decl->function.temp_structs, expr);
+            if (!(expr->flags & AST_EXPR_FLAG_CONST)) {
+                darray_append_unique(&task->fn_decl->function.temp_structs, expr);
+            }
             expr->resolved_type = suggested_type;
             break;
         }

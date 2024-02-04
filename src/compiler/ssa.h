@@ -41,6 +41,7 @@ enum SSA_Op : u8
     SSA_OP_LOAD_IM,     // LOAD_IM [8-bit size] [32-bit dest reg] [immediate (size in bytes specified in the first argument)]
     SSA_OP_LOAD_PARAM,  // LOAD_PARAM [32-bit dest reg] [32-bit param index]
     SSA_OP_LOAD_PTR,    // LOAD_PTR [8-bit size reg] [32-bit dest reg] [32-bit ptr_reg]
+    SSA_OP_LOAD_CONST,  // LOAD_CONST [32-bit dest reg] [32-bit offset]
 
     SSA_OP_STRUCT_OFFSET, // STRUCT_OFFSET [32-bit dest reg] [32-bit base ptr reg] [32-bit offset] [16-bit index]
 
@@ -87,6 +88,8 @@ struct SSA_Program
     Allocator* allocator;
 
     s64 entry_fn_index;
+
+    DArray<u8> constant_memory;
     DArray<SSA_Function> functions;
 };
 
@@ -123,15 +126,24 @@ NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, u32 dest_reg, u
 NAPI u32 ssa_emit_load_immediate(SSA_Builder* builder, s64 bit_size, u64 immediate_value);
 NAPI u32 ssa_emit_load_param(SSA_Builder* builder, u32 param_index);
 NAPI u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg);
+NAPI u32 ssa_emit_load_constant(SSA_Builder *builder, u32 offset);
 NAPI u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, s64 bit_offset, s64 index);
 NAPI void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u32 false_block);
 NAPI void ssa_emit_jmp(SSA_Builder* builder, u32 block);
 
 NAPI void ssa_emit_op(SSA_Builder* builder, SSA_Op op);
+
 NAPI void ssa_emit_8(SSA_Builder* builder, u8 value);
 NAPI void ssa_emit_16(SSA_Builder* builder, u16 value);
 NAPI void ssa_emit_32(SSA_Builder* builder, u32 value);
 NAPI void ssa_emit_64(SSA_Builder* builder, u64 value);
+
+NAPI void ssa_emit_8(DArray<u8> *bytes, u8 value);
+NAPI void ssa_emit_16(DArray<u8> *bytes, u16 value);
+NAPI void ssa_emit_32(DArray<u8> *bytes, u32 value);
+NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
+
+NAPI u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr);
 
 NAPI String ssa_to_string(Allocator* allocator, SSA_Program* program);
 NAPI void ssa_print(String_Builder* sb, SSA_Program* program);

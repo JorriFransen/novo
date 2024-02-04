@@ -1,18 +1,4 @@
 
-// TODO:
-//  - Redo linear allocator to have blocks
-//  - Global variables
-//  - Capture errors, and check for them in tests
-//  - Basic control flow
-//      - switch
-//  - Foreign functions (call printf)
-//  - #run
-//  - #insert
-//  - Flag for lvalue expressions?
-//  - Constant variables
-//  - Defer
-//  - Nested function declarations
-
 Vec :: struct {
     x: s64;
     y: s64;

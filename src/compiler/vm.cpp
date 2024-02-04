@@ -219,6 +219,14 @@ u64 vm_run(VM* vm)
                 break;
             }
 
+            case SSA_OP_LOAD_CONST: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 offset = vm_fetch<u32>(block, &ip);
+
+                vm_set_register(vm, dest_reg, (u64)&vm->current_program->constant_memory[offset]);
+                break;
+            }
+
             case SSA_OP_STRUCT_OFFSET: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 ptr_reg = vm_fetch<u32>(block, &ip);

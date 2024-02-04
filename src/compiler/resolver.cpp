@@ -427,7 +427,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
         case AST_Expression_Kind::COMPOUND: {
 
-            bool all_const = false;
+            bool all_const = true;
 
             for (s64 i = 0; i < expr->compound.expressions.count; i++) {
 

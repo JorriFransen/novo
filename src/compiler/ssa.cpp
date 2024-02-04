@@ -40,6 +40,7 @@ void ssa_program_init(SSA_Program* program, Allocator* allocator)
 {
     program->allocator = allocator;
     program->entry_fn_index = -1;
+    darray_init(allocator, &program->constant_memory);
     darray_init(allocator, &program->functions);
 }
 
@@ -604,27 +605,35 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
         case AST_Expression_Kind::COMPOUND: {
 
-            u32 compound_alloc_reg;
-            bool found = ssa_find_alloc(builder, lvalue_expr, &compound_alloc_reg);
-            assert(found);
+            if (lvalue_expr->flags & AST_EXPR_FLAG_CONST) {
 
-            s64 offset = 0;
-            for (s64 i = 0; i < lvalue_expr->compound.expressions.count; i++) {
+                u32 offset = ssa_emit_constant(builder, lvalue_expr);
+                return ssa_emit_load_constant(builder, offset);
 
-                AST_Expression* expr = lvalue_expr->compound.expressions[i];
-                u32 value_reg = ssa_emit_expression(builder, expr, scope);
+            } else {
 
-                u32 ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, offset, i);
-                offset += expr->resolved_type->bit_size;
+                u32 compound_alloc_reg;
+                bool found = ssa_find_alloc(builder, lvalue_expr, &compound_alloc_reg);
+                assert(found);
 
-                if (expr->resolved_type->kind == Type_Kind::STRUCT) {
-                    ssa_emit_memcpy(builder, ptr_reg, value_reg, expr->resolved_type->bit_size);
-                } else {
-                    ssa_emit_store_ptr(builder, expr->resolved_type->bit_size, ptr_reg, value_reg);
+                s64 offset = 0;
+                for (s64 i = 0; i < lvalue_expr->compound.expressions.count; i++) {
+
+                    AST_Expression* expr = lvalue_expr->compound.expressions[i];
+                    u32 value_reg = ssa_emit_expression(builder, expr, scope);
+
+                    u32 ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, offset, i);
+                    offset += expr->resolved_type->bit_size;
+
+                    if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+                        ssa_emit_memcpy(builder, ptr_reg, value_reg, expr->resolved_type->bit_size);
+                    } else {
+                        ssa_emit_store_ptr(builder, expr->resolved_type->bit_size, ptr_reg, value_reg);
+                    }
                 }
-            }
 
-            return compound_alloc_reg;
+                return compound_alloc_reg;
+            }
         }
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
@@ -901,6 +910,17 @@ u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg)
     return dest_reg;
 }
 
+u32 ssa_emit_load_constant(SSA_Builder *builder, u32 offset)
+{
+    u32 dest_reg = ssa_register_create(builder);
+
+    ssa_emit_op(builder, SSA_OP_LOAD_CONST);
+    ssa_emit_32(builder, dest_reg);
+    ssa_emit_32(builder, offset);
+
+    return dest_reg;
+}
+
 u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, s64 bit_offset, s64 index)
 {
     assert(bit_offset % 8 == 0);
@@ -961,24 +981,38 @@ void ssa_emit_op(SSA_Builder* builder, SSA_Op op)
 
 void ssa_emit_8(SSA_Builder* builder, u8 value)
 {
-    auto bytes = &builder->function->blocks[builder->block_index].bytes;
-
-    darray_append(bytes, value);
+    ssa_emit_8(&builder->function->blocks[builder->block_index].bytes, value);
 }
 
 void ssa_emit_16(SSA_Builder* builder, u16 value)
 {
-    auto bytes = &builder->function->blocks[builder->block_index].bytes;
+    ssa_emit_16(&builder->function->blocks[builder->block_index].bytes, value);
+}
 
+void ssa_emit_32(SSA_Builder* builder, u32 value)
+{
+    ssa_emit_32(&builder->function->blocks[builder->block_index].bytes, value);
+}
+
+void ssa_emit_64(SSA_Builder* builder, u64 value)
+{
+    ssa_emit_64(&builder->function->blocks[builder->block_index].bytes, value);
+}
+
+void ssa_emit_8(DArray<u8> *bytes, u8 value)
+{
+    darray_append(bytes, value);
+}
+
+void ssa_emit_16(DArray<u8> *bytes, u16 value)
+{
     // Little endian
     darray_append(bytes, (u8)(value & 0xFF));
     darray_append(bytes, (u8)((value >> 8) & 0xFF));
 }
 
-void ssa_emit_32(SSA_Builder* builder, u32 value)
+void ssa_emit_32(DArray<u8> *bytes, u32 value)
 {
-    auto bytes = &builder->function->blocks[builder->block_index].bytes;
-
     // Little endian
     darray_append(bytes, (u8)(value & 0xFF));
     darray_append(bytes, (u8)((value >> 8) & 0xFF));
@@ -986,10 +1020,8 @@ void ssa_emit_32(SSA_Builder* builder, u32 value)
     darray_append(bytes, (u8)((value >> 24) & 0xFF));
 }
 
-void ssa_emit_64(SSA_Builder* builder, u64 value)
+void ssa_emit_64(DArray<u8> *bytes, u64 value)
 {
-    auto bytes = &builder->function->blocks[builder->block_index].bytes;
-
     // Little endian
     darray_append(bytes, (u8)(value & 0xFF));
     darray_append(bytes, (u8)((value >> 8) & 0xFF));
@@ -1000,6 +1032,54 @@ void ssa_emit_64(SSA_Builder* builder, u64 value)
     darray_append(bytes, (u8)((value >> 40) & 0xFF));
     darray_append(bytes, (u8)((value >> 48) & 0xFF));
     darray_append(bytes, (u8)((value >> 56) & 0xFF));
+}
+
+u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr)
+{
+    assert(const_expr->flags & AST_EXPR_FLAG_CONST);
+
+    s64 offset = builder->program->constant_memory.count;
+    assert(offset <= U32_MAX);
+
+    switch (const_expr->kind) {
+
+        case AST_Expression_Kind::INVALID: assert(false); break;
+        case AST_Expression_Kind::IDENTIFIER: assert(false); break;
+        case AST_Expression_Kind::BINARY: assert(false); break;
+        case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::CALL: assert(false); break;
+
+        case AST_Expression_Kind::COMPOUND: {
+            assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
+
+            for (s64 i = 0; i < const_expr->compound.expressions.count; i++) {
+                ssa_emit_constant(builder, const_expr->compound.expressions[i]);
+            }
+            break;
+        }
+
+        case AST_Expression_Kind::INTEGER_LITERAL: {
+            Type *inttype = const_expr->resolved_type;
+            assert(inttype->kind == Type_Kind::INTEGER);
+
+            switch (inttype->bit_size) {
+                default: assert(false); break;
+                case 8: ssa_emit_8(&builder->program->constant_memory, (u8)const_expr->integer_literal); break;
+                case 16: ssa_emit_16(&builder->program->constant_memory, (u16)const_expr->integer_literal); break;
+                case 32: ssa_emit_32(&builder->program->constant_memory, (u32)const_expr->integer_literal); break;
+                case 64: ssa_emit_64(&builder->program->constant_memory, (u64)const_expr->integer_literal); break;
+            }
+
+            break;
+        }
+
+        case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
+        case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
+    }
+
+    return offset;
 }
 
 String ssa_to_string(Allocator* allocator, SSA_Program* program)
@@ -1018,6 +1098,21 @@ String ssa_to_string(Allocator* allocator, SSA_Program* program)
 
 void ssa_print(String_Builder* sb, SSA_Program* program)
 {
+    if (program->constant_memory.count) {
+        bool newline = true;
+        for (s64 i = 0; i < program->constant_memory.count; i++) {
+
+            if (newline) string_builder_append(sb, "0x%.8x: ", i);
+            newline = (i + 1) % 8 == 0;
+
+            string_builder_append(sb, "%.2x ", program->constant_memory[i]);
+
+            if (newline) string_builder_append(sb, "\n");
+        }
+
+        string_builder_append(sb, "\n");
+    }
+
     for (s64 fi = 0; fi < program->functions.count; fi++) {
         if (fi != 0) string_builder_append(sb, "\n");
 
@@ -1185,6 +1280,17 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             ip += sizeof(u32);
 
             string_builder_append(sb, "  %%%u = LOAD_PTR %hhu %%%u\n", dest_reg, size_reg, ptr_reg);
+            break;
+        }
+
+        case SSA_OP_LOAD_CONST: {
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 offset_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = LOAD_CONST %u\n", dest_reg, offset_reg);
             break;
         }
 
