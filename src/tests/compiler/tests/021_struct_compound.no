@@ -16,6 +16,7 @@ add_v2 :: (a: Vec, b: Vec) -> Vec {
 main :: () -> s64 {
     a : Vec = { 1, 2 };
     r := add_v1(a, { 11, 22 });
+
     r = add_v2(r, { 2, 3 });
 
     return r.x + r.y;

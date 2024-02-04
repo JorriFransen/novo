@@ -617,7 +617,11 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
                 u32 ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, offset, i);
                 offset += expr->resolved_type->bit_size;
 
-                ssa_emit_store_ptr(builder, expr->resolved_type->bit_size, ptr_reg, value_reg);
+                if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+                    ssa_emit_memcpy(builder, ptr_reg, value_reg, expr->resolved_type->bit_size);
+                } else {
+                    ssa_emit_store_ptr(builder, expr->resolved_type->bit_size, ptr_reg, value_reg);
+                }
             }
 
             return compound_alloc_reg;
@@ -669,7 +673,11 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             } else {
 
                 auto lvalue = ssa_emit_lvalue(builder, expr, scope);
-                result = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
+                if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+                    result = lvalue;
+                } else {
+                    result = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
+                }
             }
             break;
         }
@@ -777,7 +785,10 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             break;
         }
 
-        case AST_Expression_Kind::COMPOUND: assert(false); break;
+        case AST_Expression_Kind::COMPOUND: {
+            return ssa_emit_lvalue(builder, expr, scope);
+            break;
+        }
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
             result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);
@@ -833,6 +844,7 @@ NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, u32 dest_reg, u
     assert(bit_size % 8 == 0);
     auto size = bit_size / 8;
     assert(size >= 0 && size <= U8_MAX);
+    assert(size <= 8);
 
     ssa_emit_op(builder, SSA_OP_STORE_PTR);
     ssa_emit_8(builder, size);
@@ -877,6 +889,7 @@ u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg)
     assert(bit_size % 8 == 0);
     auto size = bit_size / 8;
     assert(size > 0 && size < U8_MAX);
+    assert(size <= 8);
 
     u32 dest_reg = ssa_register_create(builder);
 

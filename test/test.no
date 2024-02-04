@@ -17,19 +17,15 @@ Vec :: struct {
     y : s64;
 }
 
-add_v1 :: (a: Vec, b: Vec) -> Vec {
-    return { a.x + b.x, a.y + b.y };
-}
-
-add_v2 :: (a: Vec, b: Vec) -> Vec {
-    r : Vec = { a.x + b.x, a.y + b.y };
-    return r;
+AABB :: struct {
+    pos: Vec;
+    size: Vec;
 }
 
 main :: () -> s64 {
-    a : Vec = { 1, 2 };
-    r := add_v1(a, { 11, 22 });
-    r = add_v2(r, { 2, 3 });
 
-    return r.x + r.y;
+    s : Vec = { 3, 4 };
+    r : AABB = { { 1, 2 }, s };
+
+    return r.pos.x + r.pos.y + r.size.x + r.size.y;
 }
