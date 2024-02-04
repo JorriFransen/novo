@@ -145,11 +145,20 @@ u64 vm_run(VM *vm)
             }
 
             case SSA_OP_STORE_PTR: {
+                u8 size = vm_fetch<u8>(block, &ip);
                 u32 ptr_reg = vm_fetch<u32>(block, &ip);
                 u32 value_reg = vm_fetch<u32>(block, &ip);
 
-                auto ptr = (u64 *)vm_get_register(vm, ptr_reg);
-                *ptr = vm_get_register(vm, value_reg);
+                u64 ptr_value = vm_get_register(vm, ptr_reg);
+                u64 value = vm_get_register(vm, value_reg);
+
+                switch (size) {
+                    default: assert(false); break;
+                    case 1: *(u8*)ptr_value = (u8)value;
+                    case 2: *(u16*)ptr_value = (u16)value;
+                    case 4: *(u32*)ptr_value = (u32)value;
+                    case 8: *(u64*)ptr_value = (u64)value;
+                }
                 break;
             }
 
@@ -181,10 +190,10 @@ u64 vm_run(VM *vm)
 
                 switch (size) {
                     default: assert(false); break;
-                    case 8 : value = *(u8  *)ptr_value; break;
-                    case 16: value = *(u16 *)ptr_value; break;
-                    case 32: value = *(u32 *)ptr_value; break;
-                    case 64: value = *(u64 *)ptr_value; break;
+                    case 1: value = *(u8*)ptr_value; break;
+                    case 2: value = *(u16*)ptr_value; break;
+                    case 4: value = *(u32*)ptr_value; break;
+                    case 8: value = *(u64*)ptr_value; break;
                 }
 
                 vm_set_register(vm, dest_reg, value);

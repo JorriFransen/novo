@@ -192,7 +192,7 @@ bool ssa_emit_function(Instance *inst, SSA_Program *program, AST_Declaration *de
             if (sret) param_index++;
             u32 param_reg = ssa_emit_load_param(builder, param_index);
 
-            ssa_emit_store_ptr(builder, param_storage_index++, param_reg);
+            ssa_emit_store_ptr(builder, param_decl->resolved_type->bit_size, param_storage_index++, param_reg);
         }
     }
 
@@ -308,7 +308,7 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
                         case Type_Kind::INTEGER:
                         case Type_Kind::BOOLEAN: {
                             u32 value_reg = ssa_emit_expression(builder, init_expr, scope);
-                            ssa_emit_store_ptr(builder, alloc_reg, value_reg);
+                            ssa_emit_store_ptr(builder, init_expr->resolved_type->bit_size, alloc_reg, value_reg);
                             break;
                         }
 
@@ -340,7 +340,7 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
                     u32 rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);
                     auto lvalue = ssa_emit_lvalue(builder, stmt->assignment.lvalue, scope);
 
-                    ssa_emit_store_ptr(builder, lvalue, rvalue);
+                    ssa_emit_store_ptr(builder, stmt->assignment.rvalue->resolved_type->bit_size, lvalue, rvalue);
 
                     break;
                 }
@@ -359,8 +359,9 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
 
         case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
 
+            auto bit_size = stmt->arithmetic_assignment.lvalue->resolved_type->bit_size;
             u32 lvalue = ssa_emit_lvalue(builder, stmt->arithmetic_assignment.lvalue, scope);
-            u32 lhs = ssa_emit_load_ptr(builder, stmt->arithmetic_assignment.lvalue->resolved_type->bit_size, lvalue);
+            u32 lhs = ssa_emit_load_ptr(builder, bit_size, lvalue);
             u32 rhs = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
 
             switch (stmt->arithmetic_assignment.op) {
@@ -374,7 +375,7 @@ void ssa_emit_statement(SSA_Builder *builder, AST_Statement *stmt, Scope *scope)
             ssa_emit_32(builder, lhs);
             ssa_emit_32(builder, rhs);
 
-            ssa_emit_store_ptr(builder, lvalue, result);
+            ssa_emit_store_ptr(builder, bit_size, lvalue, result);
 
             break;
         }
@@ -847,9 +848,14 @@ void ssa_emit_memcpy(SSA_Builder *builder, u32 dest_ptr_reg, u32 src_ptr_reg, s6
     ssa_emit_32(builder, size);
 }
 
-void ssa_emit_store_ptr(SSA_Builder *builder, u32 dest_reg, u32 source_reg)
+NAPI void ssa_emit_store_ptr(SSA_Builder *builder, s64 bit_size, u32 dest_reg, u32 source_reg)
 {
+    assert(bit_size % 8 == 0);
+    auto size = bit_size / 8;
+    assert(size >= 0 && size <= U8_MAX);
+
     ssa_emit_op(builder, SSA_OP_STORE_PTR);
+    ssa_emit_8(builder, size);
     ssa_emit_32(builder, dest_reg);
     ssa_emit_32(builder, source_reg);
 }
@@ -866,13 +872,14 @@ u32 ssa_emit_load_param(SSA_Builder *builder, u32 param_index)
 
 u32 ssa_emit_load_ptr(SSA_Builder *builder, s64 bit_size, u32 ptr_reg)
 {
-    assert(bit_size > 0 && bit_size < U8_MAX);
     assert(bit_size % 8 == 0);
+    auto size = bit_size / 8;
+    assert(size > 0 && size < U8_MAX);
 
     u32 dest_reg = ssa_register_create(builder);
 
     ssa_emit_op(builder, SSA_OP_LOAD_PTR);
-    ssa_emit_8(builder, bit_size);
+    ssa_emit_8(builder, size);
     ssa_emit_32(builder, dest_reg);
     ssa_emit_32(builder, ptr_reg);
 
@@ -1068,13 +1075,16 @@ s64 ssa_print_instruction(String_Builder *sb, SSA_Program *program, SSA_Function
         }
 
         case SSA_OP_STORE_PTR: {
+            u8 size_reg = *(u8 *)&bytes[ip];
+            ip += sizeof(u8);
+
             u32 ptr_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
             u32 value_reg = *(u32 *)&bytes[ip];
             ip += sizeof(u32);
 
-            string_builder_append(sb, "  STORE_PTR %%%u %%%u\n", ptr_reg, value_reg);
+            string_builder_append(sb, "  STORE_PTR %hu %%%u %%%u\n", size_reg, ptr_reg, value_reg);
             break;
         }
 

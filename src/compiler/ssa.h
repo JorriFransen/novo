@@ -32,11 +32,11 @@ enum SSA_Op : u8
     SSA_OP_LTEQ,        // LTEQ [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
     SSA_OP_GTEQ,        // GTEQ [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
-    SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size]
+    SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size in bytes]
 
-    SSA_OP_MEMCPY,      // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [32-bit size]
+    SSA_OP_MEMCPY,      // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [32-bit size in bytes]
 
-    SSA_OP_STORE_PTR,   // STORE_PTR [32-bit ptr reg] [32-bit value reg]
+    SSA_OP_STORE_PTR,   // STORE_PTR [8-bit size reg] [32-bit ptr reg] [32-bit value reg]
 
     SSA_OP_LOAD_IM,     // LOAD_IM [32-bit dest reg] [64-bit immediate]
     SSA_OP_LOAD_PARAM,  // LOAD_PARAM [32-bit dest reg] [32-bit param index]
@@ -119,7 +119,7 @@ NAPI s64 ssa_emit_expression(SSA_Builder *builder, AST_Expression *expr, Scope *
 
 NAPI u32 ssa_emit_alloc(SSA_Builder *builder, s64 bit_size);
 NAPI void ssa_emit_memcpy(SSA_Builder *builder, u32 dest_ptr_reg, u32 src_ptr_reg, s64 bit_size);
-NAPI void ssa_emit_store_ptr(SSA_Builder *builder, u32 dest_reg, u32 source_reg);
+NAPI void ssa_emit_store_ptr(SSA_Builder *builder, s64 bit_size, u32 dest_reg, u32 source_reg);
 NAPI u32 ssa_emit_load_param(SSA_Builder *builder, u32 param_index);
 NAPI u32 ssa_emit_load_ptr(SSA_Builder *builder, s64 bit_size, u32 ptr_reg);
 NAPI void ssa_emit_jmp_if(SSA_Builder *builder, u32 cond_reg, u32 true_block, u32 false_block);
