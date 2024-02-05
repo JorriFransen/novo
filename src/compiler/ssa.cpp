@@ -602,15 +602,29 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::BINARY: assert(false); break;
 
         case AST_Expression_Kind::MEMBER: {
-            auto base_lvalue = ssa_emit_lvalue(builder, lvalue_expr->member.base, scope);
-
             auto field = lvalue_expr->member.member_name->decl;
             assert(field);
             assert(field->kind == AST_Declaration_Kind::STRUCT_MEMBER);
 
             auto index = field->variable.index;
 
-            Type* struct_type = lvalue_expr->member.base->resolved_type;
+            Type *base_type = lvalue_expr->member.base->resolved_type;
+            Type *struct_type = nullptr;
+
+            u32 base_lvalue;
+
+            if (base_type->kind == Type_Kind::STRUCT) {
+                struct_type = base_type;
+                base_lvalue = ssa_emit_lvalue(builder, lvalue_expr->member.base, scope);
+            } else {
+                assert(base_type->kind == Type_Kind::POINTER);
+                assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
+                struct_type = base_type->pointer.base;
+                base_lvalue = ssa_emit_expression(builder, lvalue_expr->member.base, scope);
+            }
+
+            assert(struct_type);
+
             assert(struct_type->kind == Type_Kind::STRUCT);
             auto offset = struct_type->structure.members[index].offset;
 

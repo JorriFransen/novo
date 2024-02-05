@@ -422,10 +422,22 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 return false;
             }
 
-            Type* struct_type = expr->member.base->resolved_type;
-            assert(struct_type->kind == Type_Kind::STRUCT);
+            Type* base_type = expr->member.base->resolved_type;
+            Type *struct_type = nullptr;
 
-            AST_Declaration* field = scope_find_symbol(struct_type->structure.scope, expr->member.member_name->atom, nullptr);
+            if (base_type->kind == Type_Kind::STRUCT) {
+                struct_type = base_type;
+            } else {
+                assert(base_type->kind == Type_Kind::POINTER);
+                assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
+
+                struct_type = base_type->pointer.base;
+            }
+
+            assert(struct_type);
+            Scope *struct_scope = struct_type->structure.scope;
+
+            AST_Declaration* field = scope_find_symbol(struct_scope, expr->member.member_name->atom, nullptr);
             u32 index = field->variable.index;
             assert(index >= 0 && index < struct_type->structure.members.count);
 

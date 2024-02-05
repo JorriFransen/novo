@@ -385,10 +385,18 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 }
             }
 
-            Type* struct_type = expr->member.base->resolved_type;
-            assert(struct_type->kind == Type_Kind::STRUCT);
+            Type* base_type = expr->member.base->resolved_type;
+            Scope* struct_scope = nullptr;
 
-            Scope* struct_scope = struct_type->structure.scope;
+            if (base_type->kind == Type_Kind::STRUCT) {
+                struct_scope = base_type->structure.scope;
+            } else {
+                assert(base_type->kind == Type_Kind::POINTER);
+                assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
+                struct_scope = base_type->pointer.base->structure.scope;
+            }
+
+            assert(struct_scope);
 
             if (!resolve_identifier(inst, task, expr->member.member_name, struct_scope)) {
                 return false;
