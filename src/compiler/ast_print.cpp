@@ -124,11 +124,17 @@ static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Decla
             string_builder_append(sb, "VAR_DECL: '%s'\n", name.data);
 
             if (decl->variable.type_spec) {
-                ast_ts_to_string(instance, sb, decl->variable.type_spec, indent + 1);
+                ast_print_pos(instance, sb, decl->variable.type_spec->range_id);
+                ast_print_indent(sb, indent + 1);
+                string_builder_append(sb, "TS:\n");
+                ast_ts_to_string(instance, sb, decl->variable.type_spec, indent + 2);
             }
 
             if (decl->variable.init_expr) {
-                ast_expr_to_string(instance, sb, decl->variable.init_expr, indent + 1);
+                ast_print_pos(instance, sb, decl->variable.init_expr->range_id);
+                ast_print_indent(sb, indent + 1);
+                string_builder_append(sb, "INIT:\n");
+                ast_expr_to_string(instance, sb, decl->variable.init_expr, indent + 2);
             }
             break;
         }
