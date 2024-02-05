@@ -1,0 +1,4 @@
+[wrap-file]
+directory = dyncall-1.4
+source_filename = dyncall-1.4.tar.gz
+patch_directory = dyncall

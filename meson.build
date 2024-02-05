@@ -10,6 +10,9 @@ if compiler_id == 'clang-cl'
   add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')
 endif
 
+dyncall_proj = subproject('dyncall')
+dyncall_dep = dyncall_proj.get_variable('libdyncall_dep')
+
 common_source = [
   'src/common/defines.h',
   'src/common/filesystem.cpp', 'src/common/filesystem.h',
@@ -56,7 +59,7 @@ compiler_source = [
   'src/compiler/vm.cpp', 'src/compiler/vm.h',
 ]
 
-compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT')
+compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT', dependencies: [dyncall_dep])
 
 
 driver_include_dirs = ['src/driver/']

@@ -2,6 +2,8 @@
 
 #include <defines.h>
 
+typedef struct DCCallVM_    DCCallVM;
+
 namespace Novo {
 
 struct Allocator;
@@ -23,6 +25,8 @@ struct VM
 
     u32 register_count;
     u32 stack_size;
+
+    DCCallVM* dyncall_vm;
 };
 
 NAPI void vm_init(VM* vm, Allocator* allocator);

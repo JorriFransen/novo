@@ -1,5 +1,7 @@
 #include "vm.h"
 
+#include <dyncall.h>
+
 #include <containers/darray.h>
 #include <cstdio>
 #include <memory/allocator.h>
@@ -28,6 +30,10 @@ void vm_init(VM* vm, Allocator* allocator)
 
     vm->registers = allocate_array<u64>(allocator, vm->register_count);
     vm->stack = allocate_array<u64>(allocator, vm->stack_size);
+
+    vm->dyncall_vm = dcNewCallVM(4096);
+    dcMode(vm->dyncall_vm, DC_CALL_C_DEFAULT);
+    dcReset(vm->dyncall_vm);
 }
 
 template <typename T>
