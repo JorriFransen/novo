@@ -616,6 +616,10 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
 
+        case AST_Expression_Kind::DEREF: {
+            return ssa_emit_expression(builder, lvalue_expr->operand, scope);
+        }
+
         case AST_Expression_Kind::COMPOUND: {
 
             if (lvalue_expr->flags & AST_EXPR_FLAG_CONST) {
@@ -811,6 +815,20 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
         case AST_Expression_Kind::ADDRESS_OF: {
             return ssa_emit_lvalue(builder, expr->operand, scope);
+            break;
+        }
+
+        case AST_Expression_Kind::DEREF: {
+            Type *operand_type = expr->operand->resolved_type;
+
+            if (operand_type->kind == Type_Kind::STRUCT) {
+                assert(false);
+            } else {
+                u32 ptr_reg = ssa_emit_expression(builder, expr->operand, scope);
+                return ssa_emit_load_ptr(builder, operand_type->bit_size, ptr_reg);
+            }
+
+            assert(false);
             break;
         }
 
@@ -1080,6 +1098,7 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u
         case AST_Expression_Kind::CALL: assert(false); break;
 
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
+        case AST_Expression_Kind::DEREF: assert(false); break;
 
         case AST_Expression_Kind::COMPOUND: {
             assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);

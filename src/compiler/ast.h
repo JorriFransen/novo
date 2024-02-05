@@ -207,6 +207,7 @@ enum class AST_Expression_Kind : u32
     CALL,
 
     ADDRESS_OF,
+    DEREF,
 
     COMPOUND,
 
@@ -344,6 +345,7 @@ NAPI AST_Expression* ast_binary_expression(Instance* instance, u32 op, AST_Expre
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name);
 NAPI AST_Expression* ast_call_expression(Instance* instance, AST_Expression* base_expr, DArray<AST_Expression *> args, u32 range_id);
 NAPI AST_Expression *ast_address_of_expression(Instance *instance, AST_Expression *operand, u32 start_id);
+NAPI AST_Expression *ast_deref_expression(Instance *instance, AST_Expression *operand, u32 start_id);
 NAPI AST_Expression* ast_compound_expression(Instance* instance, DArray<AST_Expression*> expressions, u32 range_id);
 NAPI AST_Expression* ast_integer_literal_expression(Instance* instance, u64 i, u32 range_id);
 NAPI AST_Expression* ast_real_literal_expression(Instance* instance, Real_Value rv, u32 range_id);

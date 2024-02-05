@@ -425,7 +425,8 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             break;
         }
 
-        case AST_Expression_Kind::ADDRESS_OF: {
+        case AST_Expression_Kind::ADDRESS_OF:
+        case AST_Expression_Kind::DEREF: {
             if (!resolve_expression(inst, task, expr->operand, scope)) {
                 return false;
             }

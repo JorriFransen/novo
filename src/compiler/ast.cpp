@@ -314,6 +314,16 @@ AST_Expression *ast_address_of_expression(Instance *instance, AST_Expression *op
     return result;
 }
 
+AST_Expression *ast_deref_expression(Instance *instance, AST_Expression *operand, u32 start_id)
+{
+    auto end_id = source_range_end(instance, operand->range_id);
+    auto range_id = source_range(instance, start_id, end_id);
+
+    auto result = ast_expression(instance, AST_Expression_Kind::DEREF, range_id);
+    result->operand = operand;
+    return result;
+}
+
 AST_Expression* ast_compound_expression(Instance* instance, DArray<AST_Expression*> expressions, u32 range_id)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::COMPOUND, range_id);

@@ -18,18 +18,19 @@
 //  - Capture errors, and check for them in tests
 
 
-Vec :: struct {
-    x: s64;
-    y: s64;
-}
+// inc :: (ptr: *s64) {
+//     <ptr = <ptr + 1;
+// }
 
 main :: () -> s64 {
 
-    x := 42;
+    x := 40;
     px := *x;
 
-    // v : Vec;
-    // py := *v.y;
+    x += 2;
+    <px = <px * 2;
 
-    return 0;
+    // inc(px);
+
+    return <px;
 }

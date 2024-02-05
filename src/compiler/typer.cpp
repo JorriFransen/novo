@@ -487,6 +487,23 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
+        case AST_Expression_Kind::DEREF: {
+
+            if (!type_expression(inst, task, expr->operand, scope, nullptr)) {
+                return false;
+            }
+
+            if (expr->operand->resolved_type->kind != Type_Kind::POINTER) {
+                auto sp_id = source_range_start(inst, expr->operand->range_id);
+                instance_fatal_error(inst, sp_id, "Cannot dereference non pointer expression");
+                assert(false);
+                return false;
+            }
+
+            expr->resolved_type = expr->operand->resolved_type->pointer.base;
+            break;
+        }
+
         case AST_Expression_Kind::COMPOUND: {
             assert(suggested_type);
             assert(suggested_type->kind == Type_Kind::STRUCT);
