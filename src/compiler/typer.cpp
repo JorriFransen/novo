@@ -572,10 +572,24 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
         }
 
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
-        case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
+
+        case AST_Expression_Kind::CHAR_LITERAL: {
+            if (suggested_type) {
+                assert(suggested_type == inst->builtin_type_u8);
+                expr->resolved_type = suggested_type;
+            } else {
+                expr->resolved_type = inst->builtin_type_u8;
+            }
+            break;
+        }
 
         case AST_Expression_Kind::BOOL_LITERAL: {
-            expr->resolved_type = inst->builtin_type_bool;
+            if (suggested_type) {
+                assert(suggested_type->kind == Type_Kind::BOOLEAN);
+                expr->resolved_type = suggested_type;
+            } else {
+                expr->resolved_type = inst->builtin_type_bool;
+            }
             break;
         }
 

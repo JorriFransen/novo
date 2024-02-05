@@ -1,6 +1,5 @@
 
 // TODO:
-//  - Pointers
 //  - Foreign functions (call printf)
 //  - Builtin string type
 //  - #run
@@ -17,28 +16,11 @@
 //  - Redo linear allocator to have blocks
 //  - Capture errors, and check for them in tests
 
-
-Vec :: struct {
-    x: s64;
-    y: s64;
-}
-
-add_y :: (v: *Vec, y: s64) {
-    v.y += y;
-}
+// putchar :: (char: int) -> int #foreign;
 
 main :: () -> s64 {
 
-    v: Vec = { 1, 2 };
+    c : u8 = 'i';
 
-    vptr := *v;
-    yptr := *v.y;
-
-    vptr.x *= 2;
-    <yptr *= 3;
-
-    v2 := <vptr;
-    add_y(*v2, 3);
-
-    return vptr.x + vptr.y + v2.x + v2.y;
+    return c;
 }

@@ -866,7 +866,11 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
         }
 
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
-        case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
+
+        case AST_Expression_Kind::CHAR_LITERAL: {
+            result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);
+            break;
+        }
 
         case AST_Expression_Kind::BOOL_LITERAL: {
             result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->bool_literal);
