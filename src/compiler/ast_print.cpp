@@ -423,6 +423,12 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
             break;
         }
 
+        case AST_Expression_Kind::ADDRESS_OF: {
+            string_builder_append(sb, "EXPR_ADDRESS_OF:\n");
+            ast_expr_to_string(instance, sb, expr->call.base, indent + 1);
+            break;
+        }
+
         case AST_Expression_Kind::COMPOUND: {
             string_builder_append(sb, "EXPR_COMPOUND: (%d members)\n", expr->compound.expressions.count);
 

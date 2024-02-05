@@ -425,6 +425,14 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             break;
         }
 
+        case AST_Expression_Kind::ADDRESS_OF: {
+            if (!resolve_expression(inst, task, expr->operand, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
         case AST_Expression_Kind::COMPOUND: {
 
             bool all_const = true;

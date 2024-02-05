@@ -316,7 +316,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                         case Type_Kind::VOID: assert(false); break;
 
                         case Type_Kind::INTEGER:
-                        case Type_Kind::BOOLEAN: {
+                        case Type_Kind::BOOLEAN:
+                        case Type_Kind::POINTER: {
                             u32 value_reg = ssa_emit_expression(builder, init_expr, scope);
                             ssa_emit_store_ptr(builder, init_expr->resolved_type->bit_size, alloc_reg, value_reg);
                             break;
@@ -355,6 +356,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     break;
                 }
 
+                case Type_Kind::POINTER: assert(false); break;
                 case Type_Kind::FUNCTION: assert(false); break;
 
                 case Type_Kind::STRUCT: {
@@ -612,6 +614,8 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             return ssa_emit_expression(builder, lvalue_expr, scope);
         }
 
+        case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
+
         case AST_Expression_Kind::COMPOUND: {
 
             if (lvalue_expr->flags & AST_EXPR_FLAG_CONST) {
@@ -802,6 +806,11 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             if (sret) {
                 result = sret_reg;
             }
+            break;
+        }
+
+        case AST_Expression_Kind::ADDRESS_OF: {
+            return ssa_emit_lvalue(builder, expr->operand, scope);
             break;
         }
 
@@ -1069,6 +1078,8 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
+
+        case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
 
         case AST_Expression_Kind::COMPOUND: {
             assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);

@@ -14,6 +14,7 @@ Type* type_new(Instance* instance, Type_Kind kind, u32 bit_size)
     auto result = allocate<Type>(&instance->ast_allocator);
     result->kind = kind;
     result->bit_size = bit_size;
+    result->pointer_to = nullptr;
     return result;
 }
 
@@ -33,6 +34,17 @@ Type* integer_type_new(Instance* instance, bool sign, u32 bit_size)
 Type* boolean_type_new(Instance* inst, u32 bit_size)
 {
     auto result = type_new(inst, Type_Kind::BOOLEAN, bit_size);
+    return result;
+}
+
+Type* pointer_type_new(Instance* inst, Type* base)
+{
+    assert(!base->pointer_to);
+
+    auto result = type_new(inst, Type_Kind::POINTER, 64);
+    result->pointer.base = base;
+    base->pointer_to = result;
+
     return result;
 }
 
@@ -68,6 +80,13 @@ Type* struct_type_new(Instance* inst, Array_Ref<Type*> member_types, Scope* scop
     result->structure.members = members;
     result->structure.scope = scope;
     return result;
+}
+
+Type* pointer_type_get(Instance *inst, Type* base)
+{
+    if (base->pointer_to) return base->pointer_to;
+
+    return pointer_type_new(inst, base);
 }
 
 Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type)
@@ -126,6 +145,7 @@ void type_to_string(String_Builder* sb, Type* type)
             break;
         }
 
+        case Type_Kind::POINTER: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
     }

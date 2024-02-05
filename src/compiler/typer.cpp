@@ -368,6 +368,11 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 return false;
             }
 
+
+            if (decl->kind == AST_Declaration_Kind::VARIABLE) {
+                expr->flags |= AST_EXPR_FLAG_LVALUE;
+            }
+
             expr->resolved_type = decl->resolved_type;
             break;
         }
@@ -426,6 +431,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             Type* mem_type = struct_type->structure.members[index].type;
 
+            expr->flags |= AST_EXPR_FLAG_LVALUE;
             expr->resolved_type = mem_type;
             break;
         }
@@ -459,6 +465,25 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
                 darray_append_unique(&task->fn_decl->function.temp_structs, expr);
             }
+            break;
+        }
+
+        case AST_Expression_Kind::ADDRESS_OF: {
+
+            if (!type_expression(inst, task, expr->operand, scope, nullptr)) {
+                return false;
+            }
+
+            if (!(expr->operand->flags & AST_EXPR_FLAG_LVALUE)) {
+                auto sp_id = source_range_start(inst, expr->operand->range_id);
+                instance_fatal_error(inst, sp_id, "Cannot take address of non lvalue expression");
+                assert(false);
+                return false;
+            }
+
+            assert(expr->operand->flags & AST_EXPR_FLAG_LVALUE);
+
+            expr->resolved_type = pointer_type_get(inst, expr->operand->resolved_type);
             break;
         }
 

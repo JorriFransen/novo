@@ -16,19 +16,20 @@
 //  - Keyword tokens should be associated with some enum so the parser can switch on this instead of using if-else chains
 //  - Redo linear allocator to have blocks
 //  - Capture errors, and check for them in tests
-//  - Flag for lvalue expressions?
 
 
-add :: (a: s64, b: s64) -> s64 {
-    return a + b;
+Vec :: struct {
+    x: s64;
+    y: s64;
 }
 
 main :: () -> s64 {
 
-    // x := 42;
-    // px := *x;
-    //
-    // return <x;
+    x := 42;
+    px := *x;
+
+    // v : Vec;
+    // py := *v.y;
 
     return 0;
 }

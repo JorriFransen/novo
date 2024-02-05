@@ -333,6 +333,14 @@ AST_Expression* parse_leaf_expression(Parser* parser)
             break;
         }
 
+        case '*': {
+            next_token(parser->lexer);
+
+            AST_Expression *operand = parse_expression(parser);
+            result = ast_address_of_expression(parser->instance, operand, ct.source_pos_id);
+            break;
+        }
+
         case '{': {
             next_token(parser->lexer);
 
