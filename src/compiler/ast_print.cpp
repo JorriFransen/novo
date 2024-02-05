@@ -158,6 +158,11 @@ static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Decla
         };
 
         case AST_Declaration_Kind::FUNCTION: {
+
+            if (decl->flags & AST_DECL_FLAG_FOREIGN) {
+                string_builder_append(sb, "FOREIGN_");
+            }
+
             string_builder_append(sb, "FUNC_DECL: '%s'\n", name.data);
 
             if (decl->function.return_ts) {

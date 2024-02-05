@@ -16,11 +16,13 @@
 //  - Redo linear allocator to have blocks
 //  - Capture errors, and check for them in tests
 
-// putchar :: (char: int) -> int #foreign;
+putchar :: (char: int) -> int #foreign;
 
 main :: () -> s64 {
 
-    c : u8 = 'i';
+    c : int = 'H';
+
+    putchar(c);
 
     return c;
 }

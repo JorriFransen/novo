@@ -20,40 +20,41 @@ enum SSA_Op : u8
 {
     SSA_OP_NOP,
 
-    SSA_OP_ADD,         // ADD [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_SUB,         // SUB [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_MUL,         // MUL [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_DIV,         // DIV [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_ADD,           // ADD [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_SUB,           // SUB [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_MUL,           // MUL [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_DIV,           // DIV [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
-    SSA_OP_LT,          // LT [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_GT,          // GT [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_EQ,          // EQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_NEQ,         // NEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_LTEQ,        // LTEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
-    SSA_OP_GTEQ,        // GTEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_LT,            // LT [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_GT,            // GT [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_EQ,            // EQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_NEQ,           // NEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_LTEQ,          // LTEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
+    SSA_OP_GTEQ,          // GTEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
-    SSA_OP_ALLOC,       // ALLOC [32-bit dest reg] [32-bit size in bytes]
+    SSA_OP_ALLOC,         // ALLOC [32-bit dest reg] [32-bit size in bytes]
 
-    SSA_OP_MEMCPY,      // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [32-bit size in bytes]
+    SSA_OP_MEMCPY,        // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [32-bit size in bytes]
 
-    SSA_OP_STORE_PTR,   // STORE_PTR [8-bit size reg] [32-bit ptr reg] [32-bit value reg]
+    SSA_OP_STORE_PTR,     // STORE_PTR [8-bit size reg] [32-bit ptr reg] [32-bit value reg]
 
-    SSA_OP_LOAD_IM,     // LOAD_IM [8-bit size] [32-bit dest reg] [immediate (size in bytes specified in the first argument)]
-    SSA_OP_LOAD_PARAM,  // LOAD_PARAM [32-bit dest reg] [32-bit param index]
-    SSA_OP_LOAD_PTR,    // LOAD_PTR [8-bit size reg] [32-bit dest reg] [32-bit ptr_reg]
-    SSA_OP_LOAD_CONST,  // LOAD_CONST [32-bit dest reg] [32-bit offset]
+    SSA_OP_LOAD_IM,       // LOAD_IM [8-bit size] [32-bit dest reg] [immediate (size in bytes specified in the first argument)]
+    SSA_OP_LOAD_PARAM,    // LOAD_PARAM [32-bit dest reg] [32-bit param index]
+    SSA_OP_LOAD_PTR,      // LOAD_PTR [8-bit size reg] [32-bit dest reg] [32-bit ptr_reg]
+    SSA_OP_LOAD_CONST,    // LOAD_CONST [32-bit dest reg] [32-bit offset]
 
     SSA_OP_STRUCT_OFFSET, // STRUCT_OFFSET [32-bit dest reg] [32-bit base ptr reg] [32-bit offset] [16-bit index]
 
-    SSA_OP_PUSH,        // PUSH [32-bit value reg]
-    SSA_OP_POP_N,       // POP_N [32-bit count]
+    SSA_OP_PUSH,          // PUSH [32-bit value reg]
+    SSA_OP_POP_N,         // POP_N [32-bit count]
 
-    SSA_OP_CALL,        // CALL [32-bit dest reg] [32-bit function index]
-    SSA_OP_RET,         // RET [32-bit value reg]
-    SSA_OP_RET_VOID,    // RET_VOID
+    SSA_OP_CALL,          // CALL [32-bit dest reg] [32-bit function index]
+    SSA_OP_CALL_FOREIGN,  // CALL_FOREIGN [32-bit dest reg] [32-bit function index]
+    SSA_OP_RET,           // RET [32-bit value reg]
+    SSA_OP_RET_VOID,      // RET_VOID
 
-    SSA_OP_JMP_IF,      // JMP_IF [32-bit cond reg] [32-bit true block] [32-bit false block]
-    SSA_OP_JMP,         // JMP [32-bit block]
+    SSA_OP_JMP_IF,        // JMP_IF [32-bit cond reg] [32-bit true block] [32-bit false block]
+    SSA_OP_JMP,           // JMP [32-bit block]
 };
 
 struct SSA_Block
@@ -82,6 +83,7 @@ struct SSA_Function
     DArray<SSA_Alloc> allocs;
 
     bool sret;
+    bool foreign;
 };
 
 struct SSA_Constant;
@@ -103,7 +105,7 @@ struct SSA_Builder;
 NAPI void ssa_program_init(SSA_Program* program, Allocator* allocator);
 NAPI void ssa_program_free(SSA_Program* program);
 
-NAPI void ssa_function_init(SSA_Program* program, SSA_Function* func, Atom name, u32 param_count, bool sret);
+NAPI void ssa_function_init(SSA_Program* program, SSA_Function* func, Atom name, u32 param_count, bool sret, bool foreign);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, const char* name);
 

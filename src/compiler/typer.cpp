@@ -575,7 +575,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
         case AST_Expression_Kind::CHAR_LITERAL: {
             if (suggested_type) {
-                assert(suggested_type == inst->builtin_type_u8);
+                assert(suggested_type->bit_size  >= inst->builtin_type_u8->bit_size);
                 expr->resolved_type = suggested_type;
             } else {
                 expr->resolved_type = inst->builtin_type_u8;

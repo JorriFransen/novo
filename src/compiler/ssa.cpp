@@ -72,7 +72,7 @@ void ssa_program_free(SSA_Program* program)
     darray_free(&program->functions);
 }
 
-void ssa_function_init(SSA_Program* program, SSA_Function* func, Atom name, u32 param_count, bool sret)
+void ssa_function_init(SSA_Program* program, SSA_Function* func, Atom name, u32 param_count, bool sret, bool foreign)
 {
     func->name = name;
     func->register_count = 0;
@@ -84,6 +84,8 @@ void ssa_function_init(SSA_Program* program, SSA_Function* func, Atom name, u32 
 
     func->sret = sret;
     if (sret) func->param_count++;
+
+    func->foreign = foreign;
 }
 
 void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name)
@@ -145,8 +147,9 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     assert(decl->ident);
 
     bool sret = decl->resolved_type->function.return_type->kind == Type_Kind::STRUCT;
+    bool foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
 
-    ssa_function_init(program, &func, decl->ident->atom, decl->function.params.count, sret);
+    ssa_function_init(program, &func, decl->ident->atom, decl->function.params.count, sret, foreign);
 
     SSA_Builder local_builder;
     local_builder.instance = inst;
@@ -776,16 +779,16 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
             // Only support calling via identifier for now...
             assert(expr->call.base->kind == AST_Expression_Kind::IDENTIFIER);
-            auto name = expr->call.base->identifier->atom;
+            Atom name = expr->call.base->identifier->atom;
 
             u32 fn_index;
             bool found = ssa_find_function(builder->program, name, &fn_index);
             assert(found);
 
-            bool sret = builder->program->functions[fn_index].sret;
+            SSA_Function *callee = &builder->program->functions[fn_index];
 
             u32 sret_reg;
-            if (sret) {
+            if (callee->sret) {
                 bool found = ssa_find_alloc(builder, expr, &sret_reg);
                 assert(found);
 
@@ -815,7 +818,11 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
             // assert(expr->resolved_type->kind != Type_Kind::VOID);
 
-            ssa_emit_op(builder, SSA_OP_CALL);
+            if (callee->foreign) {
+                ssa_emit_op(builder, SSA_OP_CALL_FOREIGN);
+            } else {
+                ssa_emit_op(builder, SSA_OP_CALL);
+            }
 
             result = ssa_register_create(builder);
             ssa_emit_32(builder, result);
@@ -823,14 +830,14 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             ssa_emit_32(builder, fn_index);
 
             u32 arg_pop_count = expr->call.args.count;
-            if (sret) arg_pop_count++;
+            if (callee->sret) arg_pop_count++;
 
             if (arg_pop_count) {
                 ssa_emit_op(builder, SSA_OP_POP_N);
                 ssa_emit_32(builder, arg_pop_count);
             }
 
-            if (sret) {
+            if (callee->sret) {
                 result = sret_reg;
             }
             break;
@@ -1225,7 +1232,15 @@ void ssa_print(String_Builder* sb, SSA_Program* program)
         if (fi != 0) string_builder_append(sb, "\n");
 
         SSA_Function* fn = &program->functions[fi];
-        string_builder_append(sb, "%s:\n", atom_string(fn->name).data);
+
+        String name = atom_string(fn->name);
+        if (fn->foreign) {
+            string_builder_append(sb, "#foreign %s;\n", name.data);
+            continue;
+        }
+
+        string_builder_append(sb, "%s:\n", name.data);
+
 
         s64 block_index = 0;
         int printed_block_count = 0;
@@ -1447,6 +1462,19 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             assert(fn_index >= 0 && fn_index < program->functions.count);
             String name = atom_string(program->functions[fn_index].name);
             string_builder_append(sb, "  %%%u = CALL %%%s\n", dest_reg, name.data);
+            break;
+        }
+
+        case SSA_OP_CALL_FOREIGN: {
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 fn_index = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            assert(fn_index >= 0 && fn_index < program->functions.count);
+            String name = atom_string(program->functions[fn_index].name);
+            string_builder_append(sb, "  %%%u = CALL_FOREIGN %%%s\n", dest_reg, name.data);
             break;
         }
 

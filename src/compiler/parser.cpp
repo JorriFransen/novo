@@ -253,27 +253,52 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         return_ts = parse_type_spec(parser);
     }
 
-    auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 4);
+    u32 body_start_id;
+    u32 end_id;
+    DArray<AST_Statement*> body_array = {};
 
-    auto body_start_id = parser->lexer->token.source_pos_id;
-    expect_token(parser, '{');
-    while (!is_token(parser, '}')) {
+    AST_Declaration_Flags flags = AST_DECL_FLAG_NONE;
 
-        auto stmt = parse_statement(parser, fn_scope, true);
-        if (!stmt) return nullptr;
+    if (is_token(parser, '{')) {
 
-        darray_append(&stmts, stmt);
+        auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 4);
+
+        body_start_id = parser->lexer->token.source_pos_id;
+        expect_token(parser, '{');
+        while (!is_token(parser, '}')) {
+
+            auto stmt = parse_statement(parser, fn_scope, true);
+            if (!stmt) return nullptr;
+
+            darray_append(&stmts, stmt);
+        }
+
+        end_id = parser->lexer->token.source_pos_id;
+        expect_token(parser, '}');
+
+        body_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
+    } else {
+
+        body_start_id = parser->lexer->token.source_pos_id;
+        expect_token(parser, '#');
+
+        auto directive_name = parser->lexer->token;
+        expect_token(parser, TOK_NAME);
+        end_id = directive_name.source_pos_id;
+
+        assert(directive_name.atom == atom_get("foreign"));
+        expect_token(parser, ';');
+
+        flags |= AST_DECL_FLAG_FOREIGN;
     }
 
-    auto end = parser->lexer->token.source_pos_id;
-    expect_token(parser, '}');
-
-    auto body_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
 
     auto start = source_range_start(parser->instance, ident->range_id);
-    auto range = source_range(parser->instance, start, end);
+    auto range = source_range(parser->instance, start, end_id);
 
-    return ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope, range, body_start_id);
+    AST_Declaration* result = ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope, range, body_start_id);
+    result->flags |= flags;
+    return result;
 }
 
 AST_Expression* parse_leaf_expression(Parser* parser)

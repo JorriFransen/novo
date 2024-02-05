@@ -57,6 +57,7 @@ struct Instance
     Type* builtin_type_void;
     Type* builtin_type_u8;
     Type* builtin_type_s64;
+    Type* builtin_type_int;
     Type* builtin_type_bool;
 
 };

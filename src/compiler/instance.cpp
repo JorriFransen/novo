@@ -88,6 +88,10 @@ void instance_init(Instance* inst, Options options)
     auto s64_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
     scope_add_symbol(inst->global_scope, s64_decl->ident->atom, s64_decl);
 
+    inst->builtin_type_int = inst->builtin_type_s64;
+    auto int_decl = ast_builtin_type_decl(inst, inst->builtin_type_int, "int");
+    scope_add_symbol(inst->global_scope, int_decl->ident->atom, int_decl);
+
     inst->builtin_type_bool = boolean_type_new(inst, 8);
     auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);

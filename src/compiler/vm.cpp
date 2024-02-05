@@ -1,6 +1,7 @@
 #include "vm.h"
 
 #include <containers/darray.h>
+#include <cstdio>
 #include <memory/allocator.h>
 
 #include "ssa.h"
@@ -51,6 +52,12 @@ NINLINE u64 vm_stack_pop(VM* vm)
     u64 result = vm->stack[vm->sp - 1];
     vm->sp -= 1;
     return result;
+}
+
+NINLINE u64 vm_stack_top(VM *vm)
+{
+    assert(vm->sp >= 1);
+    return vm->stack[vm->sp - 1];
 }
 
 NINLINE void vm_set_register(VM* vm, u32 reg, u64 value)
@@ -280,6 +287,43 @@ u64 vm_run(VM* vm)
                 vm->block_index = 0;
                 block = &fn->blocks[0];
                 vm->register_offset += old_fn->register_count;
+
+                break;
+            }
+
+            case SSA_OP_CALL_FOREIGN: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 fn_index = vm_fetch<u32>(block, &ip);
+                assert(fn_index >= 0 && fn_index < vm->current_program->functions.count);
+                // auto old_fn = fn;
+                fn = &vm->current_program->functions[fn_index];
+                assert(fn->foreign);
+                assert(dest_reg);
+
+                u64 arg = vm_stack_top(vm);
+                assert(fn->name == atom_get("putchar"));
+                u64 result = putchar(arg);
+
+                vm_set_register(vm, dest_reg, result);
+
+                //
+                //
+                // auto new_bp = vm->sp;
+                // vm_stack_push(vm, vm->bp);
+                // vm_stack_push(vm, dest_reg);
+                // vm_stack_push(vm, ip);
+                // vm_stack_push(vm, vm->fn_index);
+                // vm_stack_push(vm, vm->block_index);
+                // vm_stack_push(vm, vm->register_offset);
+                //
+                // vm->bp = new_bp;
+                // ip = 0;
+                //
+                // vm->fn_index = fn_index;
+                // fn = &vm->current_program->functions[fn_index];
+                // vm->block_index = 0;
+                // block = &fn->blocks[0];
+                // vm->register_offset += old_fn->register_count;
 
                 break;
             }
