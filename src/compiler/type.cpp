@@ -145,7 +145,12 @@ void type_to_string(String_Builder* sb, Type* type)
             break;
         }
 
-        case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::POINTER: {
+            string_builder_append(sb, "*");
+            type_to_string(sb, type->pointer.base);
+            break;
+        }
+
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
     }

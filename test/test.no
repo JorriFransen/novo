@@ -23,11 +23,22 @@ Vec :: struct {
     y: s64;
 }
 
+add_y :: (v: *Vec, y: s64) {
+    v.y += y;
+}
+
 main :: () -> s64 {
 
     v: Vec = { 1, 2 };
 
     vptr := *v;
+    yptr := *v.y;
 
-    return vptr.x + vptr.y;
+    vptr.x *= 2;
+    <yptr *= 3;
+
+    v2 := <vptr;
+    add_y(*v2, 3);
+
+    return vptr.x + vptr.y + v2.x + v2.y;
 }

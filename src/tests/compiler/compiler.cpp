@@ -42,6 +42,7 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/022_nested_struct_compound.no", .return_code = 10 },
     { .file_path = "tests/023_constant_struct_compound.no", .return_code = 120 },
     { .file_path = "tests/024_pointers.no", .return_code = 85 },
+    { .file_path = "tests/025_struct_pointers.no", .return_code = 19 },
 };
 
 static bool run_test_case(Test_Case* tc)
