@@ -217,7 +217,9 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         ssa_emit_statement(builder, stmt, scope);
     }
 
-    if (!ssa_block_exits(builder, builder->block_index) && func.blocks[builder->block_index].incoming.count > 0) {
+    bool last_block_exits = ssa_block_exits(builder, builder->block_index);
+
+    if (!last_block_exits && func.blocks[builder->block_index].incoming.count > 0) {
         u32 sp_id;
         if (decl->function.body.count) {
             sp_id = source_range_end(inst, decl->function.body[decl->function.body.count - 1]->range_id);
@@ -225,6 +227,10 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
             sp_id = source_range_end(inst, decl->range_id);
         }
         instance_fatal_error(inst, sp_id, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
+    }
+
+    if (!last_block_exits && decl->resolved_type->function.return_type->kind == Type_Kind::VOID) {
+        ssa_emit_op(builder, SSA_OP_RET_VOID);
     }
 
     if (decl->ident->atom == atom_get("main")) {
@@ -379,6 +385,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
             switch (stmt->arithmetic_assignment.op) {
                 default: assert(false); break;
                 case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
+                case '-': ssa_emit_op(builder, SSA_OP_SUB); break;
+                case '*': ssa_emit_op(builder, SSA_OP_MUL); break;
                 case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
             }
 
@@ -420,7 +428,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 }
 
             } else {
-                assert(false);
+
+                ssa_emit_op(builder, SSA_OP_RET_VOID);
             }
             break;
         }
@@ -790,7 +799,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 ssa_emit_32(builder, arg_reg);
             }
 
-            assert(expr->resolved_type->kind != Type_Kind::VOID);
+            // assert(expr->resolved_type->kind != Type_Kind::VOID);
 
             ssa_emit_op(builder, SSA_OP_CALL);
 
@@ -1428,6 +1437,11 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             ip += sizeof(u32);
 
             string_builder_append(sb, "  RET %%%u\n", value_reg);
+            break;
+        }
+
+        case SSA_OP_RET_VOID: {
+            string_builder_append(sb, "  RET_VOID\n");
             break;
         }
 

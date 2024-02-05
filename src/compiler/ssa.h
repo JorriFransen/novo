@@ -50,6 +50,7 @@ enum SSA_Op : u8
 
     SSA_OP_CALL,        // CALL [32-bit dest reg] [32-bit function index]
     SSA_OP_RET,         // RET [32-bit value reg]
+    SSA_OP_RET_VOID,    // RET_VOID
 
     SSA_OP_JMP_IF,      // JMP_IF [32-bit cond reg] [32-bit true block] [32-bit false block]
     SSA_OP_JMP,         // JMP [32-bit block]

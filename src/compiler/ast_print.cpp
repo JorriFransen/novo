@@ -22,7 +22,7 @@ static void ast_print_indent(String_Builder* sb, int indent);
 static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Declaration* decl, int indent = 0);
 static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_Statement* stmt, int indent = 0);
 static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expression* expr, int indent = 0);
-static void ast_ts_to_string(Instance* instance, String_Builder* sb, AST_Type_Spec* ts, int indent = 0);
+static void ast_ts_to_string(Instance* inst, String_Builder* sb, AST_Type_Spec* ts, int indent = 0);
 
 String ast_to_string(Instance* instance, AST_File* file, String_Builder* sb)
 {
@@ -472,9 +472,9 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
     }
 }
 
-static void ast_ts_to_string(Instance* instance, String_Builder* sb, AST_Type_Spec* ts, int indent/*=0*/)
+static void ast_ts_to_string(Instance* inst, String_Builder* sb, AST_Type_Spec* ts, int indent/*=0*/)
 {
-    ast_print_pos(instance, sb, ts->range_id);
+    ast_print_pos(inst, sb, ts->range_id);
     ast_print_indent(sb, indent);
 
     switch (ts->kind) {
@@ -483,6 +483,12 @@ static void ast_ts_to_string(Instance* instance, String_Builder* sb, AST_Type_Sp
         case AST_Type_Spec_Kind::IDENTIFIER: {
             auto str = atom_string(ts->identifier->atom);
             string_builder_append(sb, "IDENT_TS: '%s'\n", str.data);
+            break;
+        }
+
+        case AST_Type_Spec_Kind::POINTER: {
+            string_builder_append(sb, "POINTER_TS:\n");
+            ast_ts_to_string(inst, sb, ts->base, indent + 1);
             break;
         }
     }

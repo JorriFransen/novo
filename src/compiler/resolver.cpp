@@ -482,9 +482,15 @@ bool resolve_ts(Instance* inst, Resolve_Task* task, AST_Type_Spec* ts, Scope* sc
     switch (ts->kind) {
 
         case AST_Type_Spec_Kind::INVALID: assert(false); break;
+
         case AST_Type_Spec_Kind::IDENTIFIER: {
              result = resolve_identifier(inst, task, ts->identifier, scope);
              break;
+        }
+
+        case AST_Type_Spec_Kind::POINTER: {
+            result = resolve_ts(inst, task, ts->base, scope);
+            break;
         }
     }
 

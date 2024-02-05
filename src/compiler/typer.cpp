@@ -597,6 +597,16 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
             ts->resolved_type = decl->resolved_type;
             break;
         }
+
+        case AST_Type_Spec_Kind::POINTER: {
+
+            if (!type_type_spec(inst, task, ts->base, scope)) {
+                return false;
+            }
+
+            ts->resolved_type = pointer_type_get(inst, ts->base->resolved_type);
+            break;
+        }
     }
 
     assert(ts->resolved_type);

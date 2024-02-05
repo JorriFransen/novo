@@ -1,0 +1,17 @@
+
+inc :: (ptr: *s64) {
+    <ptr += 1;
+}
+
+main :: () -> s64 {
+
+    x := 40;
+    px := *x;
+
+    x += 2;
+    <px *= 2;
+
+    inc(px);
+
+    return <px;
+}

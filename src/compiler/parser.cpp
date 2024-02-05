@@ -655,10 +655,24 @@ AST_Identifier* parse_identifier(Parser* parser)
 
 AST_Type_Spec* parse_type_spec(Parser* parser)
 {
-    if (is_token(parser, TOK_NAME)) {
-        AST_Identifier* ident = parse_identifier(parser);
-        return ast_identifier_type_spec(parser->instance, ident);
+    auto ct = parser->lexer->token;
+
+    switch (ct.kind) {
+        case TOK_NAME: {
+            AST_Identifier* ident = parse_identifier(parser);
+            return ast_identifier_type_spec(parser->instance, ident);
+        }
+
+        case '*': {
+            next_token(parser->lexer);
+            AST_Type_Spec* base = parse_type_spec(parser);
+            return ast_pointer_type_spec(parser->instance, base, ct.source_pos_id);
+            break;
+        }
+
+        default: assert(false);
     }
+
 
     assert(false);
     return nullptr;

@@ -315,6 +315,35 @@ u64 vm_run(VM* vm)
                 break;
             }
 
+            case SSA_OP_RET_VOID: {
+
+
+                vm->register_offset = vm_stack_pop(vm);
+                vm->block_index = vm_stack_pop(vm);
+                vm->fn_index = vm_stack_pop(vm);
+                ip = vm_stack_pop(vm);
+
+                // This register is the callers frame
+                /*u32 dest_reg =*/ vm_stack_pop(vm);
+
+                auto old_bp = vm->bp;
+                vm->bp = vm_stack_pop(vm);
+
+                if (old_bp == vm->bp) {
+                    assert(vm->sp == 0);
+                    assert(false); // Exit vm
+
+                } else {
+
+                    fn = &vm->current_program->functions[vm->fn_index];
+                    block = &fn->blocks[vm->block_index];
+
+                }
+
+                break;
+            }
+
+
             case SSA_OP_JMP_IF: {
                 u32 cond_reg = vm_fetch<u32>(block, &ip);
                 u32 true_block_index = vm_fetch<u32>(block, &ip);
