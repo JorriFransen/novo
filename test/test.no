@@ -1,5 +1,7 @@
 
 // TODO:
+//  - Move FFI to instance?
+//  - Free vm?
 //  - Foreign functions (call printf)
 //  - Builtin string type
 //  - #run
@@ -16,13 +18,13 @@
 //  - Redo linear allocator to have blocks
 //  - Capture errors, and check for them in tests
 
-putchar :: (char: int) -> int #foreign;
+putchar :: (char: s32) -> s32 #foreign;
 
 main :: () -> s64 {
 
-    c : int = 'H';
+    c : s32 = 'H';
 
-    putchar(c);
+    c = putchar(c);
 
-    return c;
+    return putchar('I') + c;
 }

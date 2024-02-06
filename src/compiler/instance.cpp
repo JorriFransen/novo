@@ -42,7 +42,7 @@ void instance_init(Instance* inst, Options options)
     auto default_alloc = inst->default_allocator;
 
     inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data, default_alloc, MEBIBYTE(1));
-    inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(16));
+    inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(64));
     inst->scope_allocator = inst->ast_allocator;
 
     darray_init(default_alloc, &inst->parse_tasks);
@@ -87,6 +87,10 @@ void instance_init(Instance* inst, Options options)
     inst->builtin_type_s64 = integer_type_new(inst, true, 64);
     auto s64_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
     scope_add_symbol(inst->global_scope, s64_decl->ident->atom, s64_decl);
+
+    inst->builtin_type_s32 = integer_type_new(inst, true, 64);
+    auto s32_decl = ast_builtin_type_decl(inst, inst->builtin_type_s32, "s32");
+    scope_add_symbol(inst->global_scope, s32_decl->ident->atom, s32_decl);
 
     inst->builtin_type_int = inst->builtin_type_s64;
     auto int_decl = ast_builtin_type_decl(inst, inst->builtin_type_int, "int");

@@ -3,10 +3,11 @@
 #include <dyncall.h>
 
 #include <containers/darray.h>
-#include <cstdio>
 #include <memory/allocator.h>
 
+#include "ffi.h"
 #include "ssa.h"
+#include "type.h"
 
 #include <assert.h>
 #include <string.h>
@@ -31,9 +32,8 @@ void vm_init(VM* vm, Allocator* allocator)
     vm->registers = allocate_array<u64>(allocator, vm->register_count);
     vm->stack = allocate_array<u64>(allocator, vm->stack_size);
 
-    vm->dyncall_vm = dcNewCallVM(4096);
-    dcMode(vm->dyncall_vm, DC_CALL_C_DEFAULT);
-    dcReset(vm->dyncall_vm);
+
+    ffi_init(&vm->ffi, allocator);
 }
 
 template <typename T>
@@ -83,6 +83,16 @@ NINLINE u64 vm_get_register(VM* vm, u32 reg)
 u64 vm_run(VM* vm, SSA_Program* program)
 {
     assert(program->entry_fn_index >= 0 && program->entry_fn_index < program->functions.count);
+
+    for (s64 i = 0; i < program->functions.count; i++) {
+        SSA_Function* func = &program->functions[i];
+        if (func->foreign) {
+            s64 result = ffi_load_function(&vm->ffi, func->name);
+            assert(result >= 0);
+
+            func->ffi_index = result;
+        }
+    }
 
     vm->current_program = program;
     vm->fn_index = program->entry_fn_index;
@@ -301,35 +311,42 @@ u64 vm_run(VM* vm)
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 fn_index = vm_fetch<u32>(block, &ip);
                 assert(fn_index >= 0 && fn_index < vm->current_program->functions.count);
-                // auto old_fn = fn;
                 fn = &vm->current_program->functions[fn_index];
                 assert(fn->foreign);
-                assert(dest_reg);
 
+                assert(false && "TODO: add arg count to call_foreign, emit arguments in loop");
+                dcReset(vm->ffi.vm);
                 u64 arg = vm_stack_top(vm);
-                assert(fn->name == atom_get("putchar"));
-                u64 result = putchar(arg);
+
+                dcArgInt(vm->ffi.vm, arg);
+
+                void* func_sym = vm->ffi.functions[fn->ffi_index].sym;
+                Type *return_type = fn->type->function.return_type;
+
+                u64 result;
+
+                switch (return_type->kind) {
+                    case Type_Kind::INVALID: assert(false); break;
+                    case Type_Kind::VOID: assert(false); break;
+
+                    case Type_Kind::INTEGER: {
+                        switch (return_type->bit_size) {
+                            default: assert(false);
+                            case 8: result = dcCallChar(vm->ffi.vm, func_sym); break;
+                            case 16: result = dcCallShort(vm->ffi.vm, func_sym); break;
+                            case 32: result = dcCallInt(vm->ffi.vm, func_sym); break;
+                            case 64: result = dcCallLongLong(vm->ffi.vm, func_sym); break;
+                        }
+                        break;
+                    }
+
+                    case Type_Kind::BOOLEAN: assert(false); break;
+                    case Type_Kind::POINTER: assert(false); break;
+                    case Type_Kind::FUNCTION: assert(false); break;
+                    case Type_Kind::STRUCT: assert(false); break;
+                }
 
                 vm_set_register(vm, dest_reg, result);
-
-                //
-                //
-                // auto new_bp = vm->sp;
-                // vm_stack_push(vm, vm->bp);
-                // vm_stack_push(vm, dest_reg);
-                // vm_stack_push(vm, ip);
-                // vm_stack_push(vm, vm->fn_index);
-                // vm_stack_push(vm, vm->block_index);
-                // vm_stack_push(vm, vm->register_offset);
-                //
-                // vm->bp = new_bp;
-                // ip = 0;
-                //
-                // vm->fn_index = fn_index;
-                // fn = &vm->current_program->functions[fn_index];
-                // vm->block_index = 0;
-                // block = &fn->blocks[0];
-                // vm->register_offset += old_fn->register_count;
 
                 break;
             }

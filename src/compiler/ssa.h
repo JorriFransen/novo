@@ -12,9 +12,10 @@ struct Allocator;
 struct AST_Declaration;
 struct AST_Expression;
 struct AST_Statement;
+struct Instance;
 struct Scope;
 struct String_Builder;
-struct Instance;
+struct Type;
 
 enum SSA_Op : u8
 {
@@ -77,6 +78,9 @@ struct SSA_Function
     Atom name;
     u32 register_count;
     u32 param_count;
+
+    Type *type;
+
     DArray<SSA_Block> blocks;
 
     // TODO: Use hash table if this gets too big?
@@ -84,6 +88,8 @@ struct SSA_Function
 
     bool sret;
     bool foreign;
+
+    u32 ffi_index;
 };
 
 struct SSA_Constant;
@@ -97,7 +103,6 @@ struct SSA_Program
     DArray<u8> constant_memory;
     DArray<SSA_Constant> constants;
     DArray<SSA_Function> functions;
-
 };
 
 struct SSA_Builder;
@@ -105,7 +110,7 @@ struct SSA_Builder;
 NAPI void ssa_program_init(SSA_Program* program, Allocator* allocator);
 NAPI void ssa_program_free(SSA_Program* program);
 
-NAPI void ssa_function_init(SSA_Program* program, SSA_Function* func, Atom name, u32 param_count, bool sret, bool foreign);
+NAPI void ssa_function_init(SSA_Program* program, SSA_Function* func, AST_Declaration *decl);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, const char* name);
 

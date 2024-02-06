@@ -72,20 +72,25 @@ void ssa_program_free(SSA_Program* program)
     darray_free(&program->functions);
 }
 
-void ssa_function_init(SSA_Program* program, SSA_Function* func, Atom name, u32 param_count, bool sret, bool foreign)
+void ssa_function_init(SSA_Program* program, SSA_Function* func, AST_Declaration *decl)
 {
-    func->name = name;
+    Type *func_type = decl->resolved_type;
+
+    func->name = decl->ident->atom;
     func->register_count = 0;
-    func->param_count = param_count;
+    func->param_count = func_type->function.param_types.count;
+    func->type = func_type;
     darray_init(program->allocator, &func->blocks);
     darray_init(program->allocator, &func->allocs);
 
     ssa_block_create(program, func, "entry");
 
+    bool sret = func_type->function.return_type->kind == Type_Kind::STRUCT;
+
     func->sret = sret;
     if (sret) func->param_count++;
 
-    func->foreign = foreign;
+    func->foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
 }
 
 void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name)
@@ -147,9 +152,8 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     assert(decl->ident);
 
     bool sret = decl->resolved_type->function.return_type->kind == Type_Kind::STRUCT;
-    bool foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
 
-    ssa_function_init(program, &func, decl->ident->atom, decl->function.params.count, sret, foreign);
+    ssa_function_init(program, &func, decl);
 
     SSA_Builder local_builder;
     local_builder.instance = inst;

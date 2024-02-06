@@ -1,8 +1,7 @@
 #pragma once
 
+#include <ffi.h>
 #include <defines.h>
-
-typedef struct DCCallVM_    DCCallVM;
 
 namespace Novo {
 
@@ -26,7 +25,7 @@ struct VM
     u32 register_count;
     u32 stack_size;
 
-    DCCallVM* dyncall_vm;
+    FFI ffi;
 };
 
 NAPI void vm_init(VM* vm, Allocator* allocator);

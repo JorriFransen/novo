@@ -32,6 +32,6 @@ int main(int argc, char* argv[])
 
     auto r = vm_run(&vm, instance.ssa_program);
     log_info("Bytecode vm returned: %llu\n", r);
-
+    
     return 0;
 }
