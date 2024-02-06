@@ -50,7 +50,7 @@ enum SSA_Op : u8
     SSA_OP_POP_N,         // POP_N [32-bit count]
 
     SSA_OP_CALL,          // CALL [32-bit dest reg] [32-bit function index]
-    SSA_OP_CALL_FOREIGN,  // CALL_FOREIGN [32-bit dest reg] [32-bit function index]
+    SSA_OP_CALL_FOREIGN,  // CALL_FOREIGN [32-bit dest reg] [32-bit function index] [16-bit arg count]
     SSA_OP_RET,           // RET [32-bit value reg]
     SSA_OP_RET_VOID,      // RET_VOID
 

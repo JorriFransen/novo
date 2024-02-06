@@ -836,6 +836,12 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             u32 arg_pop_count = expr->call.args.count;
             if (callee->sret) arg_pop_count++;
 
+            if (callee->foreign) {
+                assert(!callee->sret);
+                assert(arg_pop_count <= U16_MAX);
+                ssa_emit_16(builder, arg_pop_count);
+            }
+
             if (arg_pop_count) {
                 ssa_emit_op(builder, SSA_OP_POP_N);
                 ssa_emit_32(builder, arg_pop_count);
@@ -1476,9 +1482,12 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             u32 fn_index = *(u32*)&bytes[ip];
             ip += sizeof(u32);
 
+            u16 arg_count = *(u16*)&bytes[ip];
+            ip += sizeof(u16);
+
             assert(fn_index >= 0 && fn_index < program->functions.count);
             String name = atom_string(program->functions[fn_index].name);
-            string_builder_append(sb, "  %%%u = CALL_FOREIGN %%%s\n", dest_reg, name.data);
+            string_builder_append(sb, "  %%%u = CALL_FOREIGN %%%s %hu\n", dest_reg, name.data, arg_count);
             break;
         }
 

@@ -88,7 +88,7 @@ void instance_init(Instance* inst, Options options)
     auto s64_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
     scope_add_symbol(inst->global_scope, s64_decl->ident->atom, s64_decl);
 
-    inst->builtin_type_s32 = integer_type_new(inst, true, 64);
+    inst->builtin_type_s32 = integer_type_new(inst, true, 32);
     auto s32_decl = ast_builtin_type_decl(inst, inst->builtin_type_s32, "s32");
     scope_add_symbol(inst->global_scope, s32_decl->ident->atom, s32_decl);
 

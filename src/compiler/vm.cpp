@@ -66,6 +66,12 @@ NINLINE u64 vm_stack_top(VM *vm)
     return vm->stack[vm->sp - 1];
 }
 
+NINLINE u64 vm_stack_peek(VM *vm, s64 offset) {
+    assert(offset <= 0);
+    assert(vm->sp + offset >= 1);
+    return vm->stack[vm->sp - 1 + offset];
+}
+
 NINLINE void vm_set_register(VM* vm, u32 reg, u64 value)
 {
     auto index = vm->register_offset + reg;
@@ -310,15 +316,42 @@ u64 vm_run(VM* vm)
             case SSA_OP_CALL_FOREIGN: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 fn_index = vm_fetch<u32>(block, &ip);
+                u16 arg_count = vm_fetch<u16>(block, &ip);
+
                 assert(fn_index >= 0 && fn_index < vm->current_program->functions.count);
                 fn = &vm->current_program->functions[fn_index];
                 assert(fn->foreign);
 
-                assert(false && "TODO: add arg count to call_foreign, emit arguments in loop");
                 dcReset(vm->ffi.vm);
-                u64 arg = vm_stack_top(vm);
 
-                dcArgInt(vm->ffi.vm, arg);
+                s64 arg_offset = -arg_count + 1;
+                for (s64 i = 0; i < arg_count; i++, arg_offset++) {
+
+                    Type* arg_type = fn->type->function.param_types[i];
+                    u64 arg = vm_stack_peek(vm, arg_offset);
+
+                    switch (arg_type->kind) {
+                        case Type_Kind::INVALID: assert(false); break;
+                        case Type_Kind::VOID: assert(false); break;
+
+                        case Type_Kind::INTEGER: {
+                            switch (arg_type->bit_size) {
+                                default: assert(false); break;
+                                case 8: dcArgChar(vm->ffi.vm, arg); break;
+                                case 16: dcArgShort(vm->ffi.vm, arg); break;
+                                case 32: dcArgInt(vm->ffi.vm, arg); break;
+                                case 64: dcArgLongLong(vm->ffi.vm, arg); break;
+                            }
+                            break;
+                        }
+
+                        case Type_Kind::BOOLEAN: assert(false); break;
+                        case Type_Kind::POINTER: assert(false); break;
+                        case Type_Kind::FUNCTION: assert(false); break;
+                        case Type_Kind::STRUCT: assert(false); break;
+                    }
+                }
+                assert(arg_offset == 1);
 
                 void* func_sym = vm->ffi.functions[fn->ffi_index].sym;
                 Type *return_type = fn->type->function.return_type;
