@@ -166,19 +166,6 @@ s32 string_format(char* dest, const String_Ref fmt, va_list args)
     return written_size;
 }
 
-// TODO: Emit these arrays with a macro
-static char special_characters[] = {
-    '\n',
-    '\t',
-    '\"',
-};
-
-static char escape_characters[] = {
-    'n',
-    't',
-    '"',
-};
-
 s64 is_special_character(char c)
 {
     for (s64 i = 0; i < (s64)(sizeof(special_characters) / sizeof(special_characters[0])); i++) {

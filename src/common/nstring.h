@@ -28,6 +28,20 @@ struct String_Ref {
     NAPI const char &operator[](s64 index) const;
 };
 
+// TODO: Emit these arrays with a macro
+static char special_characters[] = {
+    '\n',
+    '\t',
+    '\"',
+};
+
+static char escape_characters[] = {
+    'n',
+    't',
+    '"',
+};
+
+
 NAPI String string(char* data, s64 length);
 
 NAPI bool string_equal(String &a, String &b);

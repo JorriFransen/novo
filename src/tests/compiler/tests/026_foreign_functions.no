@@ -9,8 +9,7 @@ main :: () -> s64 {
     c = putchar(c);
     c2 := putchar('I');
     putchar('!');
-    putchar(10);
-    // putchar('\n');
+    putchar('\n');
 
     return c + c2 + foreign_add(1, 2);
 }

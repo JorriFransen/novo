@@ -123,6 +123,21 @@ case (first_char): {                                                \
             lex->token.character = *lex->stream;
             lex->stream += 1;
 
+            if (lex->token.character == '\\') {
+
+                s64 special_index = is_escape_character(*lex->stream);
+                if (special_index < 0) {
+                    auto length = lex->stream - start;
+                    lex->pos.offset = lex->stream - lex->line_start - length + 1;
+                    instance_fatal_error(lex->instance, lex->pos, "Invalid escape character: '\\%c'", *lex->stream);
+                    return false;
+                }
+
+                lex->stream += 1;
+
+                lex->token.character = special_characters[special_index];
+            }
+
             if (*lex->stream != '\'') {
 
                 auto length = lex->stream - start;
