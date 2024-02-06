@@ -820,8 +820,6 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 ssa_emit_32(builder, arg_reg);
             }
 
-            // assert(expr->resolved_type->kind != Type_Kind::VOID);
-
             if (callee->foreign) {
                 ssa_emit_op(builder, SSA_OP_CALL_FOREIGN);
             } else {
@@ -837,7 +835,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             if (callee->sret) arg_pop_count++;
 
             if (callee->foreign) {
-                assert(!callee->sret);
+                assert(!callee->sret); // Not sure how this should work yet..
                 assert(arg_pop_count <= U16_MAX);
                 ssa_emit_16(builder, arg_pop_count);
             }

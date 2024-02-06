@@ -359,6 +359,7 @@ u64 vm_run(VM* vm)
                 u64 result;
 
                 switch (return_type->kind) {
+                    default: assert(false); break;
                     case Type_Kind::INVALID: assert(false); break;
                     case Type_Kind::VOID: assert(false); break;
 
