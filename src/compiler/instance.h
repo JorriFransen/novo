@@ -9,6 +9,7 @@
 
 #include "atom.h"
 #include "options.h"
+#include "source_pos.h"
 
 namespace Novo {
 
@@ -25,6 +26,7 @@ struct Imported_File
 {
     Atom path;
     AST_File *ast;
+    DArray<u32> newline_offsets;
 };
 
 struct Instance
@@ -68,7 +70,6 @@ struct Instance
     bool builtin_module_loaded;
     // These types are defined in the builtin module
     Type* type_string;
-
 };
 
 NAPI void instance_init(Instance* inst, Options options);
@@ -77,8 +78,8 @@ NAPI void instance_free(Instance* inst);
 NAPI bool instance_start(Instance* inst);
 NAPI bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_module = false);
 
-NAPI void instance_error(Instance* inst, const char* fmt, ...);
-NAPI void instance_fatal_error(Instance* inst, const char* fmt, ...);
-NAPI void instance_fatal_error_note(Instance* inst, const char* fmt, ...);
+NAPI void instance_error(Instance* inst, Source_Pos pos, const char* fmt, ...);
+NAPI void instance_fatal_error(Instance* inst, Source_Pos pos, const char* fmt, ...);
+NAPI void instance_fatal_error_note(Instance* inst, Source_Pos pos, const char* fmt, ...);
 
 }

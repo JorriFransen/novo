@@ -18,7 +18,7 @@ namespace Novo {
 
 #define expect_token(p, k) if (!expect_token_internal((p), (k))) return {};
 
-AST_File* parse_file(Instance* instance, const String_Ref file_path)
+AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index)
 {
     Lexer lexer;
     lexer_create(instance, &lexer);
@@ -30,7 +30,7 @@ AST_File* parse_file(Instance* instance, const String_Ref file_path)
     bool read_ok = fs_read_entire_file(&instance->temp_allocator, file_path, &file_content);
     assert(read_ok);
 
-    lexer_init_stream(&lexer, file_content, file_path);
+    lexer_init_stream(&lexer, file_content, file_path, import_index);
 
     Parser parser;
     parser.instance = instance;
@@ -92,8 +92,8 @@ AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi)
         assert(ex_decl);
         assert(ex_decl->ident);
 
-        instance_error(parser->instance, "Redeclaration of symbol: '%s'", name.data);
-        instance_fatal_error_note(parser->instance, "Previous declaration was here");
+        instance_error(parser->instance, ident->source_pos, "Redeclaration of symbol: '%s'", name.data);
+        instance_fatal_error_note(parser->instance, ex_decl->source_pos, "Previous declaration was here");
         return nullptr;
     }
 
@@ -148,8 +148,8 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
         assert(ex_decl);
         assert(ex_decl->ident);
 
-        instance_error(parser->instance, "Redeclaration of symbol: '%s'", name.data);
-        instance_fatal_error_note(parser->instance, "Previous declaration was here");
+        instance_error(parser->instance, ident->source_pos, "Redeclaration of symbol: '%s'", name.data);
+        instance_fatal_error_note(parser->instance, ex_decl->source_pos, "Previous declaration was here");
         return nullptr;
     }
     return result;
@@ -184,8 +184,8 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
             assert(ex_decl);
             assert(ex_decl->ident);
 
-            instance_error(parser->instance, "Redeclaration of symbol: '%s'", new_name.data);
-            instance_fatal_error_note(parser->instance, "Previous declaration was here");
+            instance_error(parser->instance, ident->source_pos, "Redeclaration of symbol: '%s'", new_name.data);
+            instance_fatal_error_note(parser->instance, ex_decl->source_pos, "Previous declaration was here");
             return nullptr;
         }
 
@@ -384,7 +384,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         default: {
             assert(!result);
             auto tok_str = atom_string(ct.atom);
-            instance_fatal_error(parser->instance, "Unexpected token '%s' when parsing leaf expression",  tok_str.data);
+            instance_fatal_error(parser->instance, source_pos(parser, ct), "Unexpected token '%s' when parsing leaf expression",  tok_str.data);
             return nullptr;
         }
     }
@@ -628,7 +628,7 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
         return ast_return_statement(parser->instance, expr);
     }
 
-    instance_fatal_error(parser->instance, "Unexpected keyword '%s'", atom_string(ct.atom).data);
+    instance_fatal_error(parser->instance, source_pos(parser, ct), "Unexpected keyword '%s'", atom_string(ct.atom).data);
 
     assert(false);
     return nullptr;
@@ -673,7 +673,7 @@ bool expect_token_internal(Parser* parser, Token_Kind kind)
     auto ct = parser->lexer->token;
     if (ct.kind != kind) {
         auto tok_str = atom_string(ct.atom);
-        instance_fatal_error(parser->instance, "Expected token '%s', got '%s'", tmp_token_kind_str(kind).data, tok_str.data);
+        instance_fatal_error(parser->instance, source_pos(parser, ct), "Expected token '%s', got '%s'", tmp_token_kind_str(kind).data, tok_str.data);
         return false;
     }
 

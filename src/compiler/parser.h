@@ -23,7 +23,7 @@ struct Parser
     Lexer* lexer;
 };
 
-NAPI AST_File* parse_file(Instance* instance, const String_Ref file_path);
+NAPI AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index);
 
 NAPI AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi);
 NAPI AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi);

@@ -176,7 +176,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         for (s64 i = 0; i < inst->parse_tasks.count; i++) {
             Parse_Task task = inst->parse_tasks[i];
 
-            AST_File* parsed_file = parse_file(inst, atom_string(task.file_name));
+            AST_File* parsed_file = parse_file(inst, atom_string(task.file_name), task.imported_file_index);
             if (parsed_file)
             {
                 inst->imported_files[task.imported_file_index].ast = parsed_file;
@@ -284,7 +284,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             if (t->waiting_for) {
                 auto name = atom_string(t->waiting_for->atom);
-                instance_error(inst, "Reference to undecared identifier: '%s'", name.data);
+                instance_error(inst, t->waiting_for->source_pos, "Reference to undecared identifier: '%s'", name.data);
                 error_reported = true;
             }
         }
@@ -296,12 +296,16 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     return true;
 }
 
-static void instance_error_va(Instance* inst, const char* fmt, va_list args)
+static void instance_error_va(Instance* inst, Source_Pos pos, const char* fmt, va_list args)
 {
     inst->fatal_error = true;
 
-    // fprintf(stderr, "%s:%d:%d: error: ", sp.name, sp.line, sp.offset);
-    fprintf(stderr, "error: ");
+    Imported_File file = inst->imported_files[pos.file_index];
+    String_Ref name = atom_string(file.path);
+
+    Line_Info li = line_info(file.newline_offsets, pos.offset);
+
+    fprintf(stderr, "%s:%d:%d: error: ", name.data, li.line, li.offset);
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
 }
@@ -316,29 +320,29 @@ static void instance_error_note_va(Instance* inst, const char* fmt, va_list args
     fprintf(stderr, "\n");
 }
 
-void instance_error(Instance* inst, const char* fmt, ...)
+void instance_error(Instance* inst, Source_Pos pos, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
 
-    instance_error_va(inst, fmt, args);
+    instance_error_va(inst, pos, fmt, args);
 
     va_end(args);
 }
 
-void instance_fatal_error(Instance* inst, const char* fmt, ...)
+NAPI void instance_fatal_error(Instance* inst, Source_Pos pos, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
 
-    instance_error_va(inst, fmt, args);
+    instance_error_va(inst, pos, fmt, args);
 
     va_end(args);
 
     exit(1);
 }
 
-void instance_fatal_error_note(Instance* inst, const char* fmt, ...)
+void instance_fatal_error_note(Instance* inst, Source_Pos pos, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);

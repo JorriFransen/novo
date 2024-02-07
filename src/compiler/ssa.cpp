@@ -218,7 +218,8 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         auto stmt = decl->function.body[i];
 
         if (ssa_block_exits(builder, builder->block_index)) {
-            instance_fatal_error(inst, "Unreachable code detected");
+            assert(false); // Report end of statement
+            instance_fatal_error(inst, stmt->source_pos, "Unreachable code detected");
         }
         ssa_emit_statement(builder, stmt, scope);
     }
@@ -226,7 +227,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     bool last_block_exits = ssa_block_exits(builder, builder->block_index);
 
     if (!last_block_exits && func.blocks[builder->block_index].incoming.count > 0) {
-        instance_fatal_error(inst, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
+        instance_fatal_error(inst, func.source_pos, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
     }
 
     if (!last_block_exits && decl->resolved_type->function.return_type->kind == Type_Kind::VOID) {

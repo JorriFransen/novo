@@ -192,7 +192,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
             }
 
             if (lvalue->resolved_type != rvalue->resolved_type) {
-                instance_fatal_error(inst, "Mismatching types in assignment, left: '%s', right: '%s'",
+                instance_fatal_error(inst, stmt->source_pos, "Mismatching types in assignment, left: '%s', right: '%s'",
                         temp_type_string(inst, lvalue->resolved_type).data,
                         temp_type_string(inst, rvalue->resolved_type).data);
             }
@@ -214,7 +214,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
             }
 
             if (lvalue->resolved_type != rvalue->resolved_type) {
-                instance_fatal_error(inst, "Mismatching types in arithmetic assignment, left: '%s', right: '%s'",
+                instance_fatal_error(inst, stmt->source_pos, "Mismatching types in arithmetic assignment, left: '%s', right: '%s'",
                         temp_type_string(inst, lvalue->resolved_type).data,
                         temp_type_string(inst, rvalue->resolved_type).data);
             }
@@ -283,7 +283,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
             }
 
             if (cond->resolved_type->kind != Type_Kind::BOOLEAN) {
-                instance_fatal_error(inst, "Expression after 'while' must be of boolean type (got: '%s')",
+                instance_fatal_error(inst, cond->source_pos,  "Expression after 'while' must be of boolean type (got: '%s')",
                                      temp_type_string(inst, cond->resolved_type).data);
             }
 
@@ -308,7 +308,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
             }
 
             if (cond->resolved_type->kind != Type_Kind::BOOLEAN) {
-                instance_fatal_error(inst, "Conditional in 'for' must be of boolean type (got: '%s')",
+                instance_fatal_error(inst, cond->source_pos, "Conditional in 'for' must be of boolean type (got: '%s')",
                                      temp_type_string(inst, cond->resolved_type).data);
             }
 
@@ -483,7 +483,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             if (!(expr->operand->flags & AST_EXPR_FLAG_LVALUE)) {
-                instance_fatal_error(inst, "Cannot take address of non lvalue expression");
+                instance_fatal_error(inst, expr->operand->source_pos, "Cannot take address of non lvalue expression");
                 assert(false);
                 return false;
             }
@@ -501,7 +501,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             if (expr->operand->resolved_type->kind != Type_Kind::POINTER) {
-                instance_fatal_error(inst, "Cannot dereference non pointer expression");
+                instance_fatal_error(inst, expr->operand->source_pos, "Cannot dereference non pointer expression");
                 assert(false);
                 return false;
             }

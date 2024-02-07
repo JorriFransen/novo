@@ -1,6 +1,8 @@
 
 #include <defines.h>
+#include <filesystem.h>
 #include <instance.h>
+#include <lexer.h>
 #include <logger.h>
 #include <memory/allocator.h>
 #include <nstring.h>
@@ -10,6 +12,8 @@
 #include "command_line_args.h"
 
 #include <cstdio>
+
+#include <containers/darray.h>
 
 using namespace Novo;
 

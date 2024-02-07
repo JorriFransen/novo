@@ -1,6 +1,7 @@
 #pragma once
 
 #include "atom.h"
+#include "source_pos.h"
 
 #include <containers/darray.h>
 #include <defines.h>
@@ -90,6 +91,7 @@ struct SSA_Function
     bool foreign;
 
     u32 ffi_index;
+    Source_Pos source_pos;
 };
 
 struct SSA_Constant;

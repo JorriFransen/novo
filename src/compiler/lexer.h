@@ -55,8 +55,8 @@ struct Token
         char character;
     };
 
-    u64 source_pos_id;
     u32 offset;
+    u32 length;
 };
 
 struct Lexer
@@ -64,6 +64,7 @@ struct Lexer
     Instance* instance;
 
     String_Ref stream_name;
+    s64 import_index;
 
     const char* stream_start;
     const char* stream;
@@ -73,7 +74,7 @@ struct Lexer
 };
 
 NAPI void lexer_create(Instance* instance, Lexer* out_lexer);
-NAPI void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref stream_name);
+NAPI void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref stream_name, s64 import_index);
 NAPI void lexer_destroy(Lexer* lexer);
 
 NAPI bool next_token(Lexer* lexer);
