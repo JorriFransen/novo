@@ -100,12 +100,8 @@ struct AST_Declaration
 
             Scope* scope;
 
-            u32 param_range_id;
-            u32 body_range_id;
         } function;
     };
-
-    u32 range_id;
 };
 
 enum class AST_Statement_Kind : u32
@@ -194,8 +190,6 @@ struct AST_Statement
             Scope* scope;
         } block;
     };
-
-    u32 range_id;
 };
 
 enum class AST_Expression_Kind : u32
@@ -270,8 +264,6 @@ struct AST_Expression
         bool bool_literal;
         Atom string_literal;
     };
-
-    u32 range_id;
 };
 
 enum class AST_Type_Spec_Kind : u32
@@ -300,14 +292,11 @@ struct AST_Type_Spec
         AST_Identifier* identifier;
         AST_Type_Spec *base;
     };
-
-    u32 range_id;
 };
 
 struct AST_Identifier
 {
     Atom atom;
-    u32 range_id;
 
     AST_Declaration* decl;
 };
@@ -321,45 +310,45 @@ NAPI AST_Node ast_node(AST_Type_Spec* expr);
 
 NAPI AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes);
 
-NAPI AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident, u32 range_id);
+NAPI AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident);
 NAPI AST_Declaration* ast_builtin_type_decl(Instance* inst, Type* type, const char* name);
 NAPI AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init);
-NAPI AST_Declaration* ast_struct_member_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* default_val, u32 range_id);
-NAPI AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> fields, Scope* scope, u32 range_id);
-NAPI AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec* return_ts, Scope* scope, u32 range_id, u32 body_start_id);
+NAPI AST_Declaration* ast_struct_member_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* default_val);
+NAPI AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> fields, Scope* scope);
+NAPI AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec* return_ts, Scope* scope);
 
-NAPI AST_Statement* ast_statement(Instance* inst, AST_Statement_Kind kind, u32 range_id);
-NAPI AST_Statement* ast_import_statement(Instance* inst, String_Ref path, u32 range_id);
+NAPI AST_Statement* ast_statement(Instance* inst, AST_Statement_Kind kind);
+NAPI AST_Statement* ast_import_statement(Instance* inst, String_Ref path);
 NAPI AST_Statement* ast_declaration_statement(Instance* inst, AST_Declaration* decl);
 NAPI AST_Statement* ast_assignment_statement(Instance* inst, AST_Expression* lvalue, AST_Expression* rvalue);
 NAPI AST_Statement* ast_arithmetic_assignment_statement(Instance* inst, u32 op, AST_Expression* lvalue, AST_Expression* rvalue);
 NAPI AST_Statement* ast_call_expr_statement(Instance* inst, AST_Expression* call);
-NAPI AST_Statement* ast_return_statement(Instance* inst, AST_Expression* expr, u32 start_id);
-NAPI AST_Statement* ast_if_statement(Instance* inst, DArray<AST_If_Block> if_blocks, AST_Statement* else_stmt, u32 start_id);
-NAPI AST_Statement* ast_while_statement(Instance* inst, AST_Expression* cond, AST_Statement* stmt, u32 start_id);
-NAPI AST_Statement* ast_for_statement(Instance* inst, AST_Statement* init, AST_Expression* cond, AST_Statement* step, AST_Statement* stmt, Scope* scope, u32 start_id);
-NAPI AST_Statement* ast_break_statement(Instance* inst, u32 range_id);
-NAPI AST_Statement* ast_continue_statement(Instance* inst, u32 range_id);
-NAPI AST_Statement* ast_block_statement(Instance* inst, DArray<AST_Statement *> stmts, Scope* scope, u32 range_id);
+NAPI AST_Statement* ast_return_statement(Instance* inst, AST_Expression* expr);
+NAPI AST_Statement* ast_if_statement(Instance* inst, DArray<AST_If_Block> if_blocks, AST_Statement* else_stmt);
+NAPI AST_Statement* ast_while_statement(Instance* inst, AST_Expression* cond, AST_Statement* stmt);
+NAPI AST_Statement* ast_for_statement(Instance* inst, AST_Statement* init, AST_Expression* cond, AST_Statement* step, AST_Statement* stmt, Scope* scope);
+NAPI AST_Statement* ast_break_statement(Instance* inst);
+NAPI AST_Statement* ast_continue_statement(Instance* inst);
+NAPI AST_Statement* ast_block_statement(Instance* inst, DArray<AST_Statement *> stmts, Scope* scope);
 
-NAPI AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, u32 range_id, AST_Expression_Flags flags = AST_EXPR_FLAG_NONE);
+NAPI AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, AST_Expression_Flags flags = AST_EXPR_FLAG_NONE);
 NAPI AST_Expression* ast_identifier_expression(Instance* inst, AST_Identifier* ident);
 NAPI AST_Expression* ast_binary_expression(Instance* inst, u32 op, AST_Expression* lhs, AST_Expression* rhs);
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name);
-NAPI AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression *> args, u32 range_id);
-NAPI AST_Expression *ast_address_of_expression(Instance *instance, AST_Expression *operand, u32 start_id);
-NAPI AST_Expression *ast_deref_expression(Instance *instance, AST_Expression *operand, u32 start_id);
-NAPI AST_Expression* ast_compound_expression(Instance* inst, DArray<AST_Expression*> expressions, u32 range_id);
-NAPI AST_Expression* ast_integer_literal_expression(Instance* inst, u64 i, u32 range_id);
-NAPI AST_Expression* ast_real_literal_expression(Instance* inst, Real_Value rv, u32 range_id);
-NAPI AST_Expression* ast_char_literal_expression(Instance* inst, char c, u32 range_id);
-NAPI AST_Expression* ast_bool_literal_expression(Instance* inst, bool b, u32 range_id);
-NAPI AST_Expression* ast_string_literal_expression(Instance* inst, Atom atom, u32 range_id);
+NAPI AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression *> args);
+NAPI AST_Expression *ast_address_of_expression(Instance *instance, AST_Expression *operand);
+NAPI AST_Expression *ast_deref_expression(Instance *instance, AST_Expression *operand);
+NAPI AST_Expression* ast_compound_expression(Instance* inst, DArray<AST_Expression*> expressions);
+NAPI AST_Expression* ast_integer_literal_expression(Instance* inst, u64 i);
+NAPI AST_Expression* ast_real_literal_expression(Instance* inst, Real_Value rv);
+NAPI AST_Expression* ast_char_literal_expression(Instance* inst, char c);
+NAPI AST_Expression* ast_bool_literal_expression(Instance* inst, bool b);
+NAPI AST_Expression* ast_string_literal_expression(Instance* inst, Atom atom);
 
-NAPI AST_Type_Spec* ast_type_spec(Instance* inst, AST_Type_Spec_Kind kind, u32 range_id);
+NAPI AST_Type_Spec* ast_type_spec(Instance* inst, AST_Type_Spec_Kind kind);
 NAPI AST_Type_Spec* ast_identifier_type_spec(Instance* inst, AST_Identifier* ident);
-NAPI AST_Type_Spec* ast_pointer_type_spec(Instance* inst, AST_Type_Spec *base, u32 start_id);
+NAPI AST_Type_Spec* ast_pointer_type_spec(Instance* inst, AST_Type_Spec *base);
 
-NAPI AST_Identifier* ast_identifier(Instance* inst, Atom atom, u32 range_id);
+NAPI AST_Identifier* ast_identifier(Instance* inst, Atom atom);
 
 }

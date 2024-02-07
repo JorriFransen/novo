@@ -7,7 +7,6 @@
 #include "ast.h"
 #include "instance.h"
 #include "lexer.h"
-#include "source_pos.h"
 #include "type.h"
 
 #include <assert.h>
@@ -92,7 +91,6 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
     if (sret) func->param_count++;
 
     func->foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
-    func->sp_id = source_range_start(inst, decl->range_id);
 }
 
 void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name)
@@ -220,8 +218,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         auto stmt = decl->function.body[i];
 
         if (ssa_block_exits(builder, builder->block_index)) {
-            auto pos = source_range_start(inst, stmt->range_id);
-            instance_fatal_error(inst, pos, "Unreachable code detected");
+            instance_fatal_error(inst, "Unreachable code detected");
         }
         ssa_emit_statement(builder, stmt, scope);
     }
@@ -229,13 +226,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     bool last_block_exits = ssa_block_exits(builder, builder->block_index);
 
     if (!last_block_exits && func.blocks[builder->block_index].incoming.count > 0) {
-        u32 sp_id;
-        if (decl->function.body.count) {
-            sp_id = source_range_end(inst, decl->function.body[decl->function.body.count - 1]->range_id);
-        } else {
-            sp_id = source_range_end(inst, decl->range_id);
-        }
-        instance_fatal_error(inst, sp_id, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
+        instance_fatal_error(inst, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
     }
 
     if (!last_block_exits && decl->resolved_type->function.return_type->kind == Type_Kind::VOID) {

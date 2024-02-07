@@ -102,7 +102,7 @@ u64 vm_run(VM* vm, SSA_Program* program)
             if (result < 0) {
 
                 String name = atom_string(func->name);
-                instance_fatal_error(vm->instance, func->sp_id, "FFI unable to load foreign function: '%s'", name.data);
+                instance_fatal_error(vm->instance, "FFI unable to load foreign function: '%s'", name.data);
                 assert(false);
             }
 

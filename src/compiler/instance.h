@@ -16,8 +16,6 @@ struct AST_File;
 struct Parse_Task;
 struct Resolve_Task;
 struct Scope;
-struct Source_Pos;
-struct Source_Range;
 struct SSA_Program;
 struct SSA_Task;
 struct Type;
@@ -56,8 +54,6 @@ struct Instance
     DArray<Type*> function_types;
 
     bool fatal_error;
-    DArray<Source_Pos> source_positions;
-    DArray<Source_Range> source_ranges;
 
     SSA_Program* ssa_program;
 
@@ -81,13 +77,8 @@ NAPI void instance_free(Instance* inst);
 NAPI bool instance_start(Instance* inst);
 NAPI bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_module = false);
 
-NAPI void instance_error(Instance* inst, Source_Pos sp, const char* fmt, ...);
-NAPI void instance_error(Instance* inst, u32 sp_id, const char* fmt, ...);
-
-NAPI void instance_fatal_error(Instance* inst, Source_Pos sp, const char* fmt, ...);
-NAPI void instance_fatal_error(Instance* inst, u32 sp_id, const char* fmt, ...);
-
-NAPI void instance_fatal_error_note(Instance* inst, Source_Pos sp, const char* fmt, ...);
-NAPI void instance_fatal_error_note(Instance* inst, u32 sp_id, const char* fmt, ...);
+NAPI void instance_error(Instance* inst, const char* fmt, ...);
+NAPI void instance_fatal_error(Instance* inst, const char* fmt, ...);
+NAPI void instance_fatal_error_note(Instance* inst, const char* fmt, ...);
 
 }

@@ -523,16 +523,15 @@ bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* iden
              scope_is_parent(found_in_scope, task->fn_decl->function.scope))) {
 
             // The declaration is inside the current function, check the order...
-            u32 decl_pos_id = source_range_end(inst, found_decl->range_id);
-            u32 ident_pos_id = source_range_start(inst, ident->range_id);
 
-            if (ident_pos_id <= decl_pos_id) {
-                auto ident_str = atom_string(ident->atom).data;
-                u32 decl_start_id = source_range_start(inst, found_decl->range_id);
-
-                instance_error(inst, ident_pos_id, "Reference to identifier '%s' before declaration", ident_str);
-                instance_fatal_error_note(inst, decl_start_id, "'%s' was first declared here", ident_str);
-            }
+            // if (
+            // if (ident_pos_id <= decl_pos_id) {
+            //     auto ident_str = atom_string(ident->atom).data;
+            //     u32 decl_start_id = source_range_start(inst, found_decl->range_id);
+            //
+            //     instance_error(inst, ident_pos_id, "Reference to identifier '%s' before declaration", ident_str);
+            //     instance_fatal_error_note(inst, decl_start_id, "'%s' was first declared here", ident_str);
+            // }
         }
 
         ident->decl = found_decl;

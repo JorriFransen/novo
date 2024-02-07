@@ -4,7 +4,6 @@
 #include <nstring.h>
 
 #include "atom.h"
-#include "source_pos.h"
 
 namespace Novo {
 
@@ -57,6 +56,7 @@ struct Token
     };
 
     u64 source_pos_id;
+    u32 offset;
 };
 
 struct Lexer
@@ -70,7 +70,6 @@ struct Lexer
     const char* line_start;
 
     Token token;
-    Source_Pos pos;
 };
 
 NAPI void lexer_create(Instance* instance, Lexer* out_lexer);

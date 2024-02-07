@@ -12,7 +12,6 @@
 #include "parser.h"
 #include "resolver.h"
 #include "scope.h"
-#include "source_pos.h"
 #include "ssa.h"
 #include "task.h"
 #include "type.h"
@@ -57,14 +56,6 @@ void instance_init(Instance* inst, Options options)
     darray_init(&inst->ast_allocator, &inst->function_types);
 
     inst->fatal_error = false;
-
-    darray_init(default_alloc, &inst->source_positions);
-    // push dummy because index zero is invalid
-    darray_append(&inst->source_positions, {});
-
-    darray_init(default_alloc, &inst->source_ranges);
-    // push dummy because index zero is invalid
-    darray_append(&inst->source_ranges, {});
 
     if (!g_atoms_initialized) {
         initialize_atoms(default_alloc, 128);
@@ -115,9 +106,6 @@ void instance_free(Instance* inst)
 
     darray_free(&inst->imported_files);
     darray_free(&inst->function_types);
-
-    darray_free(&inst->source_positions);
-    darray_free(&inst->source_ranges);
 
     ssa_program_free(inst->ssa_program);
 
@@ -295,9 +283,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             auto t = &inst->resolve_tasks[i];
 
             if (t->waiting_for) {
-                auto sp_id = source_range_start(inst, t->waiting_for->range_id);
                 auto name = atom_string(t->waiting_for->atom);
-                instance_error(inst, sp_id, "Reference to undecared identifier: '%s'", name.data);
+                instance_error(inst, "Reference to undecared identifier: '%s'", name.data);
                 error_reported = true;
             }
         }
@@ -309,95 +296,54 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     return true;
 }
 
-static void instance_error_va(Instance* inst, Source_Pos sp, const char* fmt, va_list args)
+static void instance_error_va(Instance* inst, const char* fmt, va_list args)
 {
     inst->fatal_error = true;
 
-    fprintf(stderr, "%s:%d:%d: error: ", sp.name, sp.line, sp.offset);
+    // fprintf(stderr, "%s:%d:%d: error: ", sp.name, sp.line, sp.offset);
+    fprintf(stderr, "error: ");
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
 }
 
-static void instance_error_note_va(Instance* inst, Source_Pos sp, const char* fmt, va_list args)
+static void instance_error_note_va(Instance* inst, const char* fmt, va_list args)
 {
     inst->fatal_error = true;
 
-    fprintf(stderr, "%s:%d:%d: note: ", sp.name, sp.line, sp.offset);
+    // fprintf(stderr, "%s:%d:%d: note: ", sp.name, sp.line, sp.offset);
+    fprintf(stderr, "note: ");
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
 }
 
-void instance_error(Instance* inst, Source_Pos sp, const char* fmt, ...)
+void instance_error(Instance* inst, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
 
-    instance_error_va(inst, sp, fmt, args);
+    instance_error_va(inst, fmt, args);
 
     va_end(args);
 }
 
-void instance_error(Instance* inst, u32 sp_id, const char* fmt, ...)
+void instance_fatal_error(Instance* inst, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
 
-    assert(sp_id > 0 && sp_id < inst->source_positions.count);
-    auto sp = inst->source_positions[sp_id];
-
-    instance_error_va(inst, sp, fmt, args);
-
-    va_end(args);
-}
-
-void instance_fatal_error(Instance* inst, Source_Pos sp, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-
-    instance_error_va(inst, sp, fmt, args);
+    instance_error_va(inst, fmt, args);
 
     va_end(args);
 
     exit(1);
 }
 
-void instance_fatal_error(Instance* inst, u32 sp_id, const char* fmt, ...)
+void instance_fatal_error_note(Instance* inst, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
 
-    assert(sp_id > 0 && sp_id < inst->source_positions.count);
-    auto sp = inst->source_positions[sp_id];
-
-    instance_error_va(inst, sp, fmt, args);
-
-    va_end(args);
-
-    exit(1);
-}
-
-void instance_fatal_error_note(Instance* inst, Source_Pos sp, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-
-    instance_error_note_va(inst, sp, fmt, args);
-
-    va_end(args);
-
-    exit(1);
-}
-
-void instance_fatal_error_note(Instance* inst, u32 sp_id, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-
-    assert(sp_id > 0 && sp_id < inst->source_positions.count);
-    auto sp = inst->source_positions[sp_id];
-
-    instance_error_note_va(inst, sp, fmt, args);
+    instance_error_note_va(inst, fmt, args);
 
     va_end(args);
 

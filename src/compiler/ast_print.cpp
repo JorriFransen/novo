@@ -15,8 +15,7 @@
 
 namespace Novo {
 
-static void ast_print_pos(Instance* instance, String_Builder* sb, u32 pos_id_a, u32 pos_id_b);
-static void ast_print_pos(Instance* instance, String_Builder* sb, u32 range_id);
+static void ast_print_pos(Instance* instance, String_Builder* sb);
 
 static void ast_print_indent(String_Builder* sb, int indent);
 static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Declaration* decl, int indent = 0);
@@ -66,38 +65,9 @@ String ast_to_string(Instance* instance, AST_File* file, Allocator* allocator)
     return result;
 }
 
-static void ast_print_pos(Instance* instance, String_Builder* sb, u32 pos_id_a, u32 pos_id_b)
+static void ast_print_pos(Instance* instance, String_Builder* sb)
 {
-    assert(pos_id_a > 0 && pos_id_a < instance->source_positions.count);
-    assert(pos_id_b > 0 && pos_id_b < instance->source_positions.count);
-
-    auto start = &instance->source_positions[pos_id_a];
-
-    if (pos_id_a == pos_id_b) {
-        string_builder_append(sb, "%03d:%03d-%07d  ", start->line, start->offset, start->length);
-    } else {
-        auto end = &instance->source_positions[pos_id_b];
-
-        int end_offset = end->offset;
-        if (end->length > 1) {
-            end_offset += (end->length - 1);
-        }
-
-        string_builder_append(sb, "%03d:%03d-%03d:%03d  ", start->line, start->offset, end->line, end_offset);
-    }
-}
-
-static void ast_print_pos(Instance* instance, String_Builder* sb, u32 range_id)
-{
-    if (range_id) {
-
-        assert(range_id > 0 && range_id < instance->source_ranges.count);
-        auto range = &instance->source_ranges[range_id];
-        ast_print_pos(instance, sb, range->start_index, range->end_index);
-
-    } else {
-        string_builder_append(sb, "                 ");
-    }
+    assert(false);
 }
 
 static void ast_print_indent(String_Builder* sb, int indent)
@@ -109,7 +79,7 @@ static void ast_print_indent(String_Builder* sb, int indent)
 
 static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Declaration* decl, int indent/*=0*/)
 {
-    ast_print_pos(instance, sb, decl->range_id);
+    ast_print_pos(instance, sb);
 
     assert(decl->ident);
     auto name = atom_string(decl->ident->atom);
@@ -124,14 +94,14 @@ static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Decla
             string_builder_append(sb, "VAR_DECL: '%s'\n", name.data);
 
             if (decl->variable.type_spec) {
-                ast_print_pos(instance, sb, decl->variable.type_spec->range_id);
+                ast_print_pos(instance, sb);
                 ast_print_indent(sb, indent + 1);
                 string_builder_append(sb, "TS:\n");
                 ast_ts_to_string(instance, sb, decl->variable.type_spec, indent + 2);
             }
 
             if (decl->variable.init_expr) {
-                ast_print_pos(instance, sb, decl->variable.init_expr->range_id);
+                ast_print_pos(instance, sb);
                 ast_print_indent(sb, indent + 1);
                 string_builder_append(sb, "INIT:\n");
                 ast_expr_to_string(instance, sb, decl->variable.init_expr, indent + 2);
@@ -166,13 +136,13 @@ static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Decla
             string_builder_append(sb, "FUNC_DECL: '%s'\n", name.data);
 
             if (decl->function.return_ts) {
-                ast_print_pos(instance, sb, 0);
+                ast_print_pos(instance, sb);
                 ast_print_indent(sb, indent + 1);
                 string_builder_append(sb, "RETURN_TS:\n");
                 ast_ts_to_string(instance, sb, decl->function.return_ts, indent + 2);
             }
 
-            ast_print_pos(instance, sb, decl->function.param_range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "PARAMS: %d\n", decl->function.params.count);
 
@@ -180,7 +150,7 @@ static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Decla
                 ast_decl_to_string(instance, sb, decl->function.params[i], indent + 2);
             }
 
-            ast_print_pos(instance, sb, decl->function.body_range_id);
+            ast_print_pos(instance, sb);
             if (decl->function.body.count) {
                 ast_print_indent(sb, indent + 1);
                 string_builder_append(sb, "BODY:\n");
@@ -202,7 +172,7 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         case AST_Statement_Kind::INVALID: assert(false); break;
 
         case AST_Statement_Kind::IMPORT: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_IMPORT: '%s'\n", stmt->import_path.data);
             break;
@@ -214,16 +184,16 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         }
 
         case AST_Statement_Kind::ASSIGNMENT: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_ASSIGN:\n");
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, " LVALUE:\n");
             ast_expr_to_string(instance, sb, stmt->assignment.lvalue, indent + 2);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, " RVALUE:\n");
             ast_expr_to_string(instance, sb, stmt->assignment.rvalue, indent + 2);
@@ -231,16 +201,16 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         }
 
         case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_ARITHMETIC_ASSIGN: '%s'\n", tmp_token_kind_str((Token_Kind)stmt->arithmetic_assignment.op).data);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, " LVALUE:\n");
             ast_expr_to_string(instance, sb, stmt->arithmetic_assignment.lvalue, indent + 2);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, " RVALUE:\n");
             ast_expr_to_string(instance, sb, stmt->arithmetic_assignment.rvalue, indent + 2);
@@ -253,7 +223,7 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         }
 
         case AST_Statement_Kind::RETURN: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_RETURN:\n");
 
@@ -264,14 +234,14 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         }
 
         case AST_Statement_Kind::IF: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_IF:\n");
 
             for (s64 i = 0; i < stmt->if_stmt.blocks.count; i++) {
                 auto if_block = stmt->if_stmt.blocks[i];
 
-                ast_print_pos(instance, sb, 0);
+                ast_print_pos(instance, sb);
                 ast_print_indent(sb, indent + 1);
                 if (i == 0) {
                     string_builder_append(sb, "IF_COND:\n");
@@ -281,7 +251,7 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
 
                 ast_expr_to_string(instance, sb, if_block.cond, indent + 2);
 
-                ast_print_pos(instance, sb, 0);
+                ast_print_pos(instance, sb);
                 ast_print_indent(sb, indent + 1);
                 string_builder_append(sb, "THEN:\n");
 
@@ -289,7 +259,7 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
             }
 
             if (stmt->if_stmt.else_stmt) {
-                ast_print_pos(instance, sb, 0);
+                ast_print_pos(instance, sb);
                 ast_print_indent(sb, indent + 1);
                 string_builder_append(sb, "ELSE:\n");
                 ast_stmt_to_string(instance, sb, stmt->if_stmt.else_stmt, indent + 2);
@@ -298,17 +268,17 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         }
 
         case AST_Statement_Kind::WHILE: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "WHILE:\n");
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "COND:\n");
 
             ast_expr_to_string(instance, sb, stmt->while_stmt.cond, indent + 2);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "DO:\n");
 
@@ -317,29 +287,29 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         }
 
         case AST_Statement_Kind::FOR: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "FOR:\n");
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "INIT:\n");
 
             ast_stmt_to_string(instance, sb, stmt->for_stmt.init, indent + 2);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "COND:\n");
 
             ast_expr_to_string(instance, sb, stmt->for_stmt.cond, indent + 2);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "STEP:\n");
 
             ast_stmt_to_string(instance, sb, stmt->for_stmt.step, indent + 2);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "DO:\n");
 
@@ -348,21 +318,21 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         }
 
         case AST_Statement_Kind::BREAK: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "BREAK:\n");
             break;
         }
 
         case AST_Statement_Kind::CONTINUE: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "CONTINUE:\n");
             break;
         }
 
         case AST_Statement_Kind::BLOCK: {
-            ast_print_pos(instance, sb, stmt->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "BLOCK:\n");
 
@@ -376,7 +346,7 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
 
 static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expression* expr, int indent/*=0*/)
 {
-    ast_print_pos(instance, sb, expr->range_id);
+    ast_print_pos(instance, sb);
 
     ast_print_indent(sb, indent);
 
@@ -400,12 +370,12 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
         case AST_Expression_Kind::MEMBER: {
             string_builder_append(sb, "EXPR_MEMBER:\n");
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "BASE:\n");
             ast_expr_to_string(instance, sb, expr->member.base, indent + 2);
 
-            ast_print_pos(instance, sb, expr->member.member_name->range_id);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "MEMBER_NAME: '%s'\n", atom_string(expr->member.member_name->atom).data);
             break;
@@ -413,12 +383,12 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
 
         case AST_Expression_Kind::CALL: {
             string_builder_append(sb, "EXPR_CALL:\n");
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "BASE:\n");
             ast_expr_to_string(instance, sb, expr->call.base, indent + 2);
 
-            ast_print_pos(instance, sb, 0);
+            ast_print_pos(instance, sb);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "ARGS: %d\n", expr->call.args.count);
 
@@ -479,7 +449,7 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
 
 static void ast_ts_to_string(Instance* inst, String_Builder* sb, AST_Type_Spec* ts, int indent/*=0*/)
 {
-    ast_print_pos(inst, sb, ts->range_id);
+    ast_print_pos(inst, sb);
     ast_print_indent(sb, indent);
 
     switch (ts->kind) {

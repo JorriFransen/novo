@@ -90,7 +90,6 @@ struct SSA_Function
     bool foreign;
 
     u32 ffi_index;
-    u32 sp_id;
 };
 
 struct SSA_Constant;

@@ -39,10 +39,6 @@ void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref s
     lexer->token.kind = TOK_INVALID;
 
     NSTRING_ASSERT_ZERO_TERMINATION(stream_name);
-    lexer->pos.name = stream_name.data;
-
-    lexer->pos.line = 1;
-    lexer->pos.offset = 0;
 
     next_token(lexer);
 }
@@ -88,7 +84,6 @@ case (first_char): {                                                \
         case ' ': case '\n': case '\r': case '\t': {
             while (isspace(*lex->stream)) {
                 if (*lex->stream == '\n') {
-                    lex->pos.line += 1;
                     lex->line_start = lex->stream + 1;
                 }
                 lex->stream += 1;
@@ -127,9 +122,7 @@ case (first_char): {                                                \
 
                 s64 special_index = is_escape_character(*lex->stream);
                 if (special_index < 0) {
-                    auto length = lex->stream - start;
-                    lex->pos.offset = lex->stream - lex->line_start - length + 1;
-                    instance_fatal_error(lex->instance, lex->pos, "Invalid escape character: '\\%c'", *lex->stream);
+                    instance_fatal_error(lex->instance, "Invalid escape character: '\\%c'", *lex->stream);
                     return false;
                 }
 
@@ -140,11 +133,7 @@ case (first_char): {                                                \
 
             if (*lex->stream != '\'') {
 
-                auto length = lex->stream - start;
-                lex->pos.offset = lex->stream - lex->line_start - length + 1;
-                lex->pos.offset += 2;
-
-                instance_fatal_error(lex->instance, lex->pos, "Exected \"'\" to end character literal");
+                instance_fatal_error(lex->instance, "Exected \"'\" to end character literal");
                 return false;
             }
 
@@ -221,7 +210,7 @@ case (first_char): {                                                \
                 lex->token.kind = (Token_Kind)*lex->stream;
                 lex->stream += 1;
             } else {
-                instance_fatal_error(lex->instance, lex->pos, "Unexpected character: '%c', value: '%d'", *lex->stream, *lex->stream);
+                instance_fatal_error(lex->instance, "Unexpected character: '%c', value: '%d'", *lex->stream, *lex->stream);
                 lex->token.kind = TOK_ERROR;
                 return false;
             }
@@ -240,7 +229,7 @@ case (first_char): {                                                \
                 const char* err_char = nullptr;
                 String str_lit = convert_escape_characters_to_special_characters(&lex->instance->temp_allocator, String_Ref(start, length), &err_char);
                 if (err_char) {
-                    instance_fatal_error(lex->instance, lex->pos, "Invalid escape sequence in string literal: '\\%c'", *err_char);
+                    instance_fatal_error(lex->instance, "Invalid escape sequence in string literal: '\\%c'", *err_char);
                     lex->token.kind = TOK_ERROR;
                     return false;
                 }
@@ -259,12 +248,6 @@ case (first_char): {                                                \
     } else {
         lex->token.atom = {};
     }
-
-    lex->pos.length = length;
-    lex->pos.offset = lex->stream - lex->line_start - length + 1;
-
-    lex->token.source_pos_id = lex->instance->source_positions.count;
-    darray_append(&lex->instance->source_positions, lex->pos);
 
     return true;
 }
@@ -395,21 +378,16 @@ static bool lex_int(Lexer* lexer)
         }
 
         if (digit >= base) {
-
-            // Move offset to the invalid character
-            lexer->pos.offset = start - lexer->line_start + length + 1;
-
-            instance_fatal_error(lexer->instance, lexer->pos, "Digit '%c' out of range for base %llu", *lexer->stream, base);
+            assert(false); // Ensure position is reported correctly
+            instance_fatal_error(lexer->instance, "Digit '%c' out of range for base %llu", *lexer->stream, base);
             lexer->token.kind = TOK_ERROR;
             return false;
         }
 
         if (result > (U64_MAX - digit) / base) {
 
-            // Move offset to the start of the integer
-            lexer->pos.offset = start - lexer->line_start - length + 1;
-
-            instance_fatal_error(lexer->instance, lexer->pos, "Integer literal overflow: '%.*s'", (int)length + 1, start);
+            assert(false); // Ensure position is reported correctly
+            instance_fatal_error(lexer->instance, "Integer literal overflow: '%.*s'", (int)length + 1, start);
             lexer->token.kind = TOK_ERROR;
 
             // Skip the rest of this integer
@@ -424,9 +402,8 @@ static bool lex_int(Lexer* lexer)
 
     if (lexer->stream == start) {
 
-        lexer->pos.offset = lexer->stream - lexer->line_start - length + 1;
-
-        instance_fatal_error(lexer->instance, lexer->pos, "Expected base %llu digit, got '%c'", base, *lexer->stream);
+        assert(false); // Ensure position is reported correctly
+        instance_fatal_error(lexer->instance, "Expected base %llu digit, got '%c'", base, *lexer->stream);
         lexer->token.kind = TOK_ERROR;
         return false;
     }
@@ -465,10 +442,7 @@ static bool lex_real(Lexer* lexer)
 
         if (!isdigit(*lexer->stream)) {
 
-            auto length = lexer->stream - start;
-            lexer->pos.offset = start - lexer->line_start + length + 1;
-
-            instance_fatal_error(lexer->instance, lexer->pos, "Expected digit after float literal exponent, found '%c'.", *lexer->stream);
+            instance_fatal_error(lexer->instance, "Expected digit after float literal exponent, found '%c'.", *lexer->stream);
             lexer->token.kind = TOK_ERROR;
             return false;
         }
@@ -483,30 +457,21 @@ static bool lex_real(Lexer* lexer)
     result.r32 = strtof(start, &err);
     if (result.r32 == 0.0 && err == start) {
 
-        auto length = lexer->stream - start;
-        lexer->pos.offset = start - lexer->line_start + length + 1;
-
-        instance_fatal_error(lexer->instance, lexer->pos, "Convertion to float failed");
+        instance_fatal_error(lexer->instance, "Convertion to float failed");
         lexer->token.kind = TOK_ERROR;
 
         return false;
     }
     if (result.r32 == HUGE_VALF || result.r32 == -HUGE_VALF) {
 
-        auto length = lexer->stream - start;
-        lexer->pos.offset = start - lexer->line_start + length + 1;
-
-        instance_fatal_error(lexer->instance, lexer->pos, "Float literal overflow");
+        instance_fatal_error(lexer->instance, "Float literal overflow");
         lexer->token.kind = TOK_ERROR;
 
         return false;
     }
     if (result.r32 <= FLT_MIN && errno == ERANGE) {
 
-        auto length = lexer->stream - start;
-        lexer->pos.offset = start - lexer->line_start + length + 1;
-
-        instance_fatal_error(lexer->instance, lexer->pos, "Float literal underflow");
+        instance_fatal_error(lexer->instance, "Float literal underflow");
         lexer->token.kind = TOK_ERROR;
 
         return false;
@@ -515,29 +480,20 @@ static bool lex_real(Lexer* lexer)
     result.r64 = strtod(start, &err);
     if (result.r64 == 0.0 && err == start) {
 
-        auto length = lexer->stream - start;
-        lexer->pos.offset = start - lexer->line_start + length + 1;
-
-        instance_fatal_error(lexer->instance, lexer->pos, "Convertion to double failed");
+        instance_fatal_error(lexer->instance, "Convertion to double failed");
         lexer->token.kind = TOK_ERROR;
 
         return false;
     }
     if (result.r64 == HUGE_VAL || result.r64 == -HUGE_VAL) {
 
-        auto length = lexer->stream - start;
-        lexer->pos.offset = start - lexer->line_start + length + 1;
-
-        instance_fatal_error(lexer->instance, lexer->pos, "Double literal overflow");
+        instance_fatal_error(lexer->instance, "Double literal overflow");
         lexer->token.kind = TOK_ERROR;
 
         return false;
     }
     if (result.r64 <= DBL_MIN && errno == ERANGE) {
-        auto length = lexer->stream - start;
-        lexer->pos.offset = start - lexer->line_start + length + 1;
-
-        instance_fatal_error(lexer->instance, lexer->pos, "Double literal underflow");
+        instance_fatal_error(lexer->instance, "Double literal underflow");
         lexer->token.kind = TOK_ERROR;
 
         return false;
