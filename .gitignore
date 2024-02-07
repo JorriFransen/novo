@@ -1,6 +1,9 @@
 .cache/
+.vs/
 
 build*/
 
 .nvim.lua
 .luarc.json
+
+*.sln

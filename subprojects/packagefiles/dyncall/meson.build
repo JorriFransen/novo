@@ -5,10 +5,10 @@ cc = meson.get_compiler('c')
 
 system = host_machine.system()
 
-prefix = join_paths(meson.current_source_dir(), 'install')
-libdir = join_paths(prefix, 'lib')
-
 if system == 'linux'
+
+  prefix = join_paths(meson.current_source_dir(), 'install')
+  libdir = join_paths(prefix, 'lib')
 
   run_command('configure', '--prefix=' + prefix, check: true)
   run_command('make', 'install', check: true)
@@ -17,9 +17,11 @@ if system == 'linux'
 
 elif system == 'windows'
 
-  run_command('build_dyncall.bat', check: true)
+  run_command('configure.bat', '/tool-msvc', check: true)
+  run_command('build_dyncall.bat', meson.current_build_dir(), check: true)
 
-  inc = include_directories('install\\include')
+  libdir = join_paths(meson.current_build_dir(), 'lib')
+  inc = include_directories('include')
 
 else
   assert(false, 'Unsupported platform!')

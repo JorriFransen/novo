@@ -6,8 +6,13 @@ project('novo', 'cpp',
 compiler = meson.get_compiler('cpp')
 compiler_id = compiler.get_id()
 
+link_args = []
+
+
 if compiler_id == 'clang-cl'
   add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')
+elif compiler_id == 'msvc'
+  link_args = [ '-nodefaultlib:libcmt']
 endif
 
 dyncall_proj = subproject('dyncall')
@@ -61,7 +66,7 @@ compiler_source = [
   'src/compiler/vm.cpp', 'src/compiler/vm.h',
 ]
 
-compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT', dependencies: [dyncall_dep])
+compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT', link_args: link_args, dependencies: [dyncall_dep])
 
 
 driver_include_dirs = ['src/driver/']
