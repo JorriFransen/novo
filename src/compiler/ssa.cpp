@@ -1186,8 +1186,11 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
             u32 str_offset = ssa_emit_constant(builder, Array_Ref((u8*)str.data, str.length + 1), nullptr);
             assert(str_offset >= 0);
 
-
-            patch_offset = builder->program->constant_memory.count + 1;
+            s64 padding = 8 - (builder->program->constant_memory.count % 8);
+            if (padding % 8 != 0) {
+                for (s64 i = 0; i < padding; i++) darray_append(&builder->program->constant_memory, (u8)0);
+            }
+            patch_offset = builder->program->constant_memory.count;
 
             assert(own_bytes); // We can't emit patch offset properly otherwise...
             ssa_emit_64(bytes, str_offset);
@@ -1205,7 +1208,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
 
         s64 old_count = builder->program->constant_memory.count;
         result = ssa_emit_constant(builder, temp_bytes, const_expr->resolved_type);
-        if (result > old_count) {
+        if (result >= old_count) {
             // Means this was the first occurance and actually emitted
 
             if (patch_offset >= 0) {
@@ -1238,8 +1241,10 @@ u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type)
 
     if (!match) {
 
-        s64 padding = (builder->program->constant_memory.count % 64) / 8;
-        for (s64 i = 0; i < padding; i++) darray_append(&builder->program->constant_memory, (u8)0);
+        s64 padding = 8 - (builder->program->constant_memory.count % 8);
+        if (padding % 8 != 0) {
+            for (s64 i = 0; i < padding; i++) darray_append(&builder->program->constant_memory, (u8)0);
+        }
 
         result = builder->program->constant_memory.count;
         darray_append(&builder->program->constants, { type, result });
