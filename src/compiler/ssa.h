@@ -90,6 +90,7 @@ struct SSA_Function
     bool foreign;
 
     u32 ffi_index;
+    u32 sp_id;
 };
 
 struct SSA_Constant;
@@ -111,7 +112,7 @@ struct SSA_Builder;
 NAPI void ssa_program_init(SSA_Program* program, Allocator* allocator);
 NAPI void ssa_program_free(SSA_Program* program);
 
-NAPI void ssa_function_init(SSA_Program* program, SSA_Function* func, AST_Declaration *decl);
+NAPI void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, AST_Declaration *decl);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, const char* name);
 

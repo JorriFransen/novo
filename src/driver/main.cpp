@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     printf("\n%s\n", ssa_str.data);
 
     VM vm;
-    vm_init(&vm, c_allocator());
+    vm_init(&vm, c_allocator(), &instance);
 
     auto r = vm_run(&vm, instance.ssa_program);
     log_info("Bytecode vm returned: %llu\n", r);

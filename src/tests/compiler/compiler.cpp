@@ -64,7 +64,7 @@ static bool run_test_case(Test_Case* tc)
     assert(instance.ssa_program->entry_fn_index >= 0);
 
     VM vm;
-    vm_init(&vm, c_allocator());
+    vm_init(&vm, c_allocator(), &instance);
 
     u64 return_code = vm_run(&vm, instance.ssa_program);
 

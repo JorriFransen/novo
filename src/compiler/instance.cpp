@@ -258,7 +258,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 auto wait_node = (*wait_for)[i];
                 assert(wait_node.kind == AST_Node_Kind::DECLARATION);
                 auto decl = wait_node.declaration;
-                assert(decl->kind = AST_Declaration_Kind::FUNCTION);
+                assert(decl->kind == AST_Declaration_Kind::FUNCTION);
                 assert(decl->ident);
 
                 if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {

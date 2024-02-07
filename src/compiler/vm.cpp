@@ -6,6 +6,7 @@
 #include <memory/allocator.h>
 
 #include "ffi.h"
+#include "instance.h"
 #include "ssa.h"
 #include "type.h"
 
@@ -14,9 +15,10 @@
 
 namespace Novo {
 
-void vm_init(VM* vm, Allocator* allocator)
+void vm_init(VM* vm, Allocator* allocator, Instance* inst)
 {
     vm->allocator = allocator;
+    vm->instance = inst;
     vm->current_program = nullptr;
     vm->fn_index = 0;
     vm->block_index = 0;
@@ -96,7 +98,13 @@ u64 vm_run(VM* vm, SSA_Program* program)
         SSA_Function* func = &program->functions[i];
         if (func->foreign) {
             s64 result = ffi_load_function(&vm->ffi, func->name);
-            assert(result >= 0);
+
+            if (result < 0) {
+
+                String name = atom_string(func->name);
+                instance_fatal_error(vm->instance, func->sp_id, "FFI unable to load foreign function: '%s'", name.data);
+                assert(false);
+            }
 
             func->ffi_index = result;
         }
@@ -156,7 +164,7 @@ u64 vm_run(VM* vm)
     u32 right_reg = vm_fetch<u32>(block, &ip); \
     u64 left_value = vm_get_register(vm, left_reg); \
     u64 right_value = vm_get_register(vm, right_reg); \
-    u64 result; \
+    u64 result = 0; \
     switch (size) { \
         default: assert(false); break; \
         case 1: result = (u8)left_value op (u8)right_value; break; \
@@ -224,7 +232,7 @@ u64 vm_run(VM* vm)
                 u8 size = vm_fetch<u8>(block, &ip);
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
 
-                u64 value;
+                u64 value = 0;
                 switch (size) {
                     default: assert(false); break;
                     case 1: value = vm_fetch<u8>(block, &ip); break;
@@ -252,7 +260,7 @@ u64 vm_run(VM* vm)
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 ptr_reg = vm_fetch<u32>(block, &ip);
 
-                u64 value;
+                u64 value = 0;
                 u64 ptr_value = vm_get_register(vm, ptr_reg);
 
                 switch (size) {
@@ -376,7 +384,7 @@ u64 vm_run(VM* vm)
                 void* func_sym = vm->ffi.functions[fn->ffi_index].sym;
                 Type *return_type = fn->type->function.return_type;
 
-                u64 result;
+                u64 result = 0;
 
                 switch (return_type->kind) {
                     default: assert(false); break;

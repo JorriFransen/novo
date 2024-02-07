@@ -540,8 +540,6 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             if (suggested_type) {
                 assert(suggested_type->kind == Type_Kind::INTEGER);
 
-                s64 min = I64_MIN;
-
                 if (suggested_type->integer.sign) {
                     s64 val = (s64)expr->integer_literal;
                     switch (suggested_type->bit_size) {
@@ -549,7 +547,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                         case 8: assert(val >= I8_MIN && val <= I8_MAX); break;
                         case 16: assert(val >= I16_MIN && val <= I16_MAX); break;
                         case 32: assert(val >= I32_MIN && val <= I32_MAX); break;
-                        case 64: assert(val >= min && val <= I64_MAX); break;
+                        case 64: assert(val >= I64_MIN && val <= I64_MAX); break;
                     }
                 } else {
                     u64 val = (u64)expr->integer_literal;

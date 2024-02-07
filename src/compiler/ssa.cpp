@@ -73,7 +73,7 @@ void ssa_program_free(SSA_Program* program)
     darray_free(&program->functions);
 }
 
-void ssa_function_init(SSA_Program* program, SSA_Function* func, AST_Declaration *decl)
+void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, AST_Declaration *decl)
 {
     Type *func_type = decl->resolved_type;
 
@@ -92,6 +92,7 @@ void ssa_function_init(SSA_Program* program, SSA_Function* func, AST_Declaration
     if (sret) func->param_count++;
 
     func->foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
+    func->sp_id = source_range_start(inst, decl->range_id);
 }
 
 void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name)
@@ -154,7 +155,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
 
     bool sret = decl->resolved_type->function.return_type->kind == Type_Kind::STRUCT;
 
-    ssa_function_init(program, &func, decl);
+    ssa_function_init(inst, program, &func, decl);
 
     SSA_Builder local_builder;
     local_builder.instance = inst;
@@ -697,6 +698,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
     }
 
     assert(false);
+    return false;
 }
 
 s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope)

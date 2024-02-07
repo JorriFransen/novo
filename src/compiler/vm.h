@@ -6,11 +6,13 @@
 namespace Novo {
 
 struct Allocator;
+struct Instance;
 struct SSA_Program;
 
 struct VM
 {
     Allocator* allocator;
+    Instance *instance;
     SSA_Program* current_program;
     u32 fn_index;
     u32 block_index;
@@ -29,7 +31,7 @@ struct VM
     FFI ffi;
 };
 
-NAPI void vm_init(VM* vm, Allocator* allocator);
+NAPI void vm_init(VM* vm, Allocator* allocator, Instance* inst);
 NAPI u64 vm_run(VM* vm, SSA_Program* program);
 NAPI u64 vm_run(VM* vm);
 

@@ -28,9 +28,25 @@ void ffi_init(FFI* ffi, Allocator* allocator)
     darray_init(allocator, &ffi->libs);
     darray_init(allocator, &ffi->functions);
 
+#if NPLATFORM_LINUX
+
     DLLib* this_lib = dlLoadLibrary(nullptr);
     assert(this_lib);
     darray_append(&ffi->libs, { atom_get(".self."), this_lib });
+
+#elif NPLATFORM_WINDOWS
+
+    String_Ref novo_common_name = "novo_compiler.dll";
+    DLLib* novo_common_lib = dlLoadLibrary(novo_common_name.data);
+    assert(novo_common_lib);
+    darray_append(&ffi->libs, { atom_get(novo_common_name), novo_common_lib });
+
+    String_Ref msvcrt_name = "msvcrt.dll";
+    DLLib* msvcrt_lib = dlLoadLibrary(msvcrt_name.data);
+    assert(msvcrt_lib);
+    darray_append(&ffi->libs, { atom_get(msvcrt_name), msvcrt_lib });
+
+#endif // NPLATFORM_...
 }
 
 void ffi_free(FFI* ffi)
