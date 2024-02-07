@@ -12,15 +12,22 @@
 
 namespace Novo {
 
+struct AST_File;
 struct Parse_Task;
 struct Resolve_Task;
 struct Scope;
 struct Source_Pos;
 struct Source_Range;
+struct SSA_Program;
 struct SSA_Task;
 struct Type;
 struct Type_Task;
-struct SSA_Program;
+
+struct Imported_File
+{
+    Atom path;
+    AST_File *ast;
+};
 
 struct Instance
 {
@@ -44,7 +51,7 @@ struct Instance
 
     Scope* global_scope;
 
-    DArray<Atom> imported_files;
+    DArray<Imported_File> imported_files;
 
     DArray<Type*> function_types;
 
@@ -61,12 +68,18 @@ struct Instance
     Type* builtin_type_int;
     Type* builtin_type_bool;
 
+    String_Ref builtin_path;
+    bool builtin_module_loaded;
+    // These types are defined in the builtin module
+    Type* type_string;
+
 };
 
 NAPI void instance_init(Instance* inst, Options options);
 NAPI void instance_free(Instance* inst);
 
 NAPI bool instance_start(Instance* inst);
+NAPI bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_module = false);
 
 NAPI void instance_error(Instance* inst, Source_Pos sp, const char* fmt, ...);
 NAPI void instance_error(Instance* inst, u32 sp_id, const char* fmt, ...);

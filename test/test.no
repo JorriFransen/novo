@@ -1,5 +1,6 @@
 
 // TODO:
+//  - Make sure ssa allocs are emitted in varaible declaration order
 //  - Move FFI to instance?
 //  - Free vm?
 //  - Foreign functions (call printf)
@@ -19,16 +20,26 @@
 //  - Capture errors, and check for them in tests
 
 putchar :: (char: s32) -> s32 #foreign;
+puts :: (str: *u8) -> s32 #foreign;
 foreign_add :: (a: s64, b: s64) -> s32 #foreign;
 
 main :: () -> s64 {
 
-    c : s32 = 'H';
+    msg : string = "Hello, World!\n";
+    msg2 : string = "Hello, World!\n";
 
-    c = putchar(c);
-    c2 := putchar('I');
-    putchar('!');
-    putchar('\n');
+    puts(msg.data);
+    puts(msg2.data);
 
-    return c + c2 + foreign_add(1, 2);
+    return msg.length;
 }
+
+// Need pointer math, index on pointers, pointer/integer casts or static array type
+// puts :: (s: string) {
+//     // ptr := s.data;
+//     for i := 0; i < s.length; i += 1; {
+//
+//         // putchar(cast(u32, <ptr);
+//     }
+// }
+

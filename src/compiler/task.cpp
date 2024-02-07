@@ -11,12 +11,15 @@ namespace Novo {
 
 void add_parse_task(Instance* inst, Atom path)
 {
+    s64 imported_file_index = inst->imported_files.count;
+    darray_append(&inst->imported_files, { path, nullptr });
+
     Parse_Task task = {
         .file_name = path,
+        .imported_file_index = imported_file_index,
     };
 
     darray_append(&inst->parse_tasks, task);
-    darray_append(&inst->imported_files, path);
 }
 
 void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)

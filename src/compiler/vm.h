@@ -18,12 +18,13 @@ struct VM
     u32 register_offset;
     u32 bp;
     u32 sp;
+    u32 stack_size;
+    u32 register_count;
+    s64 constant_memory_size;
 
     u64* registers;
     u64* stack;
-
-    u32 register_count;
-    u32 stack_size;
+    u8* constant_memory;
 
     FFI ffi;
 };

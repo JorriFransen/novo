@@ -155,7 +155,7 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
 
             bool imported = false;
             for (s64 i = 0; i < inst->imported_files.count; i++) {
-                if (inst->imported_files[i] == path_atom) {
+                if (inst->imported_files[i].path == path_atom) {
                     imported = true;
                     break;
                 }
@@ -469,12 +469,10 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
         case AST_Expression_Kind::INTEGER_LITERAL:
         case AST_Expression_Kind::BOOL_LITERAL:
         case AST_Expression_Kind::REAL_LITERAL:
-        case AST_Expression_Kind::CHAR_LITERAL: {
+        case AST_Expression_Kind::CHAR_LITERAL:
+        case AST_Expression_Kind::STRING_LITERAL: {
             break;
         }
-
-        case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
-
     }
 
     expr->flags |= AST_EXPR_FLAG_RESOLVED;

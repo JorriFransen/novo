@@ -593,7 +593,17 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
-        case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
+        case AST_Expression_Kind::STRING_LITERAL: {
+
+            assert(inst->type_string);
+
+            if (suggested_type) {
+                assert(suggested_type == inst->type_string);
+            }
+
+            expr->resolved_type = inst->type_string;
+            break;
+        }
     }
 
     assert(expr->resolved_type);

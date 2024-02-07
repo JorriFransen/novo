@@ -49,6 +49,7 @@ void ssa_program_init(SSA_Program* program, Allocator* allocator)
     program->entry_fn_index = -1;
     darray_init(allocator, &program->constant_memory);
     darray_init(allocator, &program->constants);
+    darray_init(allocator, &program->constant_patch_offsets);
     darray_init(allocator, &program->functions);
 }
 
@@ -687,7 +688,12 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
         case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
-        case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
+
+        case AST_Expression_Kind::STRING_LITERAL: {
+            u32 string_data_const = ssa_emit_constant(builder, lvalue_expr);
+            u32 string_data_ptr = ssa_emit_load_constant(builder, string_data_const);
+            return string_data_ptr;
+        }
     }
 
     assert(false);
@@ -1114,7 +1120,7 @@ void ssa_emit_64(DArray<u8> *bytes, u64 value)
     darray_append(bytes, (u8)((value >> 56) & 0xFF));
 }
 
-u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u8> *bytes/*=nullptr*/)
+u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u8>* bytes/*=nullptr*/)
 {
     assert(const_expr->flags & AST_EXPR_FLAG_CONST);
 
@@ -1130,6 +1136,8 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u
     }
 
     s64 old_byte_count = bytes->count;
+
+    s64 patch_offset = -1; // This might need to be a temp array later
 
     switch (const_expr->kind) {
 
@@ -1169,7 +1177,24 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
         case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
-        case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
+
+        case AST_Expression_Kind::STRING_LITERAL: {
+
+            String str = atom_string(const_expr->string_literal);
+
+            NSTRING_ASSERT_ZERO_TERMINATION(str);
+            u32 str_offset = ssa_emit_constant(builder, Array_Ref((u8*)str.data, str.length + 1), nullptr);
+            assert(str_offset >= 0);
+
+
+            patch_offset = builder->program->constant_memory.count + 1;
+
+            assert(own_bytes); // We can't emit patch offset properly otherwise...
+            ssa_emit_64(bytes, str_offset);
+            ssa_emit_64(bytes, str.length);
+
+            break;
+        }
     }
 
     assert(bytes->count - old_byte_count == byte_size);
@@ -1178,27 +1203,48 @@ u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u
 
     if (own_bytes) {
 
-        bool match = false;
-        for (s64 i = 0; i < builder->program->constants.count; i++) {
-            SSA_Constant constant = builder->program->constants[i];
+        s64 old_count = builder->program->constant_memory.count;
+        result = ssa_emit_constant(builder, temp_bytes, const_expr->resolved_type);
+        if (result > old_count) {
+            // Means this was the first occurance and actually emitted
 
-            if (constant.type == const_expr->resolved_type) {
-                if (memcmp(&builder->program->constant_memory[constant.offset], bytes->data, byte_size) == 0) {
-                    match = true;
-                    result = constant.offset;
-                    break;
-                }
+            if (patch_offset >= 0) {
+                darray_append(&builder->program->constant_patch_offsets, patch_offset);
             }
         }
 
-        if (!match) {
-            result = builder->program->constant_memory.count;
-            darray_append(&builder->program->constants, { const_expr->resolved_type, result });
-
-            darray_append_array(&builder->program->constant_memory, Array_Ref<u8>(*bytes));
-        }
-
         temp_array_destroy(&temp_bytes);
+    }
+
+    return result;
+}
+
+u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type)
+{
+    u32 result = 0;
+
+    bool match = false;
+    for (s64 i = 0; i < builder->program->constants.count; i++) {
+        SSA_Constant constant = builder->program->constants[i];
+
+        if (constant.type == type) {
+            if (memcmp(&builder->program->constant_memory[constant.offset], bytes.data, bytes.count) == 0) {
+                match = true;
+                result = constant.offset;
+                break;
+            }
+        }
+    }
+
+    if (!match) {
+
+        s64 padding = (builder->program->constant_memory.count % 64) / 8;
+        for (s64 i = 0; i < padding; i++) darray_append(&builder->program->constant_memory, (u8)0);
+
+        result = builder->program->constant_memory.count;
+        darray_append(&builder->program->constants, { type, result });
+
+        darray_append_array(&builder->program->constant_memory, Array_Ref<u8>(bytes));
     }
 
     return result;

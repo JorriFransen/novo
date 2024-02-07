@@ -14,6 +14,7 @@ struct Scope;
 struct Parse_Task
 {
     Atom file_name;
+    s64 imported_file_index;
 };
 
 struct Resolve_Task

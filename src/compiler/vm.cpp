@@ -32,6 +32,8 @@ void vm_init(VM* vm, Allocator* allocator)
     vm->registers = allocate_array<u64>(allocator, vm->register_count);
     vm->stack = allocate_array<u64>(allocator, vm->stack_size);
 
+    vm->constant_memory = nullptr;
+    vm->constant_memory_size = 0;
 
     ffi_init(&vm->ffi, allocator);
 }
@@ -110,6 +112,23 @@ u64 vm_run(VM* vm, SSA_Program* program)
     vm_stack_push(vm, 0); // dummy fn_index
     vm_stack_push(vm, 0); // dummy block_index
     vm_stack_push(vm, 0); // dummy register_offset
+
+    vm->constant_memory_size = program->constant_memory.count;
+    vm->constant_memory = allocate_array<u8>(vm->allocator, vm->constant_memory_size);
+    memcpy(vm->constant_memory, program->constant_memory.data, vm->constant_memory_size);
+
+    for (s64 i = 0; i < program->constant_patch_offsets.count; i++) {
+        s64 patch_offset = program->constant_patch_offsets[i];
+        assert(patch_offset >= 0 && patch_offset < vm->constant_memory_size - sizeof(s64));
+
+        u64* patch_ptr = (u64*)&vm->constant_memory[patch_offset];
+
+        s64 dest_offset = *patch_ptr;
+        assert(dest_offset >= 0 && dest_offset < vm->constant_memory_size);
+        u8* dest_ptr = &vm->constant_memory[dest_offset];
+
+        *patch_ptr = (u64)dest_ptr;
+    }
 
     return vm_run(vm);
 }
@@ -252,7 +271,7 @@ u64 vm_run(VM* vm)
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 offset = vm_fetch<u32>(block, &ip);
 
-                vm_set_register(vm, dest_reg, (u64)&vm->current_program->constant_memory[offset]);
+                vm_set_register(vm, dest_reg, (u64)&vm->constant_memory[offset]);
                 break;
             }
 
@@ -334,7 +353,8 @@ u64 vm_run(VM* vm)
                         case Type_Kind::INVALID: assert(false); break;
                         case Type_Kind::VOID: assert(false); break;
 
-                        case Type_Kind::INTEGER: {
+                        case Type_Kind::INTEGER:
+                        case Type_Kind::BOOLEAN: {
                             switch (arg_type->bit_size) {
                                 default: assert(false); break;
                                 case 8: dcArgChar(vm->ffi.vm, arg); break;
@@ -345,8 +365,8 @@ u64 vm_run(VM* vm)
                             break;
                         }
 
-                        case Type_Kind::BOOLEAN: assert(false); break;
-                        case Type_Kind::POINTER: assert(false); break;
+                        case Type_Kind::POINTER: dcArgPointer(vm->ffi.vm, (void*)arg); break;
+
                         case Type_Kind::FUNCTION: assert(false); break;
                         case Type_Kind::STRUCT: assert(false); break;
                     }

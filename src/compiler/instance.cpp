@@ -99,6 +99,10 @@ void instance_init(Instance* inst, Options options)
     inst->builtin_type_bool = boolean_type_new(inst, 8);
     auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
+
+    inst->builtin_path = "modules/builtin.no";
+    inst->builtin_module_loaded = false;
+    inst->type_string = nullptr;
 }
 
 void instance_free(Instance* inst)
@@ -129,6 +133,36 @@ bool instance_start(Instance* inst)
         return false;
     }
 
+    return instance_start(inst, first_file_name);
+}
+
+bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_module/*=false*/)
+{
+    if (!inst->builtin_module_loaded && !builtin_module) {
+
+        bool builtin_result = instance_start(inst, inst->builtin_path, true);
+        if (!builtin_result) return false;
+
+        // Atom builtin_path_atom = atom_get(builtin_path);
+        // AST_File *builtin_ast_file = nullptr;
+        // for (s64 i = 0; i < inst->imported_files.count; i++) {
+        //     if (inst->imported_files[i].path == builtin_path_atom) {
+        //         builtin_ast_file = inst->imported_files[i].ast;
+        //         assert(builtin_ast_file);
+        //         break;
+        //     }
+        // }
+        // assert(builtin_ast_file);
+
+
+        AST_Declaration *string_decl = scope_find_symbol(inst->global_scope, atom_get("string"), nullptr);
+        assert(string_decl);
+        assert(string_decl->kind == AST_Declaration_Kind::STRUCT);
+        inst->type_string = string_decl->resolved_type;
+
+        inst->builtin_module_loaded = true;
+    }
+
     String first_file_path;
 
     if (!fs_is_file(first_file_name)) {
@@ -157,6 +191,7 @@ bool instance_start(Instance* inst)
             AST_File* parsed_file = parse_file(inst, atom_string(task.file_name));
             if (parsed_file)
             {
+                inst->imported_files[task.imported_file_index].ast = parsed_file;
                 darray_remove_unordered(&inst->parse_tasks, i);
                 i--;
 

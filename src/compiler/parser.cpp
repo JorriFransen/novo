@@ -339,7 +339,12 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
         case TOK_STRING: {
             next_token(parser->lexer);
-            result = ast_string_literal_expression(parser->instance, ct.atom, range);
+
+            String_Ref stripped = atom_string(ct.atom);
+            stripped.length -= 2;
+            stripped.data += 1;
+            Atom string_atom = atom_get(stripped);
+            result = ast_string_literal_expression(parser->instance, string_atom, range);
             break;
         }
 

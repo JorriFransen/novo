@@ -55,6 +55,7 @@ static bool run_test_case(Test_Case* tc)
 
     Instance instance;
     instance_init(&instance, options);
+    instance.builtin_path = "../../../modules/builtin.no";
 
     if (!instance_start(&instance)) {
         return false;

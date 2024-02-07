@@ -102,6 +102,7 @@ struct SSA_Program
 
     DArray<u8> constant_memory;
     DArray<SSA_Constant> constants;
+    DArray<s64> constant_patch_offsets;
     DArray<SSA_Function> functions;
 };
 
@@ -155,7 +156,8 @@ NAPI void ssa_emit_16(DArray<u8> *bytes, u16 value);
 NAPI void ssa_emit_32(DArray<u8> *bytes, u32 value);
 NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 
-NAPI u32 ssa_emit_constant(SSA_Builder *builder, AST_Expression *const_expr, DArray<u8> *bytes = nullptr);
+NAPI u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
+NAPI u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type);
 
 NAPI String ssa_to_string(Allocator* allocator, SSA_Program* program);
 NAPI void ssa_print(String_Builder* sb, SSA_Program* program);
