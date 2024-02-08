@@ -77,13 +77,33 @@ void instance_init(Instance* inst, Options options)
     auto u8_decl = ast_builtin_type_decl(inst, inst->builtin_type_u8, "u8");
     scope_add_symbol(inst->global_scope, u8_decl->ident->atom, u8_decl);
 
-    inst->builtin_type_s64 = integer_type_new(inst, true, 64);
-    auto s64_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
-    scope_add_symbol(inst->global_scope, s64_decl->ident->atom, s64_decl);
+    inst->builtin_type_u16 = integer_type_new(inst, false, 16);
+    auto u16_decl = ast_builtin_type_decl(inst, inst->builtin_type_u16, "u16");
+    scope_add_symbol(inst->global_scope, u16_decl->ident->atom, u16_decl);
+
+    inst->builtin_type_u32 = integer_type_new(inst, false, 32);
+    auto u32_decl = ast_builtin_type_decl(inst, inst->builtin_type_u32, "u32");
+    scope_add_symbol(inst->global_scope, u32_decl->ident->atom, u32_decl);
+
+    inst->builtin_type_u64 = integer_type_new(inst, false, 64);
+    auto u64_decl = ast_builtin_type_decl(inst, inst->builtin_type_u64, "u64");
+    scope_add_symbol(inst->global_scope, u64_decl->ident->atom, u64_decl);
+
+    inst->builtin_type_s8 = integer_type_new(inst, true, 8);
+    auto s8_decl = ast_builtin_type_decl(inst, inst->builtin_type_s8, "s8");
+    scope_add_symbol(inst->global_scope, s8_decl->ident->atom, s8_decl);
+
+    inst->builtin_type_s16 = integer_type_new(inst, true, 16);
+    auto s16_decl = ast_builtin_type_decl(inst, inst->builtin_type_s16, "s16");
+    scope_add_symbol(inst->global_scope, s16_decl->ident->atom, s16_decl);
 
     inst->builtin_type_s32 = integer_type_new(inst, true, 32);
     auto s32_decl = ast_builtin_type_decl(inst, inst->builtin_type_s32, "s32");
     scope_add_symbol(inst->global_scope, s32_decl->ident->atom, s32_decl);
+
+    inst->builtin_type_s64 = integer_type_new(inst, true, 64);
+    auto s64_decl = ast_builtin_type_decl(inst, inst->builtin_type_s64, "s64");
+    scope_add_symbol(inst->global_scope, s64_decl->ident->atom, s64_decl);
 
     inst->builtin_type_int = inst->builtin_type_s64;
     auto int_decl = ast_builtin_type_decl(inst, inst->builtin_type_int, "int");

@@ -20,4 +20,6 @@ NAPI bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, S
 NAPI bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scope* scope, Type* suggested_type);
 NAPI bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* scope);
 
+NAPI bool valid_cast(Instance* inst, Type* from_type, Type* to_type);
+
 }

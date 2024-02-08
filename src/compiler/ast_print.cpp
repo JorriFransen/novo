@@ -407,9 +407,9 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
     }
 }
 
-static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expression* expr, int indent/*=0*/)
+static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expression* expr, int indent/*=0*/)
 {
-    ast_print_pos(instance, sb, expr);
+    ast_print_pos(inst, sb, expr);
 
     ast_print_indent(sb, indent);
 
@@ -425,20 +425,20 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
 
         case AST_Expression_Kind::BINARY: {
             string_builder_append(sb, "EXPR_BINARY: '%s'\n", tmp_token_kind_str((Token_Kind)expr->binary.op).data);
-            ast_expr_to_string(instance, sb, expr->binary.lhs, indent + 1);
-            ast_expr_to_string(instance, sb, expr->binary.rhs, indent + 1);
+            ast_expr_to_string(inst, sb, expr->binary.lhs, indent + 1);
+            ast_expr_to_string(inst, sb, expr->binary.rhs, indent + 1);
             break;
         }
 
         case AST_Expression_Kind::MEMBER: {
             string_builder_append(sb, "EXPR_MEMBER:\n");
 
-            ast_print_pos(instance, sb, expr->member.base);
+            ast_print_pos(inst, sb, expr->member.base);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "BASE:\n");
-            ast_expr_to_string(instance, sb, expr->member.base, indent + 2);
+            ast_expr_to_string(inst, sb, expr->member.base, indent + 2);
 
-            ast_print_pos(instance, sb, expr->member.member_name);
+            ast_print_pos(inst, sb, expr->member.member_name);
             ast_print_indent(sb, indent);
             string_builder_append(sb, "MEMBER_NAME: '%s'\n", atom_string(expr->member.member_name->atom).data);
             break;
@@ -446,35 +446,42 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
 
         case AST_Expression_Kind::CALL: {
             string_builder_append(sb, "EXPR_CALL:\n");
-            ast_print_pos(instance, sb, expr->call.base);
+            ast_print_pos(inst, sb, expr->call.base);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "BASE:\n");
-            ast_expr_to_string(instance, sb, expr->call.base, indent + 2);
+            ast_expr_to_string(inst, sb, expr->call.base, indent + 2);
 
             if (expr->call.args.count) {
-                ast_print_pos(instance, sb, expr->call.args[0]);
+                ast_print_pos(inst, sb, expr->call.args[0]);
             } else {
-                ast_print_pos(instance, sb, expr->call.base);
+                ast_print_pos(inst, sb, expr->call.base);
             }
 
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "ARGS: %d\n", expr->call.args.count);
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                ast_expr_to_string(instance, sb, expr->call.args[i], indent + 2);
+                ast_expr_to_string(inst, sb, expr->call.args[i], indent + 2);
             }
             break;
         }
 
         case AST_Expression_Kind::ADDRESS_OF: {
             string_builder_append(sb, "EXPR_ADDRESS_OF:\n");
-            ast_expr_to_string(instance, sb, expr->call.base, indent + 1);
+            ast_expr_to_string(inst, sb, expr->call.base, indent + 1);
             break;
         }
 
         case AST_Expression_Kind::DEREF: {
             string_builder_append(sb, "DEREF:\n");
-            ast_expr_to_string(instance, sb, expr->call.base, indent + 1);
+            ast_expr_to_string(inst, sb, expr->call.base, indent + 1);
+            break;
+        }
+
+        case AST_Expression_Kind::CAST: {
+            string_builder_append(sb, "CAST:\n");
+            ast_ts_to_string(inst, sb, expr->cast.ts, indent + 1);
+            ast_expr_to_string(inst, sb, expr->cast.operand, indent + 1);
             break;
         }
 
@@ -482,7 +489,7 @@ static void ast_expr_to_string(Instance* instance, String_Builder* sb, AST_Expre
             string_builder_append(sb, "EXPR_COMPOUND: (%d members)\n", expr->compound.expressions.count);
 
             for (s64 i = 0; i < expr->compound.expressions.count; i++) {
-                ast_expr_to_string(instance, sb, expr->compound.expressions[i], indent + 1);
+                ast_expr_to_string(inst, sb, expr->compound.expressions[i], indent + 1);
             }
             break;
         }

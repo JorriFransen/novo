@@ -248,17 +248,25 @@ AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, D
     return result;
 }
 
-AST_Expression *ast_address_of_expression(Instance *instance, AST_Expression *operand)
+AST_Expression *ast_address_of_expression(Instance* instance, AST_Expression* operand)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::ADDRESS_OF);
-    result->operand = operand;
+    result->unary.operand = operand;
     return result;
 }
 
-AST_Expression *ast_deref_expression(Instance *instance, AST_Expression *operand)
+AST_Expression *ast_deref_expression(Instance* instance, AST_Expression* operand)
 {
     auto result = ast_expression(instance, AST_Expression_Kind::DEREF);
-    result->operand = operand;
+    result->unary.operand = operand;
+    return result;
+}
+
+AST_Expression* ast_cast_expression(Instance* instance, AST_Type_Spec* ts, AST_Expression* operand)
+{
+    auto result = ast_expression(instance, AST_Expression_Kind::CAST);
+    result->cast.ts = ts;
+    result->cast.operand = operand;
     return result;
 }
 

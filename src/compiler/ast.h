@@ -204,6 +204,8 @@ enum class AST_Expression_Kind : u32
     ADDRESS_OF,
     DEREF,
 
+    CAST,
+
     COMPOUND,
 
     INTEGER_LITERAL,
@@ -252,7 +254,14 @@ struct AST_Expression
             DArray<AST_Expression *> args;
         } call;
 
-        AST_Expression *operand;
+        struct {
+            AST_Expression *operand;
+        } unary;
+
+        struct {
+            AST_Type_Spec* ts;
+            AST_Expression* operand;
+        } cast;
 
         struct {
             DArray<AST_Expression*> expressions;
@@ -335,9 +344,10 @@ NAPI AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, AS
 NAPI AST_Expression* ast_identifier_expression(Instance* inst, AST_Identifier* ident);
 NAPI AST_Expression* ast_binary_expression(Instance* inst, u32 op, AST_Expression* lhs, AST_Expression* rhs);
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name);
-NAPI AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression *> args);
-NAPI AST_Expression *ast_address_of_expression(Instance *instance, AST_Expression *operand);
-NAPI AST_Expression *ast_deref_expression(Instance *instance, AST_Expression *operand);
+NAPI AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression*> args);
+NAPI AST_Expression* ast_address_of_expression(Instance* instance, AST_Expression* operand);
+NAPI AST_Expression* ast_deref_expression(Instance* instance, AST_Expression* operand);
+NAPI AST_Expression* ast_cast_expression(Instance* instance, AST_Type_Spec* ts, AST_Expression* operand);
 NAPI AST_Expression* ast_compound_expression(Instance* inst, DArray<AST_Expression*> expressions);
 NAPI AST_Expression* ast_integer_literal_expression(Instance* inst, u64 i);
 NAPI AST_Expression* ast_real_literal_expression(Instance* inst, Real_Value rv);

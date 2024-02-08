@@ -91,6 +91,7 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
     if (sret) func->param_count++;
 
     func->foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
+    func->source_pos = source_pos(inst, decl);
 }
 
 void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name)
@@ -226,12 +227,12 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
 
     bool last_block_exits = ssa_block_exits(builder, builder->block_index);
 
-    if (!last_block_exits && func.blocks[builder->block_index].incoming.count > 0) {
-        instance_fatal_error(inst, func.source_pos, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
-    }
-
-    if (!last_block_exits && decl->resolved_type->function.return_type->kind == Type_Kind::VOID) {
-        ssa_emit_op(builder, SSA_OP_RET_VOID);
+    if (!last_block_exits) {
+        if (decl->resolved_type->function.return_type->kind == Type_Kind::VOID) {
+            ssa_emit_op(builder, SSA_OP_RET_VOID);
+        } else if (func.blocks[builder->block_index].incoming.count > 0) {
+            instance_fatal_error(inst, func.source_pos, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
+        }
     }
 
     if (decl->ident->atom == atom_get("main")) {
@@ -641,8 +642,10 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
 
         case AST_Expression_Kind::DEREF: {
-            return ssa_emit_expression(builder, lvalue_expr->operand, scope);
+            return ssa_emit_expression(builder, lvalue_expr->unary.operand, scope);
         }
+
+        case AST_Expression_Kind::CAST: assert(false); break;
 
         case AST_Expression_Kind::COMPOUND: {
 
@@ -852,21 +855,31 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
         }
 
         case AST_Expression_Kind::ADDRESS_OF: {
-            return ssa_emit_lvalue(builder, expr->operand, scope);
+            return ssa_emit_lvalue(builder, expr->unary.operand, scope);
             break;
         }
 
         case AST_Expression_Kind::DEREF: {
-            Type *operand_type = expr->operand->resolved_type;
+            Type *operand_type = expr->unary.operand->resolved_type;
 
             if (operand_type->kind == Type_Kind::STRUCT) {
                 assert(false);
             } else {
-                u32 ptr_reg = ssa_emit_expression(builder, expr->operand, scope);
+                u32 ptr_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
                 return ssa_emit_load_ptr(builder, operand_type->bit_size, ptr_reg);
             }
 
             assert(false);
+            break;
+        }
+
+        case AST_Expression_Kind::CAST: {
+
+            Type* to_type = expr->cast.ts->resolved_type;
+            Type* from_type = expr->cast.operand->resolved_type;
+
+            u32 operand_reg = ssa_emit_expression(builder, expr->cast.operand, scope);
+            return ssa_emit_cast(builder, from_type, to_type, operand_reg);
             break;
         }
 
@@ -896,6 +909,56 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
     }
 
     return result;
+}
+
+u32 ssa_emit_trunc(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg)
+{
+    assert(target_bit_size % 8 == 0);
+    auto target_byte_size = target_bit_size / 8;
+    assert(target_byte_size >= 0 && target_byte_size < U8_MAX);
+
+    u32 result_reg = ssa_register_create(builder);
+    ssa_emit_op(builder, SSA_OP_TRUNC);
+    ssa_emit_8(builder, target_byte_size);
+    ssa_emit_32(builder, result_reg);
+    ssa_emit_32(builder, operand_reg);
+
+    return result_reg;
+}
+
+u32 ssa_emit_sext(SSA_Builder* builder, s64 target_bit_size, s64 source_bit_size, u32 operand_reg)
+{
+    assert(target_bit_size % 8 == 0);
+    auto target_byte_size = target_bit_size / 8;
+    assert(target_byte_size >= 0 && target_byte_size < U8_MAX);
+
+    assert(source_bit_size % 8 == 0);
+    auto source_byte_size = source_bit_size / 8;
+    assert(source_byte_size >= 0 && source_byte_size < U8_MAX);
+
+    u32 result_reg = ssa_register_create(builder);
+    ssa_emit_op(builder, SSA_OP_SEXT);
+    ssa_emit_8(builder, target_byte_size);
+    ssa_emit_8(builder, source_byte_size);
+    ssa_emit_32(builder, result_reg);
+    ssa_emit_32(builder, operand_reg);
+
+    return result_reg;
+}
+
+u32 ssa_emit_zext(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg)
+{
+    assert(target_bit_size % 8 == 0);
+    auto target_byte_size = target_bit_size / 8;
+    assert(target_byte_size >= 0 && target_byte_size < U8_MAX);
+
+    u32 result_reg = ssa_register_create(builder);
+    ssa_emit_op(builder, SSA_OP_ZEXT);
+    ssa_emit_8(builder, target_byte_size);
+    ssa_emit_32(builder, result_reg);
+    ssa_emit_32(builder, operand_reg);
+
+    return result_reg;
 }
 
 u32 ssa_emit_alloc(SSA_Builder* builder, s64 bit_size)
@@ -1040,6 +1103,44 @@ void ssa_emit_jmp(SSA_Builder* builder, u32 block)
     darray_append(&builder->function->blocks[block].incoming, (u32)builder->block_index);
 }
 
+u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
+{
+    switch (from_type->kind) {
+        case Type_Kind::INVALID: assert(false); break;
+        case Type_Kind::VOID: assert(false); break;
+
+        case Type_Kind::INTEGER: {
+            assert(to_type->kind == Type_Kind::INTEGER);
+            return ssa_emit_integer_cast(builder, from_type, to_type, operand_reg);
+        }
+
+        case Type_Kind::BOOLEAN: assert(false); break;
+        case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::FUNCTION: assert(false); break;
+        case Type_Kind::STRUCT: assert(false); break;
+    }
+}
+
+u32 ssa_emit_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
+{
+    assert(from_type->kind == Type_Kind::INTEGER);
+    assert(to_type->kind == Type_Kind::INTEGER);
+
+    if (from_type->bit_size == to_type->bit_size) {
+        return operand_reg;
+
+    } else if (from_type->bit_size > to_type->bit_size) {
+        return ssa_emit_trunc(builder, to_type->bit_size, operand_reg);
+
+    } else {
+        if (from_type->integer.sign) {
+            return ssa_emit_sext(builder, to_type->bit_size, from_type->bit_size, operand_reg);
+        } else {
+            return ssa_emit_zext(builder, to_type->bit_size, operand_reg);
+        }
+    }
+}
+
 void ssa_emit_op(SSA_Builder* builder, SSA_Op op)
 {
     SSA_Block* block = &builder->function->blocks[builder->block_index];
@@ -1143,6 +1244,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
 
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
         case AST_Expression_Kind::DEREF: assert(false); break;
+        case AST_Expression_Kind::CAST: assert(false); break;
 
         case AST_Expression_Kind::COMPOUND: {
             assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
@@ -1356,6 +1458,51 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
         BINOP_CASE(GTEQ);
 
 #undef BINOP_CASE
+
+        case SSA_OP_TRUNC: {
+            u8 size = *(u8*)&bytes[ip];
+            ip += sizeof(u8);
+
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 operand_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = TRUNC %hhu %%%u\n", dest_reg, size, operand_reg);
+            break;
+        }
+
+        case SSA_OP_SEXT: {
+            u8 dest_size = *(u8*)&bytes[ip];
+            ip += sizeof(u8);
+
+            u8 source_size = *(u8*)&bytes[ip];
+            ip += sizeof(u8);
+
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 operand_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = SEXT %hhu %hhu %%%u\n", dest_reg, dest_size, source_size, operand_reg);
+            break;
+        }
+
+        case SSA_OP_ZEXT: {
+            u8 dest_size = *(u8*)&bytes[ip];
+            ip += sizeof(u8);
+
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 operand_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = ZEXT %hhu %%%u\n", dest_reg, dest_size, operand_reg);
+            break;
+        }
 
         case SSA_OP_ALLOC: {
             u32 dest_reg = *(u32*)&bytes[ip];

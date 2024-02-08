@@ -435,7 +435,19 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
         case AST_Expression_Kind::ADDRESS_OF:
         case AST_Expression_Kind::DEREF: {
-            if (!resolve_expression(inst, task, expr->operand, scope)) {
+            if (!resolve_expression(inst, task, expr->unary.operand, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
+        case AST_Expression_Kind::CAST: {
+            if (!resolve_ts(inst, task, expr->cast.ts, scope)) {
+                return false;
+            }
+
+            if (!resolve_expression(inst, task, expr->cast.operand, scope)) {
                 return false;
             }
 

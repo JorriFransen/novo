@@ -362,7 +362,9 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
         case AST_Expression_Kind::IDENTIFIER: {
             auto decl = expr->identifier->decl;
-            assert(decl);
+            if (!decl) {
+                return false;
+            }
 
             if (!(decl->flags & AST_DECL_FLAG_TYPED)) {
                 return false;
@@ -462,7 +464,18 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                     return false;
                 }
 
-                assert(expr->call.args[i]->resolved_type == fn_type->function.param_types[i]);
+                AST_Expression* arg_expr = expr->call.args[i];
+                Type* param_type = fn_type->function.param_types[i];
+
+                if (arg_expr->resolved_type != param_type) {
+
+                    Source_Pos pos = source_pos(inst, arg_expr);
+
+                    instance_fatal_error(inst, pos, "Mismatching type for argument %d, got: '%s', expected: '%s'", i + 1,
+                            temp_type_string(inst, arg_expr->resolved_type).data,
+                            temp_type_string(inst, param_type).data);
+                    assert(false);
+                }
             }
 
             expr->resolved_type = fn_type->function.return_type;
@@ -482,37 +495,61 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
         case AST_Expression_Kind::ADDRESS_OF: {
 
-            if (!type_expression(inst, task, expr->operand, scope, nullptr)) {
+            if (!type_expression(inst, task, expr->unary.operand, scope, nullptr)) {
                 return false;
             }
 
-            if (!(expr->operand->flags & AST_EXPR_FLAG_LVALUE)) {
-                Source_Pos pos = source_pos(inst, expr->operand);
+            if (!(expr->unary.operand->flags & AST_EXPR_FLAG_LVALUE)) {
+                Source_Pos pos = source_pos(inst, expr->unary.operand);
                 instance_fatal_error(inst, pos, "Cannot take address of non lvalue expression");
                 assert(false);
                 return false;
             }
 
-            assert(expr->operand->flags & AST_EXPR_FLAG_LVALUE);
+            assert(expr->unary.operand->flags & AST_EXPR_FLAG_LVALUE);
 
-            expr->resolved_type = pointer_type_get(inst, expr->operand->resolved_type);
+            expr->resolved_type = pointer_type_get(inst, expr->unary.operand->resolved_type);
             break;
         }
 
         case AST_Expression_Kind::DEREF: {
 
-            if (!type_expression(inst, task, expr->operand, scope, nullptr)) {
+            if (!type_expression(inst, task, expr->unary.operand, scope, nullptr)) {
                 return false;
             }
 
-            if (expr->operand->resolved_type->kind != Type_Kind::POINTER) {
-                Source_Pos pos = source_pos(inst, expr->operand);
+            if (expr->unary.operand->resolved_type->kind != Type_Kind::POINTER) {
+                Source_Pos pos = source_pos(inst, expr->unary.operand);
                 instance_fatal_error(inst, pos, "Cannot dereference non pointer expression");
                 assert(false);
                 return false;
             }
 
-            expr->resolved_type = expr->operand->resolved_type->pointer.base;
+            expr->resolved_type = expr->unary.operand->resolved_type->pointer.base;
+            break;
+        }
+
+        case AST_Expression_Kind::CAST: {
+
+            if (!type_type_spec(inst, task, expr->cast.ts, scope)) {
+                return false;
+            }
+
+            if (!type_expression(inst, task, expr->cast.operand, scope, nullptr)) {
+                return false;
+            }
+
+            Type* from_type = expr->cast.operand->resolved_type;
+            Type* to_type = expr->cast.ts->resolved_type;
+
+            if (!valid_cast(inst, from_type, to_type)) {
+                Source_Pos pos = source_pos(inst, expr);
+                instance_fatal_error(inst, pos, "Illegal type conversion in cast, from: '%s', to: '%s'",
+                        temp_type_string(inst, from_type).data,
+                        temp_type_string(inst, to_type).data);
+            }
+
+            expr->resolved_type = expr->cast.ts->resolved_type;
             break;
         }
 
@@ -646,6 +683,23 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
     assert(ts->resolved_type);
     ts->flags |= AST_TS_FLAG_TYPED;
     return true;
+}
+
+bool valid_cast(Instance* inst, Type* from_type, Type* to_type)
+{
+    switch (from_type->kind) {
+        case Type_Kind::INVALID: assert(false); break;
+        case Type_Kind::VOID: assert(false); break;
+
+        case Type_Kind::INTEGER: {
+            return to_type->kind == Type_Kind::INTEGER;
+        }
+
+        case Type_Kind::BOOLEAN: assert(false); break;
+        case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::FUNCTION: assert(false); break;
+        case Type_Kind::STRUCT: assert(false); break;
+    }
 }
 
 }

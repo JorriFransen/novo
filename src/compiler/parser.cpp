@@ -358,12 +358,23 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case TOK_KEYWORD: {
-            if (is_keyword(parser, g_keyword_true)) {
-                next_token(parser->lexer);
+            if (match_keyword(parser, g_keyword_true)) {
                 result = ast_bool_literal_expression(parser->instance, true);
-            } else if (is_keyword(parser, g_keyword_false)) {
-                next_token(parser->lexer);
+            } else if (match_keyword(parser, g_keyword_false)) {
                 result = ast_bool_literal_expression(parser->instance, false);
+
+            } else if (match_keyword(parser, g_keyword_cast)) {
+
+                expect_token(parser, '(');
+                AST_Type_Spec* ts = parse_type_spec(parser);
+                expect_token(parser, ',');
+                AST_Expression* operand = parse_expression(parser);
+
+                pos = source_pos(pos, source_pos(parser->lexer));
+                expect_token(parser, ')');
+
+                result = ast_cast_expression(parser->instance, ts, operand);
+
             } else {
                 assert(false && "Invalid keyword in expression");
             }

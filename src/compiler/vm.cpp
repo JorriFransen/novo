@@ -203,6 +203,72 @@ u64 vm_run(VM* vm)
                 break;
             }
 
+            case SSA_OP_TRUNC: {
+                u8 target_size = vm_fetch<u8>(block, &ip);
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 operand_reg = vm_fetch<u32>(block, &ip);
+
+                u64 value = vm_get_register(vm, operand_reg);
+
+                switch (target_size) {
+                    default: assert(false); break;
+                    case 1: value = (u8)value; break;
+                    case 2: value = (u16)value; break;
+                    case 4: value = (u32)value; break;
+                    case 8: value = (u64)value; break;
+                }
+
+                vm_set_register(vm, dest_reg, value);
+                break;
+            }
+
+            case SSA_OP_SEXT: {
+                u8 target_size = vm_fetch<u8>(block, &ip);
+                u8 source_size = vm_fetch<u8>(block, &ip);
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 operand_reg = vm_fetch<u32>(block, &ip);
+
+                u64 value = vm_get_register(vm, operand_reg);
+
+                switch (source_size) {
+                    default: assert(false); break;
+                    case 1: value = (s64)((s8)value); break;
+                    case 2: value = (s64)((s16)value); break;
+                    case 4: value = (s64)((s32)value); break;
+                    case 8: value = (s64)((s64)value); break;
+                }
+
+                switch (target_size) {
+                    default: assert(false); break;
+                    case 1: value = (u8)value; break;
+                    case 2: value = (u16)value; break;
+                    case 4: value = (u32)value; break;
+                    case 8: value = (u64)value; break;
+                }
+
+                vm_set_register(vm, dest_reg, value);
+                break;
+            }
+
+            case SSA_OP_ZEXT: {
+                u8 target_size = vm_fetch<u8>(block, &ip);
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 operand_reg = vm_fetch<u32>(block, &ip);
+
+                u64 value = vm_get_register(vm, operand_reg);
+
+                switch (target_size) {
+                    default: assert(false); break;
+                    case 1: value = (u8)value; break;
+                    case 2: value = (u16)value; break;
+                    case 4: value = (u32)value; break;
+                    case 8: value = (u64)value; break;
+                }
+
+                vm_set_register(vm, dest_reg, value);
+                break;
+            }
+
             case SSA_OP_ALLOC: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 size = vm_fetch<u32>(block, &ip);

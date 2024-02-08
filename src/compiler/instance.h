@@ -67,8 +67,13 @@ struct Instance
 
     Type* builtin_type_void;
     Type* builtin_type_u8;
-    Type* builtin_type_s64;
+    Type* builtin_type_u16;
+    Type* builtin_type_u32;
+    Type* builtin_type_u64;
+    Type* builtin_type_s8;
+    Type* builtin_type_s16;
     Type* builtin_type_s32;
+    Type* builtin_type_s64;
     Type* builtin_type_int;
     Type* builtin_type_bool;
 
