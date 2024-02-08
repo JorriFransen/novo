@@ -9,6 +9,19 @@
 
 namespace Novo {
 
+// TODO: Emit these arrays with a macro
+char g_special_characters[] = {
+    '\n',
+    '\t',
+    '\"',
+};
+
+char g_escape_characters[] = {
+    'n',
+    't',
+    '"',
+};
+
 char &String::operator[](s64 index)
 {
     assert(index >= 0 && index < this->length);
@@ -168,8 +181,8 @@ s32 string_format(char* dest, const String_Ref fmt, va_list args)
 
 s64 is_special_character(char c)
 {
-    for (s64 i = 0; i < (s64)(sizeof(special_characters) / sizeof(special_characters[0])); i++) {
-        if (c  == special_characters[i]) return i;
+    for (s64 i = 0; i < (s64)(sizeof(g_special_characters) / sizeof(g_special_characters[0])); i++) {
+        if (c  == g_special_characters[i]) return i;
     }
 
     return -1;
@@ -177,8 +190,8 @@ s64 is_special_character(char c)
 
 s64 is_escape_character(char c)
 {
-    for (s64 i = 0; i < (s64)(sizeof(escape_characters) / sizeof(escape_characters[0])); i++) {
-        if (c == escape_characters[i]) return i;
+    for (s64 i = 0; i < (s64)(sizeof(g_escape_characters) / sizeof(g_escape_characters[0])); i++) {
+        if (c == g_escape_characters[i]) return i;
     }
 
     return -1;
@@ -214,7 +227,7 @@ String convert_special_characters_to_escape_characters(Allocator* allocator, con
         auto special_index = is_special_character(str[i]);
         if (special_index != -1) {
             data[ni++] = '\\';
-            data[ni++] = escape_characters[special_index];
+            data[ni++] = g_escape_characters[special_index];
         } else {
             data[ni++] = str[i];
         }
@@ -261,7 +274,7 @@ String convert_escape_characters_to_special_characters(Allocator* allocator, con
             assert(i + 1 < str.length);
             i += 1;
             auto escape_index = is_escape_character(str[i]);
-            data[ni++] = special_characters[escape_index];
+            data[ni++] = g_special_characters[escape_index];
         } else {
             data[ni++] = str[i];
         }

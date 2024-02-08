@@ -218,8 +218,8 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         auto stmt = decl->function.body[i];
 
         if (ssa_block_exits(builder, builder->block_index)) {
-            assert(false); // Report end of statement
-            instance_fatal_error(inst, stmt->source_pos, "Unreachable code detected");
+            Source_Pos pos = source_pos(inst, stmt);
+            instance_fatal_error(inst, pos, "Unreachable code detected");
         }
         ssa_emit_statement(builder, stmt, scope);
     }

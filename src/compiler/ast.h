@@ -5,7 +5,6 @@
 #include <nstring.h>
 
 #include "atom.h"
-#include "source_pos.h"
 
 namespace Novo {
 
@@ -103,8 +102,6 @@ struct AST_Declaration
 
         } function;
     };
-
-    Source_Pos source_pos;
 };
 
 enum class AST_Statement_Kind : u32
@@ -193,8 +190,6 @@ struct AST_Statement
             Scope* scope;
         } block;
     };
-
-    Source_Pos source_pos;
 };
 
 enum class AST_Expression_Kind : u32
@@ -269,8 +264,6 @@ struct AST_Expression
         bool bool_literal;
         Atom string_literal;
     };
-
-    Source_Pos source_pos;
 };
 
 enum class AST_Type_Spec_Kind : u32
@@ -306,8 +299,6 @@ struct AST_Identifier
     Atom atom;
 
     AST_Declaration* decl;
-
-    Source_Pos source_pos;
 };
 
 NAPI bool operator==(const AST_Node &a, const AST_Node &b);

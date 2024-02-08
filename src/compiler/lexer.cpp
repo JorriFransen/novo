@@ -4,6 +4,7 @@
 
 #include "instance.h"
 #include "keywords.h"
+#include "source_pos.h"
 
 #include <cassert>
 #include <cctype>
@@ -134,7 +135,7 @@ case (first_char): {                                                \
 
                 lex->stream += 1;
 
-                lex->token.character = special_characters[special_index];
+                lex->token.character = g_special_characters[special_index];
             }
 
             if (*lex->stream != '\'') {

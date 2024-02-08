@@ -3,7 +3,6 @@
 #include <memory/allocator.h>
 
 #include "instance.h"
-#include "source_pos.h"
 
 #include <cassert>
 
@@ -49,7 +48,6 @@ AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_
     result->flags = AST_DECL_FLAG_NONE;
     result->ident = ident;
     result->resolved_type = nullptr;
-    result->source_pos = {};
     return result;
 }
 
@@ -108,7 +106,6 @@ AST_Statement* ast_statement(Instance* inst, AST_Statement_Kind kind)
     auto result = allocate<AST_Statement>(&inst->ast_allocator);
     result->kind = kind;
     result->flags = AST_STMT_FLAG_NONE;
-    result->source_pos = {};
     return result;
 }
 
@@ -216,7 +213,6 @@ AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, AST_Exp
     result->kind = kind;
     result->flags = flags;
     result->resolved_type = nullptr;
-    result->source_pos = {};
     return result;
 }
 
@@ -336,7 +332,6 @@ AST_Identifier* ast_identifier(Instance* inst, Atom atom)
     auto result = allocate<AST_Identifier>(&inst->ast_allocator);
     result->atom = atom;
     result->decl = nullptr;
-    result->source_pos = {};
     return result;
 }
 

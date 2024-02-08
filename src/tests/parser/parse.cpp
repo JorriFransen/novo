@@ -1,9 +1,12 @@
 
-#include <ast_print.h>
+#include <containers/darray.h>
 #include <defines.h>
-#include <instance.h>
 #include <memory/allocator.h>
 #include <nstring.h>
+
+#include <ast_print.h>
+#include <atom.h>
+#include <instance.h>
 #include <options.h>
 #include <parser.h>
 
@@ -18,76 +21,81 @@ int main(int argc, char* argv[])
     Instance instance;
     instance_init(&instance, default_options());
 
+    Imported_File imported_file = {
+        .path = atom_get("test.no"),
+        .ast = nullptr,
+        .newline_offsets = {},
+    };
+    darray_append(&instance.imported_files, imported_file);
+
     auto file = parse_file(&instance, "test.no", 0);
     assert(file);
 
     auto ast_str = ast_to_string(&instance, file, c_allocator());
 
-    auto expected_ast_str = R"(002:001-007:001  FUNC_DECL: 'main'
-                  RETURN_TS:
-002:015-0000003    IDENT_TS: 'int'
-                  PARAMS: 0
-002:019-007:001   BODY:
-003:005-003:012    VAR_DECL: 'x'
-003:010-0000003     INIT:
-003:010-0000003      EXPR_CHAR: 'a'
-004:005-004:014    VAR_DECL: 'y'
-004:010-0000005     INIT:
-004:010-0000005      EXPR_STR: "abc"
-005:005-005:011    VAR_DECL: 'z'
-005:010-0000002     INIT:
-005:010-0000002      EXPR_INT: 42
-006:005-006:012    STMT_RETURN:
-006:012-0000001     EXPR_INT: 0
+    auto expected_ast_str = R"(test.no:002:001-007:001: FUNC_DECL: 'main'
+test.no:002:015-0000003:  RETURN_TS:
+test.no:002:015-0000003:   IDENT_TS: 'int'
+test.no:002:019-007:001:  BODY:
+test.no:003:005-0000008:   VAR_DECL: 'x'
+test.no:003:010-0000003:    INIT:
+test.no:003:010-0000003:     EXPR_CHAR: 'a'
+test.no:004:005-0000010:   VAR_DECL: 'y'
+test.no:004:010-0000005:    INIT:
+test.no:004:010-0000005:     EXPR_STR: "abc"
+test.no:005:005-0000007:   VAR_DECL: 'z'
+test.no:005:010-0000002:    INIT:
+test.no:005:010-0000002:     EXPR_INT: 42
+test.no:006:005-0000008:   STMT_RETURN:
+test.no:006:012-0000001:    EXPR_INT: 0
 
-009:001-011:001  FUNC_DECL: 'add'
-                  RETURN_TS:
-009:028-0000003    IDENT_TS: 'int'
-009:009-009:022   PARAMS: 2
-009:009-009:014    VAR_DECL: 'a'
-009:012-0000003     TS:
-009:012-0000003      IDENT_TS: 'int'
-009:017-009:022    VAR_DECL: 'b'
-009:020-0000003     TS:
-009:020-0000003      IDENT_TS: 'int'
-009:032-011:001   BODY:
-010:005-010:016    STMT_RETURN:
-010:012-010:016     EXPR_BINARY: '+'
-010:012-0000001      EXPR_IDENT: 'a'
-010:016-0000001      EXPR_IDENT: 'b'
+test.no:009:001-011:001: FUNC_DECL: 'add'
+test.no:009:009-0000014:  PARAMS: 2
+test.no:009:009-0000006:   VAR_DECL: 'a'
+test.no:009:012-0000003:    TS:
+test.no:009:012-0000003:     IDENT_TS: 'int'
+test.no:009:017-0000006:   VAR_DECL: 'b'
+test.no:009:020-0000003:    TS:
+test.no:009:020-0000003:     IDENT_TS: 'int'
+test.no:009:028-0000003:  RETURN_TS:
+test.no:009:028-0000003:   IDENT_TS: 'int'
+test.no:009:032-011:001:  BODY:
+test.no:010:005-0000012:   STMT_RETURN:
+test.no:010:012-0000005:    EXPR_BINARY: '+'
+test.no:010:012-0000001:     EXPR_IDENT: 'a'
+test.no:010:016-0000001:     EXPR_IDENT: 'b'
 
-013:001-020:001  FUNC_DECL: 'test'
-                  RETURN_TS:
-013:015-0000003    IDENT_TS: 'int'
-                  PARAMS: 0
-013:019-020:001   BODY:
-014:005-014:011    VAR_DECL: 'x'
-014:009-0000003     TS:
-014:009-0000003      IDENT_TS: 'int'
-015:005-015:011    VAR_DECL: 'y'
-015:009-0000003     TS:
-015:009-0000003      IDENT_TS: 'int'
-016:005-016:011    VAR_DECL: 'z'
-016:009-0000003     TS:
-016:009-0000003      IDENT_TS: 'int'
-018:005-018:022    VAR_DECL: 'r'
-018:010-018:022     INIT:
-018:010-018:022      EXPR_BINARY: '+'
-018:010-018:014       EXPR_BINARY: '*'
-018:010-0000001        EXPR_IDENT: 'x'
-018:014-0000001        EXPR_IDENT: 'y'
-018:018-018:022       EXPR_BINARY: '/'
-018:018-0000001        EXPR_IDENT: 'z'
-018:022-0000001        EXPR_INT: 2
-019:005-019:025    VAR_DECL: 'r2'
-019:011-019:025     INIT:
-019:011-019:025      EXPR_BINARY: '/'
-019:011-019:020       EXPR_BINARY: '*'
-019:011-0000001        EXPR_IDENT: 'x'
-019:016-019:020        EXPR_BINARY: '+'
-019:016-0000001         EXPR_IDENT: 'y'
-019:020-0000001         EXPR_IDENT: 'z'
-019:025-0000001       EXPR_INT: 2
+test.no:013:001-020:001: FUNC_DECL: 'test'
+test.no:013:015-0000003:  RETURN_TS:
+test.no:013:015-0000003:   IDENT_TS: 'int'
+test.no:013:019-020:001:  BODY:
+test.no:014:005-0000007:   VAR_DECL: 'x'
+test.no:014:009-0000003:    TS:
+test.no:014:009-0000003:     IDENT_TS: 'int'
+test.no:015:005-0000007:   VAR_DECL: 'y'
+test.no:015:009-0000003:    TS:
+test.no:015:009-0000003:     IDENT_TS: 'int'
+test.no:016:005-0000007:   VAR_DECL: 'z'
+test.no:016:009-0000003:    TS:
+test.no:016:009-0000003:     IDENT_TS: 'int'
+test.no:018:005-0000018:   VAR_DECL: 'r'
+test.no:018:010-0000013:    INIT:
+test.no:018:010-0000013:     EXPR_BINARY: '+'
+test.no:018:010-0000005:      EXPR_BINARY: '*'
+test.no:018:010-0000001:       EXPR_IDENT: 'x'
+test.no:018:014-0000001:       EXPR_IDENT: 'y'
+test.no:018:018-0000005:      EXPR_BINARY: '/'
+test.no:018:018-0000001:       EXPR_IDENT: 'z'
+test.no:018:022-0000001:       EXPR_INT: 2
+test.no:019:005-0000021:   VAR_DECL: 'r2'
+test.no:019:011-0000015:    INIT:
+test.no:019:011-0000015:     EXPR_BINARY: '/'
+test.no:019:011-0000010:      EXPR_BINARY: '*'
+test.no:019:011-0000001:       EXPR_IDENT: 'x'
+test.no:019:016-0000005:       EXPR_BINARY: '+'
+test.no:019:016-0000001:        EXPR_IDENT: 'y'
+test.no:019:020-0000001:        EXPR_IDENT: 'z'
+test.no:019:025-0000001:      EXPR_INT: 2
 
 )";
 

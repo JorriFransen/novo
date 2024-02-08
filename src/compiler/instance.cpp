@@ -12,6 +12,7 @@
 #include "parser.h"
 #include "resolver.h"
 #include "scope.h"
+#include "source_pos.h"
 #include "ssa.h"
 #include "task.h"
 #include "type.h"
@@ -94,6 +95,14 @@ void instance_init(Instance* inst, Options options)
     inst->builtin_path = "modules/builtin.no";
     inst->builtin_module_loaded = false;
     inst->type_string = nullptr;
+
+    // TODO: Dynamic allocator
+    hash_table_create(c_allocator(), &inst->ident_positions);
+    hash_table_create(c_allocator(), &inst->decl_positions);
+    hash_table_create(c_allocator(), &inst->function_body_positions);
+    hash_table_create(c_allocator(), &inst->stmt_positions);
+    hash_table_create(c_allocator(), &inst->expr_positions);
+    hash_table_create(c_allocator(), &inst->ts_positions);
 }
 
 void instance_free(Instance* inst)
@@ -111,6 +120,13 @@ void instance_free(Instance* inst)
 
     temp_allocator_free(&inst->temp_allocator_data);
     linear_allocator_free(&inst->ast_allocator_data);
+
+    hash_table_free(&inst->ident_positions);
+    hash_table_free(&inst->decl_positions);
+    hash_table_free(&inst->function_body_positions);
+    hash_table_free(&inst->stmt_positions);
+    hash_table_free(&inst->expr_positions);
+    hash_table_free(&inst->ts_positions);
 }
 
 bool instance_start(Instance* inst)
@@ -130,18 +146,6 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
         bool builtin_result = instance_start(inst, inst->builtin_path, true);
         if (!builtin_result) return false;
-
-        // Atom builtin_path_atom = atom_get(builtin_path);
-        // AST_File *builtin_ast_file = nullptr;
-        // for (s64 i = 0; i < inst->imported_files.count; i++) {
-        //     if (inst->imported_files[i].path == builtin_path_atom) {
-        //         builtin_ast_file = inst->imported_files[i].ast;
-        //         assert(builtin_ast_file);
-        //         break;
-        //     }
-        // }
-        // assert(builtin_ast_file);
-
 
         AST_Declaration *string_decl = scope_find_symbol(inst->global_scope, atom_get("string"), nullptr);
         assert(string_decl);
@@ -284,7 +288,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             if (t->waiting_for) {
                 auto name = atom_string(t->waiting_for->atom);
-                instance_error(inst, t->waiting_for->source_pos, "Reference to undecared identifier: '%s'", name.data);
+                Source_Pos pos = source_pos(inst, t->waiting_for);
+                instance_error(inst, pos, "Reference to undecared identifier: '%s'", name.data);
                 error_reported = true;
             }
         }

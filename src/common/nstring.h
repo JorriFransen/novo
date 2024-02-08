@@ -29,17 +29,8 @@ struct String_Ref {
 };
 
 // TODO: Emit these arrays with a macro
-static char special_characters[] = {
-    '\n',
-    '\t',
-    '\"',
-};
-
-static char escape_characters[] = {
-    'n',
-    't',
-    '"',
-};
+extern char g_special_characters[];
+extern char g_escape_characters[];
 
 
 NAPI String string(char* data, s64 length);

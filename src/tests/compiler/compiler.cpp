@@ -1,7 +1,9 @@
 
 #include <defines.h>
-#include <instance.h>
 #include <memory/allocator.h>
+#include <nstring.h>
+
+#include <instance.h>
 #include <options.h>
 #include <ssa.h>
 #include <vm.h>

@@ -522,14 +522,17 @@ bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* iden
             (found_in_scope == task->fn_decl->function.scope ||
              scope_is_parent(found_in_scope, task->fn_decl->function.scope))) {
 
+            Source_Pos ident_pos = source_pos(inst, ident);
+            Source_Pos decl_pos = source_pos(inst, found_decl);
+
             // The declaration is inside the current function, check the order...
-            assert(ident->source_pos.file_index == found_decl->source_pos.file_index);
+            assert(ident_pos.file_index ==  decl_pos.file_index);
 
             // TODO: This should not rely on positional info, add some other way to enforce declaration/usage order
-            if (ident->source_pos.offset <= found_decl->source_pos.offset) {
+            if (ident_pos.offset <= decl_pos.offset) {
                 const char* ident_string = atom_string(ident->atom).data;
-                instance_error(inst, ident->source_pos, "Reference to identifier '%s' before declaration", ident_string);
-                instance_fatal_error_note(inst, found_decl->source_pos, "'%s' was first declared here", ident_string);
+                instance_error(inst, ident_pos, "Reference to identifier '%s' before declaration", ident_string);
+                instance_fatal_error_note(inst, decl_pos, "'%s' was first declared here", ident_string);
             }
         }
 

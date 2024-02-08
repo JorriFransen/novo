@@ -1,6 +1,7 @@
 #pragma once
 
 #include <containers/darray.h>
+#include <containers/hash_table.h>
 #include <defines.h>
 #include <memory/allocator.h>
 #include <memory/linear_allocator.h>
@@ -9,14 +10,19 @@
 
 #include "atom.h"
 #include "options.h"
-#include "source_pos.h"
 
 namespace Novo {
 
+struct AST_Declaration;
+struct AST_Expression;
 struct AST_File;
+struct AST_Identifier;
+struct AST_Statement;
+struct AST_Type_Spec;
 struct Parse_Task;
 struct Resolve_Task;
 struct Scope;
+struct Source_Pos;
 struct SSA_Program;
 struct SSA_Task;
 struct Type;
@@ -70,6 +76,13 @@ struct Instance
     bool builtin_module_loaded;
     // These types are defined in the builtin module
     Type* type_string;
+
+    Hash_Table<AST_Identifier*, Source_Pos> ident_positions;
+    Hash_Table<AST_Declaration*, Source_Pos> decl_positions;
+    Hash_Table<AST_Declaration*, Source_Pos> function_body_positions;
+    Hash_Table<AST_Statement*, Source_Pos> stmt_positions;
+    Hash_Table<AST_Expression*, Source_Pos> expr_positions;
+    Hash_Table<AST_Type_Spec*, Source_Pos> ts_positions;
 };
 
 NAPI void instance_init(Instance* inst, Options options);

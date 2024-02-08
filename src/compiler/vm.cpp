@@ -4,7 +4,9 @@
 
 #include <containers/darray.h>
 #include <memory/allocator.h>
+#include <nstring.h>
 
+#include "atom.h"
 #include "ffi.h"
 #include "instance.h"
 #include "ssa.h"
@@ -127,7 +129,7 @@ u64 vm_run(VM* vm, SSA_Program* program)
 
     for (s64 i = 0; i < program->constant_patch_offsets.count; i++) {
         s64 patch_offset = program->constant_patch_offsets[i];
-        assert(patch_offset >= 0 && patch_offset < vm->constant_memory_size - sizeof(s64));
+        assert(patch_offset >= 0 && patch_offset < vm->constant_memory_size - (s64)sizeof(s64));
 
         u64* patch_ptr = (u64*)&vm->constant_memory[patch_offset];
 
