@@ -4,6 +4,7 @@
 #include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
+#include <platform.h>
 
 #include "ast.h"
 #include "ast_print.h"
@@ -18,10 +19,10 @@
 #include "type.h"
 #include "typer.h"
 
-#include <cassert>
-#include <cstdio>
-#include <cstdlib>
+#include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace Novo {
 
@@ -92,7 +93,36 @@ void instance_init(Instance* inst, Options options)
     auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
 
-    inst->builtin_path = "modules/builtin.no";
+    if (fs_is_directory(options.install_dir)) {
+
+        assert(fs_is_directory(options.install_dir));
+        if (fs_is_realpath(options.install_dir)) {
+            inst->compiler_install_dir = string_copy(inst->default_allocator, options.install_dir);
+        } else {
+            inst->compiler_install_dir = fs_realpath(inst->default_allocator, options.install_dir);
+        }
+
+    } else {
+        String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
+        log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
+
+        String compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
+        assert(fs_is_directory(compiler_exe_dir));
+        log_trace("Compiler exe dir: '%s'", compiler_exe_dir.data);
+
+        inst->compiler_install_dir = platform_dirname(inst->default_allocator, compiler_exe_dir);
+        assert(fs_is_directory(inst->compiler_install_dir));
+    }
+    log_trace("Compiler install dir: '%s'", inst->compiler_install_dir.data);
+
+    inst->module_dir = string_format(inst->default_allocator, "%s" NPLATFORM_PATH_SEPARATOR "%s", inst->compiler_install_dir.data, "modules");
+    assert(fs_is_directory(inst->module_dir));
+    log_trace("Module dir: '%s'", inst->module_dir.data);
+
+    inst->builtin_module_path = string_format(inst->default_allocator, "%s" NPLATFORM_PATH_SEPARATOR "%s", inst->module_dir.data, "builtin.no");
+    assert(fs_is_file(inst->builtin_module_path));
+    log_trace("Builtin module path: '%s'", inst->builtin_module_path);
+
     inst->builtin_module_loaded = false;
     inst->type_string = nullptr;
 
@@ -144,7 +174,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 {
     if (!inst->builtin_module_loaded && !builtin_module) {
 
-        bool builtin_result = instance_start(inst, inst->builtin_path, true);
+        bool builtin_result = instance_start(inst, inst->builtin_module_path, true);
         if (!builtin_result) return false;
 
         AST_Declaration *string_decl = scope_find_symbol(inst->global_scope, atom_get("string"), nullptr);

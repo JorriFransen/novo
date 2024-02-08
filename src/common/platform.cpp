@@ -2,9 +2,14 @@
 
 #include "memory/allocator.h"
 
+#include <assert.h>
 
 #if NPLATFORM_LINUX
+
+#include <limits.h> // IWYU pragma: keep
 #include <libgen.h>
+#include <unistd.h>
+
 #elif NPLATFORM_WINDOWS
 #include <cstring>
 #include <stdlib.h>
@@ -33,6 +38,16 @@ String platform_dirname(Allocator* allocator, const String_Ref path)
     return result_copy;
 }
 
+String platform_exe_path(Allocator* allocator, const char* argv_0)
+{
+    char exe_path[PATH_MAX];
+    ssize_t exe_path_length = readlink("/proc/self/exe", exe_path, PATH_MAX);
+    assert(exe_path_length != -1);
+
+    return string_copy(allocator, exe_path, exe_path_length);
+}
+
+
 #elif NPLATFORM_WINDOWS
 
 String platform_dirname(Allocator* allocator, const String_Ref path)
@@ -57,6 +72,11 @@ String platform_dirname(Allocator* allocator, const String_Ref path)
     result.data[result_length] = '\0';
 
     return result;
+}
+
+String platform_exe_path(Allocator* allocator, const char* argv_0)
+{
+    assert(false);
 }
 
 #else // NPLATFORM_LINUX

@@ -144,6 +144,8 @@ bool fs_read(File_Handle* handle, u64 size, u8* out_bytes, u64* out_size)
 
 void fs_chdir(const String_Ref path)
 {
+    assert(path.length);
+
     NSTRING_ASSERT_ZERO_TERMINATION(path);
 
     int res = chdir(path.data);
@@ -153,6 +155,8 @@ void fs_chdir(const String_Ref path)
 
 bool fs_is_realpath(const String_Ref path)
 {
+    if (path.length <= 0) return false;;
+
     NSTRING_ASSERT_ZERO_TERMINATION(path);
 
     if (path.length <= 0) return false;
@@ -167,6 +171,8 @@ bool fs_is_realpath(const String_Ref path)
 
 String fs_realpath(Allocator* allocator, const String_Ref path)
 {
+    assert(path.length);
+
     NSTRING_ASSERT_ZERO_TERMINATION(path);
 
     char buf[PATH_MAX] ;
@@ -179,6 +185,8 @@ String fs_realpath(Allocator* allocator, const String_Ref path)
 
 bool fs_is_directory(const String_Ref path)
 {
+    if (path.length <= 0) return false;
+
     NSTRING_ASSERT_ZERO_TERMINATION(path);
 
     struct stat sb;
@@ -191,6 +199,8 @@ bool fs_is_directory(const String_Ref path)
 
 bool fs_is_file(const String_Ref path)
 {
+    if (path.length <= 0) return false;
+
     NSTRING_ASSERT_ZERO_TERMINATION(path);
 
     struct stat sb;

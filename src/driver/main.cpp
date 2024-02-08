@@ -3,13 +3,9 @@
 #include <instance.h>
 #include <logger.h>
 #include <memory/allocator.h>
-#include <nstring.h>
-#include <ssa.h>
 #include <vm.h>
 
 #include "command_line_args.h"
-
-#include <cstdio>
 
 using namespace Novo;
 

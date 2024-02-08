@@ -72,8 +72,12 @@ struct Instance
     Type* builtin_type_int;
     Type* builtin_type_bool;
 
-    String_Ref builtin_path;
+    String compiler_install_dir;
+    String module_dir;
+
+    String builtin_module_path;
     bool builtin_module_loaded;
+
     // These types are defined in the builtin module
     Type* type_string;
 

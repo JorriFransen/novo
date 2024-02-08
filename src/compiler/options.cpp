@@ -5,6 +5,7 @@ namespace Novo {
 Options default_options()
 {
     Options result;
+    result.argv_0 = nullptr;
     result.input_file = nullptr;
 
 
@@ -14,6 +15,7 @@ Options default_options()
 #undef NOVO_BOOL_OPTION
 #undef NOVO_STRING_OPTION
 
+    result.install_dir = {};
 
     return result;
 }

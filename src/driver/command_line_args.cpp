@@ -75,7 +75,6 @@ struct Cmd_Opt_Parser
     int arg_count;
     int arg_index;
 
-    const char *prog_name;
     Options result;
 };
 
@@ -91,13 +90,14 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
     cop.args = argv;
     cop.arg_count = argc;
     cop.arg_index = 0;
-    cop.prog_name = prog_name;
 
     if (default_opts) {
         cop.result = *default_opts;
     } else {
         cop.result = default_options();
     }
+
+    cop.result.argv_0 = prog_name;
 
     while (cop.arg_index < cop.arg_count) {
 
@@ -298,13 +298,13 @@ static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...)
     va_list args;
     va_start(args, fmt);
 
-    fprintf(stderr, "%s: ", cop->prog_name);
+    fprintf(stderr, "%s: ", cop->result.argv_0);
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n\n");
 
     va_end(args);
 
-    command_line_usage(stderr, cop->prog_name, true);
+    command_line_usage(stderr, cop->result.argv_0, true);
 
     exit(1);
 }
@@ -317,7 +317,7 @@ static OPTION_CALLBACK_FN(command_line_help_callback)
 
 static void command_line_help(FILE *file, Cmd_Opt_Parser *cop)
 {
-    command_line_usage(file, cop->prog_name, false);
+    command_line_usage(file, cop->result.argv_0, false);
 
     fprintf(file, "\nOptions:\n");
 
