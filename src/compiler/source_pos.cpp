@@ -23,8 +23,9 @@ Line_Info line_info(Array_Ref<u32> newline_offsets, u32 offset)
     for (s64 i = 0; i < newline_offsets.count; i++, line++) {
 
         if (offset < newline_offsets[i]) {
+            if (i == 0) break;
             result.line = line;
-            result.offset = newline_offsets[i] - offset + 1;
+            result.offset = offset - newline_offsets[i - 1];
             return result;
         }
     }

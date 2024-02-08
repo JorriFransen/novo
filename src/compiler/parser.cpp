@@ -152,6 +152,8 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
         instance_fatal_error_note(parser->instance, ex_decl->source_pos, "Previous declaration was here");
         return nullptr;
     }
+
+    result->source_pos = ident->source_pos;
     return result;
 }
 
@@ -640,7 +642,10 @@ AST_Identifier* parse_identifier(Parser* parser)
 
     expect_token(parser, TOK_NAME);
 
-    return ast_identifier(parser->instance, ident_tok.atom);
+    AST_Identifier* result = ast_identifier(parser->instance, ident_tok.atom);
+
+    result->source_pos = source_pos(parser, ident_tok);
+    return result;
 }
 
 AST_Type_Spec* parse_type_spec(Parser* parser)

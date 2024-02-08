@@ -525,13 +525,11 @@ bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* iden
             // The declaration is inside the current function, check the order...
             assert(ident->source_pos.file_index == found_decl->source_pos.file_index);
 
+            // TODO: This should not rely on positional info, add some other way to enforce declaration/usage order
             if (ident->source_pos.offset <= found_decl->source_pos.offset) {
-                assert(false);
-                // auto ident_str = atom_string(ident->atom).data;
-                // u32 decl_start_id = source_range_start(inst, found_decl->range_id);
-                //
-                // instance_error(inst, ident_pos_id, "Reference to identifier '%s' before declaration", ident_str);
-                // instance_fatal_error_note(inst, decl_start_id, "'%s' was first declared here", ident_str);
+                const char* ident_string = atom_string(ident->atom).data;
+                instance_error(inst, ident->source_pos, "Reference to identifier '%s' before declaration", ident_string);
+                instance_fatal_error_note(inst, found_decl->source_pos, "'%s' was first declared here", ident_string);
             }
         }
 
