@@ -21,12 +21,14 @@ dyncall_dep = dyncall_proj.get_variable('libdyncall_dep')
 common_source = [
   'src/common/defines.h',
   'src/common/filesystem.cpp', 'src/common/filesystem.h',
+  'src/common/hash.cpp', 'src/common/hash.h',
   'src/common/logger.cpp', 'src/common/logger.h',
   'src/common/nstring.cpp', 'src/common/nstring.h',
   'src/common/platform.cpp', 'src/common/platform.h',
   'src/common/string_builder.cpp', 'src/common/string_builder.h',
 
   'src/common/containers/darray.h',
+  'src/common/containers/hash_table.h',
   'src/common/containers/stack.h',
 
   'src/common/memory/allocator.cpp', 'src/common/memory/allocator.h',
