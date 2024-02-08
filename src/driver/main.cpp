@@ -24,9 +24,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    String ssa_str = ssa_to_string(c_allocator(), instance.ssa_program);
-    printf("\n%s\n", ssa_str.data);
-
     VM vm;
     vm_init(&vm, c_allocator(), &instance);
 

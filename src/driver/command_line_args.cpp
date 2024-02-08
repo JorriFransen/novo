@@ -15,13 +15,13 @@ namespace Novo {
 
 struct Cmd_Opt_Parser;
 
-static void handle_long_option(Cmd_Opt_Parser* cop);
-static void handle_short_option(Cmd_Opt_Parser* cop);
-static void command_line_usage(FILE* file, const char* prog_name, bool suggest_help);
-static void command_line_error(Cmd_Opt_Parser* cop, const char* fmt, ...);
-static void command_line_help(FILE* file, Cmd_Opt_Parser* cop);
+static void handle_long_option(Cmd_Opt_Parser *cop);
+static void handle_short_option(Cmd_Opt_Parser *cop);
+static void command_line_usage(FILE *file, const char *prog_name, bool suggest_help);
+static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...);
+static void command_line_help(FILE *file, Cmd_Opt_Parser *cop);
 
-#define OPTION_CALLBACK_FN(n) void (n)(Cmd_Opt_Parser* cop)
+#define OPTION_CALLBACK_FN(n) void (n)(Cmd_Opt_Parser *cop)
 typedef OPTION_CALLBACK_FN(Option_Callback_FN);
 static OPTION_CALLBACK_FN(command_line_help_callback);
 
@@ -36,18 +36,18 @@ enum class Option_Type
 struct Option_Info
 {
     char short_name;
-    const char* long_name;
+    const char *long_name;
     size_t offset_in_option_struct;
     Option_Type type;
 
     union {
         bool bool_value;
-        const char* string_value;
-        Option_Callback_FN* callback;
+        const char *string_value;
+        Option_Callback_FN *callback;
     };
 
-    const char* description;
-    const char* arg_info;
+    const char *description;
+    const char *arg_info;
 };
 
 static Option_Info option_infos[] = {
@@ -75,13 +75,13 @@ struct Cmd_Opt_Parser
     int arg_count;
     int arg_index;
 
-    const char* prog_name;
+    const char *prog_name;
     Options result;
 };
 
-Options parse_command_line(int argc, char* argv[], Options* default_opts/*=nullptr*/)
+Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullptr*/)
 {
-    const char* prog_name = argv[0];
+    const char *prog_name = argv[0];
 
     // Skip program name
     argc--;
@@ -125,7 +125,7 @@ Options parse_command_line(int argc, char* argv[], Options* default_opts/*=nullp
     return cop.result;
 }
 
-static void handle_long_option(Cmd_Opt_Parser* cop)
+static void handle_long_option(Cmd_Opt_Parser *cop)
 {
     auto opt = cop->args[cop->arg_index];
     auto length = strlen(opt);
@@ -147,7 +147,7 @@ static void handle_long_option(Cmd_Opt_Parser* cop)
             match = true;
 
             auto long_name_len = strlen(info.long_name);
-            char* str_val = nullptr;
+            char *str_val = nullptr;
             bool no_argument = false;
 
             // Look for '=' first
@@ -226,7 +226,7 @@ static void handle_long_option(Cmd_Opt_Parser* cop)
     }
 }
 
-static void handle_short_option(Cmd_Opt_Parser* cop)
+static void handle_short_option(Cmd_Opt_Parser *cop)
 {
 
     auto chars = &cop->args[cop->arg_index][1];
@@ -237,6 +237,9 @@ static void handle_short_option(Cmd_Opt_Parser* cop)
         bool match = false;
         for (size_t i = 0; i < sizeof(option_infos) / sizeof(option_infos[0]); i++) {
             auto &info = option_infos[i];
+
+            if (info.short_name == 0) continue;
+
             if (info.short_name == chars[0]) {
                 match = true;
 
@@ -247,7 +250,7 @@ static void handle_short_option(Cmd_Opt_Parser* cop)
                     }
 
                     case Option_Type::STRING: {
-                        const char* value = nullptr;
+                        const char *value = nullptr;
 
                         if (chars[1]) {
                             value = &chars[1];
@@ -283,14 +286,14 @@ static void handle_short_option(Cmd_Opt_Parser* cop)
     }
 }
 
-static void command_line_usage(FILE* file, const char* prog_name, bool suggest_help)
+static void command_line_usage(FILE *file, const char *prog_name, bool suggest_help)
 {
     fprintf(file, "Usage: %s input_file [options]\n", prog_name);
 
     if (suggest_help) fprintf(file, "       %s -h\tto display all options\n\n" ,prog_name);
 }
 
-static void command_line_error(Cmd_Opt_Parser* cop, const char* fmt, ...)
+static void command_line_error(Cmd_Opt_Parser *cop, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -312,7 +315,7 @@ static OPTION_CALLBACK_FN(command_line_help_callback)
     exit(0);
 }
 
-static void command_line_help(FILE* file, Cmd_Opt_Parser* cop)
+static void command_line_help(FILE *file, Cmd_Opt_Parser *cop)
 {
     command_line_usage(file, cop->prog_name, false);
 
@@ -320,7 +323,12 @@ static void command_line_help(FILE* file, Cmd_Opt_Parser* cop)
 
     for (size_t i = 0; i < sizeof(option_infos) / sizeof(option_infos[0]); i++) {
         auto &info = option_infos[i];
-        fprintf(file, "  -%c, --%-18s", info.short_name, info.arg_info);
+        char short_name = info.short_name;
+        if (!short_name) {
+            fprintf(file, "      --%-24s", info.arg_info);
+        } else {
+            fprintf(file, "  -%c, --%-24s", short_name, info.arg_info);
+        }
 
 
         if (info.description) {

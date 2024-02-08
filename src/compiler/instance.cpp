@@ -193,11 +193,6 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             progress = true;
 
-            if (inst->options.print_ast) {
-                String ast_str = ast_to_string(inst, parsed_file, &inst->temp_allocator);
-                printf("\n%s\n", ast_str.data);
-            }
-
             add_resolve_tasks(inst, parsed_file, inst->global_scope);
         }
 
@@ -296,6 +291,21 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
         assert(error_reported);
         return false;
+    }
+
+    if (!builtin_module && inst->options.print_ast) {
+
+        for (s64 i = 0; i < inst->imported_files.count; i++) {
+            assert(inst->imported_files[i].ast);
+            String ast_str = ast_to_string(inst, inst->imported_files[i].ast, &inst->temp_allocator);
+            printf("\n%s", ast_str.data);
+        }
+
+    }
+
+    if (!builtin_module && inst->options.print_bytecode) {
+        String ssa_str = ssa_to_string(c_allocator(), inst->ssa_program);
+        printf("\n%s\n", ssa_str.data);
     }
 
     return true;
