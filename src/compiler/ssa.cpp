@@ -866,7 +866,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 assert(false);
             } else {
                 u32 ptr_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
-                return ssa_emit_load_ptr(builder, operand_type->bit_size, ptr_reg);
+                return ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, ptr_reg);
             }
 
             assert(false);

@@ -46,13 +46,20 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/024_pointers.no", .return_code = 85 },
     { .file_path = "tests/025_struct_pointers.no", .return_code = 19 },
     { .file_path = "tests/026_foreign_functions.no", .return_code = 148 },
+    { .file_path = "tests/027_trunc_u64_u8.no", .return_code = 17 },
+    { .file_path = "tests/028_trunc_u64_u16.no", .return_code = 4097 },
+    { .file_path = "tests/029_trunc_u64_u32.no", .return_code = 268435457 },
+    { .file_path = "tests/030_trunc_u32_u8.no", .return_code = 17 },
+    { .file_path = "tests/031_trunc_u32_u16.no", .return_code = 4097 },
+    { .file_path = "tests/032_trunc_u16_u8.no", .return_code = 17 },
 };
 
 static bool run_test_case(Test_Case* tc)
 {
     Options options = default_options();
     options.install_dir = "../../../";
-    options.print_ast = true;
+    // options.print_ast = true;
+    // options.print_bytecode = true;
     options.input_file = tc->file_path;
 
     Instance instance;

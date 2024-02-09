@@ -288,10 +288,10 @@ u64 vm_run(VM* vm)
 
                 switch (size) {
                     default: assert(false); break;
-                    case 1: *(u8*)ptr_value = (u8)value;
-                    case 2: *(u16*)ptr_value = (u16)value;
-                    case 4: *(u32*)ptr_value = (u32)value;
-                    case 8: *(u64*)ptr_value = (u64)value;
+                    case 1: *(u8*)ptr_value = (u8)value; break;
+                    case 2: *(u16*)ptr_value = (u16)value; break;
+                    case 4: *(u32*)ptr_value = (u32)value; break;
+                    case 8: *(u64*)ptr_value = (u64)value; break;
                 }
                 break;
             }
@@ -414,15 +414,15 @@ u64 vm_run(VM* vm)
                 u16 arg_count = vm_fetch<u16>(block, &ip);
 
                 assert(fn_index >= 0 && fn_index < vm->current_program->functions.count);
-                fn = &vm->current_program->functions[fn_index];
-                assert(fn->foreign);
+                SSA_Function* foreign_fn = &vm->current_program->functions[fn_index];
+                assert(foreign_fn->foreign);
 
                 dcReset(vm->ffi.vm);
 
                 s64 arg_offset = -arg_count + 1;
                 for (s64 i = 0; i < arg_count; i++, arg_offset++) {
 
-                    Type* arg_type = fn->type->function.param_types[i];
+                    Type* arg_type = foreign_fn->type->function.param_types[i];
                     u64 arg = vm_stack_peek(vm, arg_offset);
 
                     switch (arg_type->kind) {
@@ -449,8 +449,8 @@ u64 vm_run(VM* vm)
                 }
                 assert(arg_offset == 1);
 
-                void* func_sym = vm->ffi.functions[fn->ffi_index].sym;
-                Type *return_type = fn->type->function.return_type;
+                void* func_sym = vm->ffi.functions[foreign_fn->ffi_index].sym;
+                Type *return_type = foreign_fn->type->function.return_type;
 
                 u64 result = 0;
 
