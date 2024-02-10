@@ -355,7 +355,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 case Type_Kind::VOID: assert(false); break;
 
                 case Type_Kind::INTEGER:
-                case Type_Kind::BOOLEAN: {
+                case Type_Kind::BOOLEAN:
+                case Type_Kind::POINTER: {
                     u32 rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);
                     auto lvalue = ssa_emit_lvalue(builder, stmt->assignment.lvalue, scope);
 
@@ -364,7 +365,6 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     break;
                 }
 
-                case Type_Kind::POINTER: assert(false); break;
                 case Type_Kind::FUNCTION: assert(false); break;
 
                 case Type_Kind::STRUCT: {
@@ -698,7 +698,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
 s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
 {
-    s64 result = -1;
+    s64 result_reg = -1;
 
     switch (expr->kind) {
 
@@ -719,66 +719,118 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                     bool found = ssa_find_alloc(builder, decl, &alloc_reg);
                     assert(found);
 
-                    result = ssa_emit_load_ptr(builder, decl->resolved_type->bit_size, alloc_reg);
+                    result_reg = ssa_emit_load_ptr(builder, decl->resolved_type->bit_size, alloc_reg);
 
                 } else {
 
                     u32 param_index = decl->variable.index;
                     if (builder->function->sret) param_index++;
 
-                    result = ssa_emit_load_param(builder, param_index);
+                    result_reg = ssa_emit_load_param(builder, param_index);
                 }
 
             } else {
 
                 auto lvalue = ssa_emit_lvalue(builder, expr, scope);
                 if (expr->resolved_type->kind == Type_Kind::STRUCT) {
-                    result = lvalue;
+                    result_reg = lvalue;
                 } else {
-                    result = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
+                    result_reg = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
                 }
             }
             break;
         }
 
         case AST_Expression_Kind::BINARY: {
-            assert(expr->binary.lhs->resolved_type == expr->binary.rhs->resolved_type);
 
-            u32 left = ssa_emit_expression(builder, expr->binary.lhs, scope);
-            u32 right = ssa_emit_expression(builder, expr->binary.rhs, scope);
+            Type* left_type = expr->binary.lhs->resolved_type;
+            Type* right_type = expr->binary.rhs->resolved_type;
 
-            switch (expr->binary.op) {
-                case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
-                case '-': ssa_emit_op(builder, SSA_OP_SUB); break;
-                case '*': ssa_emit_op(builder, SSA_OP_MUL); break;
-                case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
-                case '<': ssa_emit_op(builder, SSA_OP_LT); break;
-                case '>': ssa_emit_op(builder, SSA_OP_GT); break;
-                case TOK_EQ: ssa_emit_op(builder, SSA_OP_EQ); break;
-                case TOK_NEQ: ssa_emit_op(builder, SSA_OP_NEQ); break;
-                case TOK_LTEQ: ssa_emit_op(builder, SSA_OP_LTEQ); break;
-                case TOK_GTEQ: ssa_emit_op(builder, SSA_OP_GTEQ); break;
-                default: assert(false);
-            }
+            u32 left_reg = ssa_emit_expression(builder, expr->binary.lhs, scope);
+            u32 right_reg = ssa_emit_expression(builder, expr->binary.rhs, scope);
 
             assert(expr->binary.lhs->resolved_type->bit_size % 8 == 0);
             auto size = expr->binary.lhs->resolved_type->bit_size / 8;
             assert(size >= 0 && size <= U8_MAX);
 
-            ssa_emit_8(builder, (u8)size);
+            if (left_type->kind != Type_Kind::POINTER) {
 
-            result = ssa_register_create(builder);
-            ssa_emit_32(builder, result);
+                switch (expr->binary.op) {
+                    case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
+                    case '-': ssa_emit_op(builder, SSA_OP_SUB); break;
+                    case '*': ssa_emit_op(builder, SSA_OP_MUL); break;
+                    case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
+                    case '<': ssa_emit_op(builder, SSA_OP_LT); break;
+                    case '>': ssa_emit_op(builder, SSA_OP_GT); break;
+                    case TOK_EQ: ssa_emit_op(builder, SSA_OP_EQ); break;
+                    case TOK_NEQ: ssa_emit_op(builder, SSA_OP_NEQ); break;
+                    case TOK_LTEQ: ssa_emit_op(builder, SSA_OP_LTEQ); break;
+                    case TOK_GTEQ: ssa_emit_op(builder, SSA_OP_GTEQ); break;
+                    default: assert(false);
+                }
 
-            ssa_emit_32(builder, left);
-            ssa_emit_32(builder, right);
+                result_reg = ssa_register_create(builder);
+
+                ssa_emit_8(builder, (u8)size);
+                ssa_emit_32(builder, result_reg);
+                ssa_emit_32(builder, left_reg);
+                ssa_emit_32(builder, right_reg);
+
+            } else {
+
+                assert(left_type->kind == Type_Kind::POINTER);
+
+                assert(left_type->pointer.base->bit_size % 8 == 0);
+                auto pointee_size = left_type->pointer.base->bit_size / 8;
+
+                if (right_type->kind == Type_Kind::INTEGER) {
+
+                    // TODO: POINTER_OFFSET instruction
+                    u32 pointee_size_reg = ssa_emit_load_immediate(builder, 64, pointee_size);
+
+                    u32 offset_reg = ssa_register_create(builder);
+                    ssa_emit_op(builder, SSA_OP_MUL);
+                    ssa_emit_8(builder, size);
+                    ssa_emit_32(builder, offset_reg);
+                    ssa_emit_32(builder, pointee_size_reg);
+                    ssa_emit_32(builder, right_reg);
+
+                    SSA_Op op = expr->binary.op == '+' ? SSA_OP_ADD : SSA_OP_SUB;
+
+                    result_reg = ssa_register_create(builder);
+                    ssa_emit_op(builder, op);
+                    ssa_emit_8(builder, size);
+                    ssa_emit_32(builder, result_reg);
+                    ssa_emit_32(builder, left_reg);
+                    ssa_emit_32(builder, offset_reg);
+                } else {
+                    assert(expr->binary.op == '-');
+
+                    // TODO: POINTER_DIFF instruction
+                    u32 diff_reg = ssa_register_create(builder);
+                    ssa_emit_op(builder, SSA_OP_SUB);
+                    ssa_emit_8(builder, size);
+                    ssa_emit_32(builder, diff_reg);
+                    ssa_emit_32(builder, left_reg);
+                    ssa_emit_32(builder, right_reg);
+
+                    u32 pointee_size_reg = ssa_emit_load_immediate(builder, 64, pointee_size);
+                    result_reg = ssa_register_create(builder);
+                    ssa_emit_op(builder, SSA_OP_MUL);
+                    ssa_emit_8(builder, size);
+                    ssa_emit_32(builder, result_reg);
+                    ssa_emit_32(builder, diff_reg);
+                    ssa_emit_32(builder, pointee_size_reg);
+
+                }
+            }
 
             break;
         }
 
         case AST_Expression_Kind::MEMBER: {
             auto lvalue = ssa_emit_lvalue(builder, expr, scope);
-            result = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
+            result_reg = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
             break;
         }
 
@@ -829,8 +881,8 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 ssa_emit_op(builder, SSA_OP_CALL);
             }
 
-            result = ssa_register_create(builder);
-            ssa_emit_32(builder, result);
+            result_reg = ssa_register_create(builder);
+            ssa_emit_32(builder, result_reg);
 
             ssa_emit_32(builder, fn_index);
 
@@ -849,7 +901,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             }
 
             if (callee->sret) {
-                result = sret_reg;
+                result_reg = sret_reg;
             }
             break;
         }
@@ -889,26 +941,26 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
         }
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
-            result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);
             break;
         }
 
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
 
         case AST_Expression_Kind::CHAR_LITERAL: {
-            result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->integer_literal);
             break;
         }
 
         case AST_Expression_Kind::BOOL_LITERAL: {
-            result = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->bool_literal);
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->bool_literal);
             break;
         }
 
         case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
     }
 
-    return result;
+    return result_reg;
 }
 
 u32 ssa_emit_trunc(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg)

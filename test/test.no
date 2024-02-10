@@ -1,6 +1,7 @@
 // TODO:
-//  - unary -
 //  - test sign and zero extend
+//  - ssa ops for pointer offset and difference
+//  - unary -
 //  - sizeof()
 //  - Make sure ssa allocs are emitted in varaible declaration order
 //  - Move FFI to instance?
@@ -21,25 +22,26 @@
 //  - Capture errors, and check for them in tests
 
 
-// putchar :: (char: s32) -> s32 #foreign;
-// puts :: (str: *u8) -> s32 #foreign;
-// foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-//
-// add :: (a: s64, b: s64) -> s64 {
-//     return a + b;
-// }
+putchar :: (char: s32) -> s32 #foreign;
+puts :: (str: *u8) -> s32 #foreign;
+foreign_add :: (a: s64, b: s64) -> s32 #foreign;
 
-main :: () -> s64 {
-    return cast(u16, 0x0101010101011001);
+main :: () -> int {
+    str := "Hello, World!";
+    put_string(str);
+
+    start : *u8 = str.data;
+    end : *u8 = str.data + str.length;
+
+    return (end - 1) - start;
 }
 
-// put_string :: (s: string) {
-//     ptr := s.data;
-//     for i := 0; i < s.length; i += 1; {
-//
-//         putchar(cast(s32, <ptr));
-//         // ptr = ptr + 1;
-//     }
-//     putchar('\n');
-// }
-//
+put_string :: (s: string) {
+    ptr := s.data;
+    for i := 0; i < s.length; i += 1; {
+
+        putchar(cast(s32, <ptr));
+        ptr = ptr + 1;
+    }
+    putchar('\n');
+}

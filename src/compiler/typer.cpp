@@ -392,29 +392,74 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 suggested_type = expr->binary.lhs->resolved_type;
             }
 
+            if (suggested_type->kind == Type_Kind::POINTER) {
+                suggested_type = nullptr;
+            }
+
             if (!type_expression(inst, task, expr->binary.rhs, scope, suggested_type)) {
                 return false;
             }
 
-            assert(expr->binary.lhs->resolved_type == expr->binary.rhs->resolved_type);
+            Type* left_type = expr->binary.lhs->resolved_type;
+            Type* right_type = expr->binary.rhs->resolved_type;
 
-            switch (expr->binary.op) {
-                case '<':
-                case '>':
-                case TOK_EQ:
-                case TOK_NEQ:
-                case TOK_LTEQ:
-                case TOK_GTEQ: {
-                    expr->resolved_type = inst->builtin_type_bool;
-                    break;
+            if (left_type->kind == Type_Kind::POINTER) {
+
+                switch (right_type->kind) {
+
+                    case Type_Kind::POINTER: {
+                        if (expr->binary.op != '-') {
+                            Source_Pos pos = source_pos(inst, expr);
+                            instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '-' is allowed when both sides are of pointer type");
+                        }
+
+                        break;
+                    }
+
+                    case Type_Kind::INTEGER: {
+                        if (expr->binary.op != '-' && expr->binary.op != '+') {
+                            Source_Pos pos = source_pos(inst, expr);
+                            instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '+' and '-' are allowed");
+                        }
+
+                        break;
+                    }
+
+                    default: {
+                        Source_Pos pos = source_pos(inst, expr);
+                        instance_fatal_error(inst, pos, "Invalid type in right side of pointer math binary expression. Expected integer or pointer, got '%s'",
+                                temp_type_string(inst, right_type));
+                        break;
+                    }
                 }
 
-                default: {
-                    expr->resolved_type = expr->binary.lhs->resolved_type;
-                    break;
+                expr->resolved_type = left_type;
+
+            } else {
+
+                assert(expr->binary.lhs->resolved_type == expr->binary.rhs->resolved_type);
+
+                switch (expr->binary.op) {
+                    case '<':
+                    case '>':
+                    case TOK_EQ:
+                    case TOK_NEQ:
+                    case TOK_LTEQ:
+                    case TOK_GTEQ: {
+                        expr->resolved_type = inst->builtin_type_bool;
+                        break;
+                    }
+
+                    default: {
+                        expr->resolved_type = expr->binary.lhs->resolved_type;
+                        break;
+                    }
                 }
+
             }
 
+
+            assert(expr->resolved_type);
             break;
         }
 
