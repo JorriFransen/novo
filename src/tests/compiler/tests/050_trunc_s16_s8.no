@@ -1,0 +1,4 @@
+
+main :: () -> int {
+    return cast(s8, cast(s16, 0xfefefefefefefefe));
+}

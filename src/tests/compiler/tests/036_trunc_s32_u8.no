@@ -1,0 +1,3 @@
+main :: () -> int {
+    return cast(u8, cast(s32, 0x0101010101010111));
+}
