@@ -417,9 +417,17 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             Type* op_type = expr->unary.operand->resolved_type;
             assert(suggested_type ? suggested_type == op_type : true);
 
-            assert(false); // TODO: Float and error reporting
-            assert(op_type->kind == Type_Kind::INTEGER);
-            assert(op_type->integer.sign);
+            if (op_type->kind != Type_Kind::INTEGER) {
+                Source_Pos pos = source_pos(inst, expr->unary.operand);
+                instance_fatal_error(inst, pos, "Operand to unary '-' must have signed integer type, got: '%s'", temp_type_string(inst, op_type).data);
+                assert(false);
+            }
+
+            if (!op_type->integer.sign) {
+                Source_Pos pos = source_pos(inst, expr->unary.operand);
+                instance_fatal_error(inst, pos, "Operand to unary '-'' must have signed integer type, got: '%s'", temp_type_string(inst, op_type).data);
+                assert(false);
+            }
 
             expr->resolved_type = op_type;
             break;

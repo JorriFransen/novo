@@ -1,8 +1,8 @@
 // TODO:
+//  - when typeing hex literals, only look at the byte size, not the bounds.
 //  - test sign and zero extend
 //  - test pointer math
 //  - ssa ops for pointer offset and difference
-//  - unary -
 //  - null
 //  - pointer casts
 //  - sizeof()
