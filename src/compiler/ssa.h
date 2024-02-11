@@ -93,6 +93,7 @@ struct SSA_Function
 
     // TODO: Use hash table if this gets too big?
     DArray<SSA_Alloc> allocs;
+    u32 total_alloc_size;
 
     bool sret;
     bool foreign;

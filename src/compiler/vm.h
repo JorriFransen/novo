@@ -7,12 +7,22 @@
 
 #define NOVO_VM_DEFAULT_REG_COUNT 128
 #define NOVO_VM_DEFAULT_REG_STACK_SIZE 64
+#define NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE 128
 
 namespace Novo {
 
 struct Allocator;
 struct Instance;
 struct SSA_Program;
+
+struct VM_Alloc_Block
+{
+    u8* mem;
+    u32 used;
+    u32 cap;
+
+    VM_Alloc_Block* next;
+};
 
 struct VM
 {
@@ -29,6 +39,10 @@ struct VM
 
     u64* registers;
     Stack<u64> register_stack;
+
+    VM_Alloc_Block* current_alloc_block;
+    VM_Alloc_Block* free_alloc_blocks;
+    VM_Alloc_Block first_alloc_block;
 
     u8* constant_memory;
 

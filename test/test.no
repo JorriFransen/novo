@@ -1,5 +1,4 @@
 // TODO:
-//  - VM ALLOC calls malloc right now, DONT! (this is also never freed)
 //  - test sign and zero extend
 //  - test pointer math
 //  - ssa ops for pointer offset and difference

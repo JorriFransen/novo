@@ -32,9 +32,12 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
     vm->bp = 0;
 
     vm->register_count = 0;
+    vm->registers = nullptr;
+    vm->register_stack = {};
 
-    // vm->stack_size = NOVO_VM_DEFAULT_REG_STACK_SIZE;
-    // vm->stack = allocate_array<u64>(allocator, vm->stack_size);
+    vm->current_alloc_block = nullptr;
+    vm->free_alloc_blocks = nullptr;
+    vm->first_alloc_block = {};
 
     vm->constant_memory = nullptr;
     vm->constant_memory_size = 0;
@@ -81,6 +84,12 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
     vm->registers = allocate_array<u64>(vm->allocator, reg_count);
 
     stack_init(vm->allocator, &vm->register_stack, NOVO_VM_DEFAULT_REG_STACK_SIZE);
+
+    vm->first_alloc_block.mem = allocate_array<u8>(vm->allocator, NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE);
+    vm->first_alloc_block.used = 0;
+    vm->first_alloc_block.cap = NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE;
+    vm->first_alloc_block.next = nullptr;
+    vm->current_alloc_block = &vm->first_alloc_block;
 
     for (s64 i = 0; i < program->functions.count; i++) {
         SSA_Function* func = &program->functions[i];
@@ -249,7 +258,57 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 size = vm_fetch<u32>(block, &ip);
 
-                auto ptr = allocate(vm->allocator, size);
+                if (size > vm->current_alloc_block->cap - vm->current_alloc_block->used) {
+
+                    bool found_free_block = false;
+                    if (vm->free_alloc_blocks) {
+
+                        VM_Alloc_Block* last_free_block = nullptr;
+                        VM_Alloc_Block* free_block = vm->free_alloc_blocks;
+                        while (free_block) {
+                            if (free_block->cap >= size) {
+
+                                if (last_free_block) {
+                                    last_free_block->next = free_block->next;
+                                } else {
+                                    vm->free_alloc_blocks = free_block->next;
+                                }
+
+                                free_block->next = vm->current_alloc_block;
+                                vm->current_alloc_block = free_block;
+
+                                found_free_block = true;
+                                break;
+
+                            } else {
+                                last_free_block = free_block;
+                                free_block = free_block->next;
+                            }
+                        }
+
+                    }
+
+                    if (!found_free_block) {
+
+                        u64 new_block_size = vm->current_alloc_block->cap;
+                        while (new_block_size < size) new_block_size *= 2;
+
+                        u64 alloc_size = new_block_size + sizeof(VM_Alloc_Block);
+                        u8* mem = (u8*)allocate(vm->allocator, alloc_size);
+
+                        VM_Alloc_Block* new_block = (VM_Alloc_Block*)mem;
+                        new_block->mem = mem + sizeof(VM_Alloc_Block);
+                        new_block->used = 0;
+                        new_block->cap = new_block_size;
+                        new_block->next = vm->current_alloc_block;
+
+                        vm->current_alloc_block = new_block;
+                    }
+                }
+
+                u8* ptr = vm->current_alloc_block->mem + vm->current_alloc_block->used;
+                vm->current_alloc_block->used += size;
+
                 vm_set_register(vm, dest_reg, (u64)ptr);
                 break;
             }
@@ -487,6 +546,25 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 auto old_bp = vm->bp;
                 vm->bp = stack_pop(&vm->register_stack);
 
+                u32 remaining_alloc_size = fn->total_alloc_size;
+                while (remaining_alloc_size) {
+
+                    u32 chunk_size = min(remaining_alloc_size, vm->current_alloc_block->used);
+
+                    vm->current_alloc_block->used -= chunk_size;
+                    remaining_alloc_size -= chunk_size;
+
+                    if (remaining_alloc_size) {
+                        VM_Alloc_Block* old_block = vm->current_alloc_block;
+                        VM_Alloc_Block* new_block = old_block->next;
+
+                        vm->current_alloc_block = new_block;
+
+                        old_block->next = vm->free_alloc_blocks;
+                        vm->free_alloc_blocks = old_block;
+                    }
+                }
+
                 if (old_bp == vm->bp) {
                     assert(vm->register_stack.sp == 0);
                     return { value, false };
@@ -515,6 +593,25 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
                 auto old_bp = vm->bp;
                 vm->bp = stack_pop(&vm->register_stack);
+
+                u32 remaining_alloc_size = fn->total_alloc_size;
+                while (remaining_alloc_size) {
+
+                    u32 chunk_size = min(remaining_alloc_size, vm->current_alloc_block->used);
+
+                    vm->current_alloc_block->used -= chunk_size;
+                    remaining_alloc_size -= chunk_size;
+
+                    if (remaining_alloc_size) {
+                        VM_Alloc_Block* old_block = vm->current_alloc_block;
+                        VM_Alloc_Block* new_block = old_block->next;
+
+                        vm->current_alloc_block = new_block;
+
+                        old_block->next = vm->free_alloc_blocks;
+                        vm->free_alloc_blocks = old_block;
+                    }
+                }
 
                 if (old_bp == vm->bp) {
                     assert(vm->register_stack.sp == 0);

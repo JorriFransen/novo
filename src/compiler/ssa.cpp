@@ -97,6 +97,7 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
     func->type = func_type;
     darray_init(program->allocator, &func->blocks);
     darray_init(program->allocator, &func->allocs);
+    func->total_alloc_size = 0;
 
     ssa_block_create(program, func, "entry");
 
@@ -1111,6 +1112,8 @@ u32 ssa_emit_alloc(SSA_Builder* builder, s64 bit_size)
     ssa_emit_op(builder, SSA_OP_ALLOC);
     ssa_emit_32(builder, alloc_reg);
     ssa_emit_32(builder, byte_size);
+
+    builder->program->functions[builder->function_index].total_alloc_size += byte_size;
 
     return alloc_reg;
 }
