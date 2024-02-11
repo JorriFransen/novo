@@ -655,6 +655,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             }
         }
 
+        case AST_Expression_Kind::UNARY: assert(false); break;
         case AST_Expression_Kind::BINARY: assert(false); break;
 
         case AST_Expression_Kind::MEMBER: {
@@ -792,6 +793,31 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                     result_reg = lvalue;
                 } else {
                     result_reg = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
+                }
+            }
+            break;
+        }
+
+        case AST_Expression_Kind::UNARY: {
+
+            switch (expr->unary.op) {
+                default: assert(false); break;
+
+                case '-': {
+                    assert(expr->unary.operand->resolved_type->bit_size % 8 == 0);
+                    auto size = expr->unary.operand->resolved_type->bit_size / 8;
+                    assert(size >= 0 && size <= U8_MAX);
+
+                    u32 op_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
+                    u32 im_zero_reg = ssa_emit_load_immediate(builder, expr->unary.operand->resolved_type->bit_size, 0);
+
+                    result_reg = ssa_register_create(builder);
+                    ssa_emit_op(builder, SSA_OP_SUB);
+                    ssa_emit_8(builder, (u8)size);
+                    ssa_emit_32(builder, result_reg);
+                    ssa_emit_32(builder, im_zero_reg);
+                    ssa_emit_32(builder, op_reg);
+                    break;
                 }
             }
             break;
@@ -1355,6 +1381,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
 
         case AST_Expression_Kind::INVALID: assert(false); break;
         case AST_Expression_Kind::IDENTIFIER: assert(false); break;
+        case AST_Expression_Kind::UNARY: assert(false); break;
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;

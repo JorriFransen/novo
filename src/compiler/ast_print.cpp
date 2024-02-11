@@ -442,6 +442,12 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
             break;
         }
 
+        case AST_Expression_Kind::UNARY: {
+            string_builder_append(sb, "EXPR_UNARY: '%s'\n", tmp_token_kind_str((Token_Kind)expr->unary.op).data);
+            ast_expr_to_string(inst, sb, expr->unary.operand, indent + 1);
+            break;
+        }
+
         case AST_Expression_Kind::BINARY: {
             string_builder_append(sb, "EXPR_BINARY: '%s'\n", tmp_token_kind_str((Token_Kind)expr->binary.op).data);
             ast_expr_to_string(inst, sb, expr->binary.lhs, indent + 1);

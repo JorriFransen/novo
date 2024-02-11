@@ -407,6 +407,24 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
+        case AST_Expression_Kind::UNARY: {
+
+            if (!type_expression(inst, task, expr->unary.operand, scope, suggested_type)) {
+                return false;
+            }
+
+
+            Type* op_type = expr->unary.operand->resolved_type;
+            assert(suggested_type ? suggested_type == op_type : true);
+
+            assert(false); // TODO: Float and error reporting
+            assert(op_type->kind == Type_Kind::INTEGER);
+            assert(op_type->integer.sign);
+
+            expr->resolved_type = op_type;
+            break;
+        }
+
         case AST_Expression_Kind::BINARY: {
             if (suggested_type && suggested_type->kind == Type_Kind::BOOLEAN) {
                 suggested_type = nullptr;

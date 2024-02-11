@@ -323,6 +323,15 @@ AST_Expression* parse_leaf_expression(Parser* parser)
     AST_Expression* result = nullptr;
 
     switch ((u32)ct.kind) {
+
+        case '-': {
+            next_token(parser->lexer);
+            AST_Expression* operand = parse_leaf_expression(parser);
+
+            result = ast_unary_expression(parser->instance, '-', operand);
+            break;
+        }
+
         case TOK_INT: {
             next_token(parser->lexer);
             result = ast_integer_literal_expression(parser->instance, ct.integer);
