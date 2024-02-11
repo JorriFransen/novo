@@ -207,6 +207,14 @@ AST_Statement* ast_block_statement(Instance* inst, DArray<AST_Statement*> stmts,
     return result;
 }
 
+AST_Statement* ast_assert_statement(Instance* inst, AST_Expression* cond, AST_Expression* message)
+{
+    auto result = ast_statement(inst, AST_Statement_Kind::ASSERT);
+    result->assert_stmt.cond = cond;
+    result->assert_stmt.message = message;
+    return result;
+}
+
 AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, AST_Expression_Flags flags/*=AST_EXPR_FLAG_NONE*/)
 {
     auto result = allocate<AST_Expression>(&inst->ast_allocator);

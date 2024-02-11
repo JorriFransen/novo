@@ -30,7 +30,8 @@ struct SSA_Builder
 {
     Instance *instance;
     SSA_Program* program;
-    SSA_Function* function;
+
+    s64 function_index;
     s64 block_index;
 
     Stack<SSA_Break_Info> break_info_stack;
@@ -42,6 +43,18 @@ struct SSA_Constant
     u32 offset;
 };
 
+u64 hash_key(SSA_Assert_Pos key)
+{
+    u64 r = hash_combine(key.block_index, key.offset);
+    r = hash_combine(key.fn_index, key.offset);
+    return r;
+}
+
+bool operator==(const SSA_Assert_Pos& l, const SSA_Assert_Pos& r)
+{
+    return l.offset == r.offset && l.fn_index == r.fn_index;
+}
+
 void ssa_program_init(SSA_Program* program, Allocator* allocator)
 {
     program->allocator = allocator;
@@ -50,6 +63,7 @@ void ssa_program_init(SSA_Program* program, Allocator* allocator)
     darray_init(allocator, &program->constants);
     darray_init(allocator, &program->constant_patch_offsets);
     darray_init(allocator, &program->functions);
+    hash_table_create(allocator, &program->instruction_origin_positions);
 }
 
 void ssa_program_free(SSA_Program* program)
@@ -138,28 +152,38 @@ u32 ssa_block_create(SSA_Program* program, SSA_Function* function, const char* n
 
 u32 ssa_block_create(SSA_Builder* builder, const char* name)
 {
-    return ssa_block_create(builder->program, builder->function, name);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    return ssa_block_create(builder->program, function, name);
 }
 
 u32 ssa_register_create(SSA_Builder* builder)
 {
-    assert(builder->function->register_count != U32_MAX);
-    return builder->function->register_count++;
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    assert(function->register_count != U32_MAX);
+    return function->register_count++;
 }
 
 bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl)
 {
-    SSA_Function func;
+    SSA_Function local_func;
     assert(decl->ident);
 
     bool sret = decl->resolved_type->function.return_type->kind == Type_Kind::STRUCT;
 
-    ssa_function_init(inst, program, &func, decl);
+    ssa_function_init(inst, program, &local_func, decl);
+
+    s64 fn_index = program->functions.count;
+    if (decl->ident->atom == atom_get("main")) {
+        assert(program->entry_fn_index == -1);
+        program->entry_fn_index = fn_index;
+    }
+    darray_append(&program->functions, local_func);
+    SSA_Function* func = &program->functions[fn_index];
 
     SSA_Builder local_builder;
     local_builder.instance = inst;
     local_builder.program = program;
-    local_builder.function = &func;
+    local_builder.function_index = fn_index;
     local_builder.block_index = 0;
 
     auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
@@ -177,7 +201,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         if (param_decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
 
             u32 alloc_reg = ssa_emit_alloc(builder, param_decl->resolved_type->bit_size);
-            darray_append(&func.allocs, { ast_node(param_decl), alloc_reg });
+            darray_append(&func->allocs, { ast_node(param_decl), alloc_reg });
         }
     }
 
@@ -187,7 +211,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         auto var_decl = decl->function.variables[i];
 
         u32 alloc_reg = ssa_emit_alloc(builder, var_decl->resolved_type->bit_size);
-        darray_append(&func.allocs, { ast_node(var_decl), alloc_reg });
+        darray_append(&func->allocs, { ast_node(var_decl), alloc_reg });
     }
 
     // Emit storage for (temporary) aggregates
@@ -196,7 +220,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         auto expr = decl->function.temp_structs[i];
 
         u32 alloc_reg = ssa_emit_alloc(builder, expr->resolved_type->bit_size);
-        darray_append(&func.allocs, { ast_node(expr), alloc_reg });
+        darray_append(&func->allocs, { ast_node(expr), alloc_reg });
     }
 
     // Copy parameters into local storage
@@ -230,16 +254,10 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     if (!last_block_exits) {
         if (decl->resolved_type->function.return_type->kind == Type_Kind::VOID) {
             ssa_emit_op(builder, SSA_OP_RET_VOID);
-        } else if (func.blocks[builder->block_index].incoming.count > 0) {
-            instance_fatal_error(inst, func.source_pos, "Function '%s' does not return a value from all control paths", atom_string(func.name).data);
+        } else if (func->blocks[builder->block_index].incoming.count > 0) {
+            instance_fatal_error(inst, func->source_pos, "Function '%s' does not return a value from all control paths", atom_string(func->name).data);
         }
     }
-
-    if (decl->ident->atom == atom_get("main")) {
-        assert(program->entry_fn_index == -1);
-        program->entry_fn_index = program->functions.count;
-    }
-    darray_append(&program->functions, func);
 
     temp_allocator_reset(&inst->temp_allocator_data, mark);
 
@@ -261,10 +279,12 @@ bool ssa_find_function(SSA_Program* program, Atom atom, u32* index)
 
 bool ssa_find_alloc(SSA_Builder* builder, AST_Node* ast_node, u32* result)
 {
-    for (s64 i = 0; i < builder->function->allocs.count; i++) {
+    SSA_Function* function = &builder->program->functions[builder->function_index];
 
-        if (builder->function->allocs[i].ast_node == *ast_node) {
-            *result = builder->function->allocs[i].alloc_reg;
+    for (s64 i = 0; i < function->allocs.count; i++) {
+
+        if (function->allocs[i].ast_node == *ast_node) {
+            *result = function->allocs[i].alloc_reg;
             return true;
         }
     }
@@ -286,23 +306,29 @@ bool ssa_find_alloc(SSA_Builder* builder, AST_Expression* expr, u32* result)
 
 void ssa_set_insert_point(SSA_Builder* builder, u32 new_block_index)
 {
-    assert(new_block_index >= 0 && new_block_index < builder->function->blocks.count);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+
+    assert(new_block_index >= 0 && new_block_index < function->blocks.count);
 
     if (builder->block_index == new_block_index) return;
 
-    builder->function->blocks[builder->block_index].next_index = new_block_index;
+    function->blocks[builder->block_index].next_index = new_block_index;
     builder->block_index = new_block_index;
 }
 
 bool ssa_block_exits(SSA_Builder* builder, s64 block_index)
 {
-    assert(block_index >= 0 && block_index < builder->function->blocks.count);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
 
-    return builder->function->blocks[block_index].exits;
+    assert(block_index >= 0 && block_index < function->blocks.count);
+
+    return function->blocks[block_index].exits;
 }
 
 void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 {
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+
     switch (stmt->kind) {
 
         case AST_Statement_Kind::INVALID: assert(false); break;
@@ -414,7 +440,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
-                if (builder->function->sret) {
+                if (function->sret) {
                     u32 src_ptr_reg = ssa_emit_lvalue(builder, stmt->return_expr, scope);
                     u32 dest_ptr_reg = ssa_emit_load_param(builder, 0);
                     ssa_emit_memcpy(builder, dest_ptr_reg, src_ptr_reg, stmt->return_expr->resolved_type->bit_size);
@@ -565,12 +591,40 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
                 ssa_emit_statement(builder, stmt->block.statements[i], block_scope);
             }
+
+            break;
+        }
+
+        case AST_Statement_Kind::ASSERT: {
+
+            u32 cond_reg = ssa_emit_expression(builder, stmt->assert_stmt.cond, scope);
+
+            u32 string_reg;
+
+            if (stmt->assert_stmt.message) {
+                u32 str_ptr = ssa_emit_lvalue(builder, stmt->assert_stmt.message, scope);
+                string_reg = str_ptr;
+            } else {
+                string_reg = ssa_emit_load_immediate(builder, 64, 0); // null
+            }
+
+            u32 op_offset = ssa_emit_op(builder, SSA_OP_ASSERT);
+            ssa_emit_32(builder, cond_reg);
+
+            Source_Pos pos = source_pos(builder->instance, stmt);
+            hash_table_add(&builder->program->instruction_origin_positions, { op_offset, (u32)builder->function_index, (u32)builder->block_index }, pos);
+
+
+            ssa_emit_32(builder, string_reg);
+            break;
         }
     }
 }
 
 u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* scope)
 {
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+
     switch (lvalue_expr->kind) {
 
         case AST_Expression_Kind::INVALID: assert(false); break;
@@ -589,7 +643,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
             if (is_param && is_struct) {
                 u32 param_index = decl->variable.index;
-                if (builder->function->sret) param_index++;
+                if (function->sret) param_index++;
                 return ssa_emit_load_param(builder, param_index);
             } else {
 
@@ -698,6 +752,8 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
 s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
 {
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+
     s64 result_reg = -1;
 
     switch (expr->kind) {
@@ -713,7 +769,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
                 if (decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
 
-                    assert(decl->variable.index >= 0 && decl->variable.index < builder->function->param_count);
+                    assert(decl->variable.index >= 0 && decl->variable.index < function->param_count);
 
                     u32 alloc_reg;
                     bool found = ssa_find_alloc(builder, decl, &alloc_reg);
@@ -724,7 +780,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 } else {
 
                     u32 param_index = decl->variable.index;
-                    if (builder->function->sret) param_index++;
+                    if (function->sret) param_index++;
 
                     result_reg = ssa_emit_load_param(builder, param_index);
                 }
@@ -1143,8 +1199,9 @@ void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u32 fal
     ssa_emit_32(builder, true_block);
     ssa_emit_32(builder, false_block);
 
-    darray_append(&builder->function->blocks[true_block].incoming, (u32)builder->block_index);
-    darray_append(&builder->function->blocks[false_block].incoming, (u32)builder->block_index);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    darray_append(&function->blocks[true_block].incoming, (u32)builder->block_index);
+    darray_append(&function->blocks[false_block].incoming, (u32)builder->block_index);
 }
 
 void ssa_emit_jmp(SSA_Builder* builder, u32 block)
@@ -1152,7 +1209,8 @@ void ssa_emit_jmp(SSA_Builder* builder, u32 block)
     ssa_emit_op(builder, SSA_OP_JMP);
     ssa_emit_32(builder, block);
 
-    darray_append(&builder->function->blocks[block].incoming, (u32)builder->block_index);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    darray_append(&function->blocks[block].incoming, (u32)builder->block_index);
 }
 
 u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
@@ -1193,9 +1251,10 @@ u32 ssa_emit_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, 
     }
 }
 
-void ssa_emit_op(SSA_Builder* builder, SSA_Op op)
+u32 ssa_emit_op(SSA_Builder* builder, SSA_Op op)
 {
-    SSA_Block* block = &builder->function->blocks[builder->block_index];
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    SSA_Block* block = &function->blocks[builder->block_index];
 
     assert(!block->exits);
 
@@ -1209,27 +1268,33 @@ void ssa_emit_op(SSA_Builder* builder, SSA_Op op)
 
     }
 
+    u32 result = block->bytes.count;
     darray_append(&block->bytes, (u8)op);
+    return result;
 }
 
 void ssa_emit_8(SSA_Builder* builder, u8 value)
 {
-    ssa_emit_8(&builder->function->blocks[builder->block_index].bytes, value);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    ssa_emit_8(&function->blocks[builder->block_index].bytes, value);
 }
 
 void ssa_emit_16(SSA_Builder* builder, u16 value)
 {
-    ssa_emit_16(&builder->function->blocks[builder->block_index].bytes, value);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    ssa_emit_16(&function->blocks[builder->block_index].bytes, value);
 }
 
 void ssa_emit_32(SSA_Builder* builder, u32 value)
 {
-    ssa_emit_32(&builder->function->blocks[builder->block_index].bytes, value);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    ssa_emit_32(&function->blocks[builder->block_index].bytes, value);
 }
 
 void ssa_emit_64(SSA_Builder* builder, u64 value)
 {
-    ssa_emit_64(&builder->function->blocks[builder->block_index].bytes, value);
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+    ssa_emit_64(&function->blocks[builder->block_index].bytes, value);
 }
 
 void ssa_emit_8(DArray<u8> *bytes, u8 value)
@@ -1773,6 +1838,17 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             String block_name = atom_string(fn->blocks[block_index].name);
 
             string_builder_append(sb, "  JMP [%s]\n", block_name.data);
+            break;
+        }
+
+        case SSA_OP_ASSERT: {
+            u32 cond_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 string_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  ASSERT %%%u %%%u\n", cond_reg, string_reg);
             break;
         }
     }

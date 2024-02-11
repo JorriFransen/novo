@@ -92,7 +92,7 @@ NINLINE u64 vm_get_register(VM* vm, u32 reg)
     return vm->registers[vm->register_offset + reg];
 }
 
-u64 vm_run(VM* vm, SSA_Program* program)
+VM_Result vm_run(VM* vm, SSA_Program* program)
 {
     assert(program->entry_fn_index >= 0 && program->entry_fn_index < program->functions.count);
 
@@ -143,7 +143,7 @@ u64 vm_run(VM* vm, SSA_Program* program)
     return vm_run(vm);
 }
 
-u64 vm_run(VM* vm)
+VM_Result vm_run(VM* vm)
 {
     SSA_Function* fn = &vm->current_program->functions[vm->fn_index];
     SSA_Block* block = &fn->blocks[vm->block_index];
@@ -499,7 +499,7 @@ u64 vm_run(VM* vm)
 
                 if (old_bp == vm->bp) {
                     assert(vm->sp == 0);
-                    return value;
+                    return { value, false };
 
                 } else {
 
@@ -573,11 +573,46 @@ u64 vm_run(VM* vm)
                 ip = 0;
                 break;
             }
+
+            case SSA_OP_ASSERT: {
+                u32 offset = ip - sizeof(SSA_Op);
+
+                u32 cond_reg = vm_fetch<u32>(block, &ip);
+                u32 msg_reg = vm_fetch<u32>(block, &ip);
+
+                u64 cond_value = vm_get_register(vm, cond_reg);
+
+                if (!cond_value) {
+
+                    auto string_ptr = (p_uint_t)vm_get_register(vm, msg_reg);
+
+                    Source_Pos pos;
+                    bool found = hash_table_find(&vm->current_program->instruction_origin_positions, { offset, vm->fn_index, vm->block_index }, &pos);
+                    assert(found);
+
+                    if (string_ptr != 0) {
+                        p_uint_t data_ptr = string_ptr;
+                        auto data = *(const char**)data_ptr;
+
+                        // TODO: magic number
+                        p_uint_t length_ptr = string_ptr + 8;
+                        s64 length = *(s64*)length_ptr;
+
+                        instance_error(vm->instance, pos, "[Bytecode] Assertion failed: \"%.*s\"", (int)length, data);
+
+                    } else {
+                        instance_error(vm->instance, pos, "[Bytecode] Assertion failed!");
+                    }
+
+                    return { 42, true };
+                }
+                break;
+            }
         }
     }
 
     assert(false);
-    return 0;
+    return { 42, true };
 }
 
 }

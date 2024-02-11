@@ -31,8 +31,14 @@ struct VM
     FFI ffi;
 };
 
+struct VM_Result
+{
+    u64 return_value;
+    bool assert_fail;
+};
+
 NAPI void vm_init(VM* vm, Allocator* allocator, Instance* inst);
-NAPI u64 vm_run(VM* vm, SSA_Program* program);
-NAPI u64 vm_run(VM* vm);
+NAPI VM_Result vm_run(VM* vm, SSA_Program* program);
+NAPI VM_Result vm_run(VM* vm);
 
 }

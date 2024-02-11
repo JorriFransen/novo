@@ -29,5 +29,10 @@ u64 hash_key(const char *str)
     return hash_string(str, strlen(str));
 }
 
+NAPI u64 hash_combine(u64 l, u64 r)
+{
+    return l ^ (r + 0x517cc1b727220a95 + (l << 6) + (l >> 2));
+}
+
 }
 

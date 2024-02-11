@@ -101,7 +101,8 @@ void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_De
         case AST_Statement_Kind::FOR:
         case AST_Statement_Kind::BREAK:
         case AST_Statement_Kind::CONTINUE:
-        case AST_Statement_Kind::BLOCK: {
+        case AST_Statement_Kind::BLOCK:
+        case AST_Statement_Kind::ASSERT: {
 
             Resolve_Task task = resolve_task_create(inst, ast_node(stmt), scope, fn);
 

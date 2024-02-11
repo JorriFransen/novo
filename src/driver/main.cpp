@@ -23,8 +23,11 @@ int main(int argc, char* argv[])
     VM vm;
     vm_init(&vm, c_allocator(), &instance);
 
-    auto r = vm_run(&vm, instance.ssa_program);
-    log_info("Bytecode vm returned: %llu\n", r);
+    VM_Result vr = vm_run(&vm, instance.ssa_program);
+    if (vr.assert_fail) {
+        log_warn("Bytecode vm quit after failed assert");
+    }
+    log_info("Bytecode vm returned: %llu\n", vr.return_value);
 
     return 0;
 }

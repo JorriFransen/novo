@@ -721,6 +721,22 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
 
         result = ast_return_statement(parser->instance, expr);
 
+    } else if (match_keyword(parser, g_keyword_assert)) {
+
+        expect_token(parser, '(');
+        AST_Expression* cond = parse_expression(parser);
+
+        AST_Expression* message = nullptr;
+        if (match_token(parser, ',')) {
+            message = parse_expression(parser);
+        }
+
+        expect_token(parser, ')');
+        pos = source_pos(pos, source_pos(parser->lexer));
+        expect_token(parser, ';');
+
+        result = ast_assert_statement(parser->instance, cond, message);
+
     } else {
 
         instance_fatal_error(parser->instance, source_pos(parser, ct), "Unexpected keyword '%s'", atom_string(ct.atom).data);

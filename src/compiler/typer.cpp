@@ -344,6 +344,34 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
             }
             break;
         }
+
+        case AST_Statement_Kind::ASSERT: {
+
+            AST_Expression* cond = stmt->assert_stmt.cond;
+            AST_Expression* msg = stmt->assert_stmt.message;
+
+            if (!type_expression(inst, task, cond, scope, inst->builtin_type_bool)) {
+                return false;
+            }
+
+            if (msg && !type_expression(inst, task, msg, scope, nullptr)) {
+                return false;
+            }
+
+            if (cond->resolved_type->kind != Type_Kind::BOOLEAN) {
+                Source_Pos pos = source_pos(inst, cond);
+                instance_fatal_error(inst, pos, "Assert condition must be of boolean type");
+                assert(false);
+            }
+
+            if (msg && msg->resolved_type != inst->type_string) {
+                Source_Pos pos = source_pos(inst, msg);
+                instance_fatal_error(inst, pos, "Assert message must be of string type");
+                assert(false);
+            }
+
+            break;
+        }
     }
 
     stmt->flags |= AST_TS_FLAG_TYPED;

@@ -96,11 +96,13 @@ static bool run_test_case(Test_Case* tc)
     VM vm;
     vm_init(&vm, c_allocator(), &instance);
 
-    u64 return_code = vm_run(&vm, instance.ssa_program);
+    VM_Result run_result = vm_run(&vm, instance.ssa_program);
 
-    bool result = return_code == tc->return_code;
+    assert(!run_result.assert_fail);
+
+    bool result = run_result.return_value == tc->return_code;
     if (!result) {
-        fprintf(stderr, "Mismatching return code for test file '%s', got: %llu, expected: %llu\n", tc->file_path, return_code, tc->return_code);
+        fprintf(stderr, "Mismatching return code for test file '%s', got: %llu, expected: %llu\n", tc->file_path, run_result.return_value, tc->return_code);
         result = false;
     }
 

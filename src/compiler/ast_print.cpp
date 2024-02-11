@@ -333,7 +333,7 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         case AST_Statement_Kind::WHILE: {
             ast_print_pos(instance, sb, stmt);
             ast_print_indent(sb, indent);
-            string_builder_append(sb, "WHILE:\n");
+            string_builder_append(sb, "STMT_WHILE:\n");
 
             ast_print_pos(instance, sb, stmt->while_stmt.cond);
             ast_print_indent(sb, indent + 1);
@@ -352,7 +352,7 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         case AST_Statement_Kind::FOR: {
             ast_print_pos(instance, sb, stmt);
             ast_print_indent(sb, indent);
-            string_builder_append(sb, "FOR:\n");
+            string_builder_append(sb, "STMT_FOR:\n");
 
             ast_print_pos(instance, sb, stmt->for_stmt.init);
             ast_print_indent(sb, indent + 1);
@@ -383,24 +383,43 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
         case AST_Statement_Kind::BREAK: {
             ast_print_pos(instance, sb, stmt);
             ast_print_indent(sb, indent);
-            string_builder_append(sb, "BREAK:\n");
+            string_builder_append(sb, "STMT_BREAK:\n");
             break;
         }
 
         case AST_Statement_Kind::CONTINUE: {
             ast_print_pos(instance, sb, stmt);
             ast_print_indent(sb, indent);
-            string_builder_append(sb, "CONTINUE:\n");
+            string_builder_append(sb, "STMT_CONTINUE:\n");
             break;
         }
 
         case AST_Statement_Kind::BLOCK: {
             ast_print_pos(instance, sb, stmt);
             ast_print_indent(sb, indent);
-            string_builder_append(sb, "BLOCK:\n");
+            string_builder_append(sb, "STMT_BLOCK:\n");
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
                 ast_stmt_to_string(instance, sb, stmt->block.statements[i], indent + 1);
+            }
+            break;
+        }
+
+        case AST_Statement_Kind::ASSERT: {
+            ast_print_pos(instance, sb, stmt);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "STMT_ASSERT:\n");
+
+            ast_print_pos(instance, sb, stmt);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "COND:\n");
+            ast_expr_to_string(instance, sb, stmt->assert_stmt.cond, indent + 2);
+
+            if (stmt->assert_stmt.message) {
+                ast_print_pos(instance, sb, stmt);
+                ast_print_indent(sb, indent + 1);
+                string_builder_append(sb, "MESSAGE:\n");
+                ast_expr_to_string(instance, sb, stmt->assert_stmt.message, indent + 2);
             }
             break;
         }

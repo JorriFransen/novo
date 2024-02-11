@@ -8,10 +8,11 @@ NAPI u64 hash_key(s64 key);
 NAPI u64 hash_key(const char *str);
 
 template <typename T>
-s64 hash_key(T *ptr) {
-    return hash_key((s64)ptr);
+NAPI u64 hash_key(T *ptr) {
+    return hash_key((u64)ptr);
 }
 
+NAPI u64 hash_combine(u64 l, u64 r);
 
 }
 

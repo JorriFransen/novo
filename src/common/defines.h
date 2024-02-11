@@ -66,6 +66,16 @@ STATIC_ASSERT(false, "Unsupported platform (Apple).");
 #define NNOINLINE
 #endif
 
+#define GIBIBYTE(x) (x * 1024 * 1024 * 1024)
+#define MEBIBYTE(x) (x * 1024 * 1024)
+#define KIBIBYTE(x) (x * 1024)
+
+#define GIGABYTE(x) (x * 1000 * 1000 * 1000)
+#define MEGABYTE(x) (x * 1000 * 1000)
+#define KILOBYTE(x) (x * 1000)
+
+namespace Novo {
+
 typedef unsigned char       u8;
 typedef unsigned short     u16;
 typedef unsigned int       u32;
@@ -78,6 +88,8 @@ typedef signed long long s64;
 
 typedef float  r32;
 typedef double r64;
+
+typedef u64 p_uint_t;
 
 STATIC_ASSERT(sizeof(u8) == 1, "Expected sizeof(u8) to be 1 byte");
 STATIC_ASSERT(sizeof(u16) == 2, "Expected sizeof(u16) to be 2 bytes");
@@ -106,16 +118,6 @@ STATIC_ASSERT(sizeof(r64) == 8, "Expected sizeof(r64) to be 8 bytes");
 #define I32_MIN (-2147483647LL - 1L)
 #define I16_MIN (-32768)
 #define I8_MIN  (-128)
-
-#define GIBIBYTE(x) (x * 1024 * 1024 * 1024)
-#define MEBIBYTE(x) (x * 1024 * 1024)
-#define KIBIBYTE(x) (x * 1024)
-
-#define GIGABYTE(x) (x * 1000 * 1000 * 1000)
-#define MEGABYTE(x) (x * 1000 * 1000)
-#define KILOBYTE(x) (x * 1000)
-
-namespace Novo {
 
 NINLINE u64 get_aligned(u64 operand, u64 alignment) {
     return ((operand + (alignment - 1)) & ~(alignment - 1));

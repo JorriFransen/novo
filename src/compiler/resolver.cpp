@@ -321,6 +321,21 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
 
             break;
         }
+
+        case AST_Statement_Kind::ASSERT: {
+
+            if (!resolve_expression(inst, task, stmt->assert_stmt.cond, scope)) {
+                return false;
+            }
+
+            if (stmt->assert_stmt.message) {
+                if (!resolve_expression(inst, task, stmt->assert_stmt.message, scope)) {
+                    return false;
+                }
+            }
+
+            break;
+        }
     }
 
     stmt->flags |= AST_STMT_FLAG_RESOLVED;
