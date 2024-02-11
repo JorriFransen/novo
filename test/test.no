@@ -1,8 +1,8 @@
 // TODO:
+//  - when typeing hex literals, only look at the byte size, not the bounds.
 //  - test sign and zero extend
 //  - test pointer math
 //  - ssa ops for pointer offset and difference
-//  - unary -
 //  - null
 //  - pointer casts
 //  - sizeof()
@@ -30,7 +30,8 @@
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
 
 main :: () -> int {
-    assert(1 == 1);
+    assert(1 != -1);
+    assert(---77585787 == -77585787);
     assert(true, "This should not trigger!");
     assert(false, "Whoa oops!!..");
     return 0;

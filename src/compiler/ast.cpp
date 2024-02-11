@@ -231,7 +231,15 @@ AST_Expression* ast_identifier_expression(Instance* inst, AST_Identifier* ident)
     return result;
 }
 
-NAPI AST_Expression* ast_binary_expression(Instance* inst, u32 op, AST_Expression* lhs, AST_Expression* rhs)
+AST_Expression* ast_unary_expression(Instance* inst, u32 op, AST_Expression* operand)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::UNARY);
+    result->unary.op = op;
+    result->unary.operand = operand;
+    return result;
+}
+
+AST_Expression* ast_binary_expression(Instance* inst, u32 op, AST_Expression* lhs, AST_Expression* rhs)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::BINARY);
     result->binary.op = op;

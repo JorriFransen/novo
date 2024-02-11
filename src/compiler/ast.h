@@ -204,6 +204,7 @@ enum class AST_Expression_Kind : u32
     INVALID,
 
     IDENTIFIER,
+    UNARY,
     BINARY,
     MEMBER,
     CALL,
@@ -251,6 +252,12 @@ struct AST_Expression
 
         struct
         {
+            u32 op;
+            AST_Expression* operand;
+        } unary;
+
+        struct
+        {
             AST_Expression* base;
             AST_Identifier* member_name;
         } member;
@@ -260,10 +267,6 @@ struct AST_Expression
             AST_Expression* base;
             DArray<AST_Expression *> args;
         } call;
-
-        struct {
-            AST_Expression *operand;
-        } unary;
 
         struct {
             AST_Type_Spec* ts;
@@ -350,6 +353,7 @@ NAPI AST_Statement* ast_assert_statement(Instance* inst, AST_Expression* cond, A
 
 NAPI AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, AST_Expression_Flags flags = AST_EXPR_FLAG_NONE);
 NAPI AST_Expression* ast_identifier_expression(Instance* inst, AST_Identifier* ident);
+NAPI AST_Expression* ast_unary_expression(Instance* inst, u32 op, AST_Expression* operand);
 NAPI AST_Expression* ast_binary_expression(Instance* inst, u32 op, AST_Expression* lhs, AST_Expression* rhs);
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name);
 NAPI AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression*> args);

@@ -364,6 +364,21 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             break;
         }
 
+        case AST_Expression_Kind::UNARY: {
+            AST_Expression* operand = expr->unary.operand;
+
+            if (!resolve_expression(inst, task, operand, scope)) {
+                return false;
+            }
+
+
+            if (operand->flags & AST_EXPR_FLAG_CONST) {
+                expr->flags |= AST_EXPR_FLAG_CONST;
+            }
+
+            break;
+        }
+
         case AST_Expression_Kind::BINARY: {
             AST_Expression* lhs = expr->binary.lhs;
             AST_Expression* rhs = expr->binary.rhs;
