@@ -1,5 +1,5 @@
 // TODO:
-//  - test sign and zero extend
+//  - test zero extend
 //  - test pointer math
 //  - ssa ops for pointer offset and difference
 //  - null

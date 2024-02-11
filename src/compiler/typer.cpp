@@ -338,7 +338,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
         case AST_Statement_Kind::BLOCK: {
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
-                if (!type_statement(inst, task, stmt->block.statements[i], scope)) {
+                if (!type_statement(inst, task, stmt->block.statements[i], stmt->block.scope)) {
                     return false;
                 }
             }

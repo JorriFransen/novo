@@ -3,13 +3,14 @@
 #include <dyncall.h>
 
 #include <containers/darray.h>
-#include <logger.h>
+#include <containers/hash_table.h>
 #include <memory/allocator.h>
 #include <nstring.h>
 
 #include "atom.h"
 #include "ffi.h"
 #include "instance.h"
+#include "source_pos.h"
 #include "ssa.h"
 #include "type.h"
 
@@ -78,7 +79,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
     SSA_Function* fn = &vm->current_program->functions[vm->current_program->entry_fn_index];
 
-    auto reg_count = NOVO_VM_DEFAULT_REG_COUNT;
+    u32 reg_count = NOVO_VM_DEFAULT_REG_COUNT;
     while (reg_count < fn->register_count) reg_count *= 2;
     vm->register_count = reg_count;
     vm->registers = allocate_array<u64>(vm->allocator, reg_count);

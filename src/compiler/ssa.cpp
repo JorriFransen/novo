@@ -1,7 +1,7 @@
 #include "ssa.h"
 
 #include <containers/stack.h>
-#include <logger.h>
+#include <hash.h>
 #include <memory/temp_allocator.h>
 #include <string_builder.h>
 

@@ -313,7 +313,7 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
                 AST_Statement* block_stmt = stmt->block.statements[i];
 
-                if (!resolve_statement(inst, task, block_stmt, scope)) {
+                if (!resolve_statement(inst, task, block_stmt, stmt->block.scope)) {
                     return false;
                 }
 

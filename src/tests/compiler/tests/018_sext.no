@@ -1,0 +1,132 @@
+
+main :: () -> int {
+    signed_signed();
+    signed_unsigned();
+    return 0;
+}
+
+signed_signed :: () {
+
+    {
+        x : s8 = 0xEB;
+        xx := cast(s16, x);
+        assert(xx == 0xFFEB);
+
+        y : s8 = 0x6B;
+        yy := cast(s16, y);
+        assert(yy == 0x6B);
+    }
+
+    {
+        x : s8 = 0xEB;
+        xx := cast(s32, x);
+        assert(xx == 0xFFFFFFEB);
+
+        y : s8 = 0x6B;
+        yy := cast(s32, y);
+        assert(yy == 0x6B);
+    }
+
+    {
+        x : s8 = 0xEB;
+        xx := cast(s64, x);
+        assert(xx == 0xFFFFFFFFFFFFFFEB);
+
+        y : s8 = 0x6B;
+        yy := cast(s64, y);
+        assert(yy == 0x6B);
+    }
+
+    {
+        x : s16 = 0xEAAB;
+        xx := cast(s32, x);
+        assert(xx == 0xFFFFEAAB);
+
+        y : s16 = 0x6AAB;
+        yy := cast(s32, y);
+        assert(yy == 0x6AAB);
+    }
+
+    {
+        x : s16 = 0xEAAB;
+        xx := cast(s64, x);
+        assert(xx == 0xFFFFFFFFFFFFEAAB);
+
+        y : s16 = 0x6AAB;
+        yy := cast(s64, y);
+        assert(yy == 0x6AAB);
+    }
+
+    {
+        x : s32 = 0xEAAAAAAB;
+        xx := cast(s64, x);
+        assert(xx == 0xFFFFFFFFEAAAAAAB);
+
+        y : s32 = 0x6AAAAAAB;
+        yy := cast(s64, y);
+        assert(yy == 0x6AAAAAAB);
+    }
+}
+
+signed_unsigned :: () {
+
+    {
+        x : s8 = 0xEB;
+        xx := cast(u16, x);
+        assert(xx == 0xFFEB);
+
+        y : s8 = 0x6B;
+        yy := cast(u16, y);
+        assert(yy == 0x6B);
+    }
+
+    {
+        x : s8 = 0xEB;
+        xx := cast(u32, x);
+        assert(xx == 0xFFFFFFEB);
+
+        y : s8 = 0x6B;
+        yy := cast(u32, y);
+        assert(yy == 0x6B);
+    }
+
+    {
+        x : s8 = 0xEB;
+        xx := cast(u64, x);
+        assert(xx == 0xFFFFFFFFFFFFFFEB);
+
+        y : s8 = 0x6B;
+        yy := cast(u64, y);
+        assert(yy == 0x6B);
+    }
+
+    {
+        x : s16 = 0xEAAB;
+        xx := cast(u32, x);
+        assert(xx == 0xFFFFEAAB);
+
+        y : s16 = 0x6AAB;
+        yy := cast(u32, y);
+        assert(yy == 0x6AAB);
+    }
+
+    {
+        x : s16 = 0xEAAB;
+        xx := cast(u64, x);
+        assert(xx == 0xFFFFFFFFFFFFEAAB);
+
+        y : s16 = 0x6AAB;
+        yy := cast(u64, y);
+        assert(yy == 0x6AAB);
+    }
+
+    {
+        x : s32 = 0xEAAAAAAB;
+        xx := cast(u64, x);
+        assert(xx == 0xFFFFFFFFEAAAAAAB);
+
+        y : s32 = 0x6AAAAAAB;
+        yy := cast(u64, y);
+        assert(yy == 0x6AAAAAAB);
+    }
+}

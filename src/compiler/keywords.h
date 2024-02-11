@@ -4,6 +4,8 @@
 
 #include "atom.h"
 
+// IWYU pragma: no_include <assert.h>
+
 namespace Novo {
 
 #define ALL_NOVO_KEYWORDS   \
