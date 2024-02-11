@@ -3,6 +3,7 @@
 #include <dyncall.h>
 
 #include <containers/darray.h>
+#include <logger.h>
 #include <memory/allocator.h>
 #include <nstring.h>
 
@@ -17,6 +18,8 @@
 
 namespace Novo {
 
+
+
 void vm_init(VM* vm, Allocator* allocator, Instance* inst)
 {
     vm->allocator = allocator;
@@ -29,11 +32,9 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
     vm->sp = 0;
     vm->bp = 0;
 
+    vm->register_count = 0;
 
-    vm->register_count = 256;
-    vm->stack_size = 128;
-
-    vm->registers = allocate_array<u64>(allocator, vm->register_count);
+    vm->stack_size = NOVO_VM_DEFAULT_REG_STACK_SIZE;
     vm->stack = allocate_array<u64>(allocator, vm->stack_size);
 
     vm->constant_memory = nullptr;
@@ -96,6 +97,17 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 {
     assert(program->entry_fn_index >= 0 && program->entry_fn_index < program->functions.count);
 
+    vm->current_program = program;
+    vm->fn_index = program->entry_fn_index;
+    vm->block_index = 0;
+
+    SSA_Function* fn = &vm->current_program->functions[vm->current_program->entry_fn_index];
+
+    auto reg_count = NOVO_VM_DEFAULT_REG_COUNT;
+    while (reg_count < fn->register_count) reg_count *= 2;
+    vm->register_count = reg_count;
+    vm->registers = allocate_array<u64>(vm->allocator, reg_count);
+
     for (s64 i = 0; i < program->functions.count; i++) {
         SSA_Function* func = &program->functions[i];
         if (func->foreign) {
@@ -111,10 +123,6 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
             func->ffi_index = result;
         }
     }
-
-    vm->current_program = program;
-    vm->fn_index = program->entry_fn_index;
-    vm->block_index = 0;
 
     vm_stack_push(vm, 0); // dummy bp
     vm_stack_push(vm, 0); // dummy dest reg
@@ -140,12 +148,6 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
         *patch_ptr = (u64)dest_ptr;
     }
 
-    return vm_run(vm);
-}
-
-VM_Result vm_run(VM* vm)
-{
-    SSA_Function* fn = &vm->current_program->functions[vm->fn_index];
     SSA_Block* block = &fn->blocks[vm->block_index];
 
     s64 ip = 0;
@@ -404,6 +406,19 @@ VM_Result vm_run(VM* vm)
                 vm->block_index = 0;
                 block = &fn->blocks[0];
                 vm->register_offset += old_fn->register_count;
+
+                u32 regs_required = vm->register_offset + fn->register_count;
+                if (regs_required > vm->register_count) {
+                    u32 old_count = vm->register_count;
+                    u32 new_count = vm->register_count;
+                    while (new_count < regs_required) new_count *= 2;
+
+                    auto old_regs = vm->registers;
+                    vm->registers = allocate_array<u64>(vm->allocator, new_count);
+                    vm->register_count = new_count;
+                    memcpy(vm->registers, old_regs, old_count * sizeof(vm->registers[0]));
+                    free(vm->allocator, old_regs);
+                }
 
                 break;
             }

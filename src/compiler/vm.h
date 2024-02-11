@@ -3,6 +3,9 @@
 #include <ffi.h>
 #include <defines.h>
 
+#define NOVO_VM_DEFAULT_REG_COUNT 128
+#define NOVO_VM_DEFAULT_REG_STACK_SIZE 64
+
 namespace Novo {
 
 struct Allocator;
@@ -39,6 +42,5 @@ struct VM_Result
 
 NAPI void vm_init(VM* vm, Allocator* allocator, Instance* inst);
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program);
-NAPI VM_Result vm_run(VM* vm);
 
 }

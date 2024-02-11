@@ -31,7 +31,31 @@
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
 
-main :: () -> int {
-    x : s8 = 0xfe;
+// main :: () -> int {
+//     return foreign_add(1, 2);
+// }
+
+Vec :: struct {
+    x : s64;
+    y : s64;
+}
+
+add_v1 :: (a: Vec, b: Vec) -> Vec {
+    return { a.x + b.x, a.y + b.y };
+}
+
+add_v2 :: (a: Vec, b: Vec) -> Vec {
+    r : Vec = { a.x + b.x, a.y + b.y };
+    return r;
+}
+
+main :: () -> s64 {
+    a : Vec = { 1, 2 };
+    r := add_v1(a, { 11, 22 });
+    //
+    // r = add_v2(r, { 2, 3 });
+    //
+    // assert(r.x + r.y == 41);
+
     return 0;
 }
