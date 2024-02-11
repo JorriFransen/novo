@@ -43,10 +43,20 @@ enum Token_Kind : u32
     TOK_LAST = TOK_EOF,
 };
 
+typedef u32 Token_Flags;
+enum Token_Flag : Token_Flags {
+
+    TOK_FLAG_NONE   = 0x00,
+    TOK_FLAG_HEX    = 0x01,
+    TOK_FLAG_BINARY = 0x02,
+};
+
 struct Token
 {
     Token_Kind kind;
     Atom atom;
+
+    Token_Flags flags;
 
     union
     {
@@ -54,6 +64,7 @@ struct Token
         Real_Value real;
         char character;
     };
+
 
     u32 offset;
     u32 length;

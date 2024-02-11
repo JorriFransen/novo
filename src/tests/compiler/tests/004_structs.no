@@ -1,0 +1,126 @@
+
+main :: () -> s64 {
+
+    assert(test_basics() == 42);
+    assert(test_nested() == 84);
+    assert(test_assign() == 84);
+    assert(test_arg() == 66);
+    assert(test_return_1() == 22);
+    assert(test_return_2() == 33);
+    assert(test_return_3() == 66);
+    return 0;
+}
+
+
+
+
+
+Vec :: struct {
+    x: s64;
+    y: s64;
+}
+
+vec :: (x: s64, y: s64) -> Vec {
+    result: Vec;
+    result.x = x;
+    result.y = y;
+    return result;
+}
+
+vec_sum :: (v: Vec) -> s64 {
+    result := v.x + v.y;
+
+    // Make sure we don't modify the original struct from the callers frame.
+    v.x = 0;
+    v.y = 0;
+
+    return result;
+}
+
+vec_add :: (a: Vec, b: Vec) -> Vec {
+    result: Vec;
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    return result;
+}
+
+AABB :: struct {
+    pos: Vec;
+    size: Vec;
+}
+
+
+
+test_basics :: () -> s64 {
+
+    p : Vec;
+    p.x = 40;
+    p.y = 2;
+
+    return p.x + p.y;
+}
+
+test_nested :: () -> s64 {
+    r : AABB;
+
+    p : Vec;
+    p.x = 40;
+    p.y = 2;
+
+    r.pos = p;
+    r.size.x = p.y;
+    r.size.y = p.x;
+
+    return r.pos.x + r.pos.y + r.size.x + r.size.y;
+}
+
+test_assign :: () -> s64 {
+    r : AABB;
+
+    p : Vec;
+    p.x = 40;
+    p.y = 2;
+
+    r.pos = p;
+    r.size.x = p.y;
+    r.size.y = p.x;
+
+    r2 := r;
+
+    r.pos.x = 0;
+    r.pos.y = 0;
+    r.size.x = 0;
+    r.size.y = 0;
+
+    return r2.pos.x + r2.pos.y + r2.size.x + r2.size.y;
+}
+
+test_arg :: () -> s64 {
+
+    p1 : Vec;
+    p1.x = 11;
+    p1.y = 22;
+
+    r1 := vec_sum(p1);
+    r2 := vec_sum(p1);
+
+    return r1 + r2;
+}
+
+test_return_1 :: () -> s64 {
+    return vec(11, 22).y;
+}
+
+test_return_2 :: () -> s64 {
+    p := vec(11, 22);
+    return p.x + p.y;
+}
+
+test_return_3 :: () -> s64 {
+    p1 := vec(11, 22);
+    p2 := vec(22, 11);
+
+    r := vec_add(p1, p2);
+
+    return r.x + r.y;
+}

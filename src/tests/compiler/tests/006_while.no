@@ -8,5 +8,8 @@ main :: () -> s64 {
 
     while i < 10 i = 0;
 
-    return i;
+
+    assert(i == 42);
+
+    return 0;
 }

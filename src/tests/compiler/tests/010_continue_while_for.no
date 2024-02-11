@@ -18,5 +18,7 @@ main :: () -> s64 {
         jj += 1;
     }
 
-    return ii + jj;
+    assert(ii + jj == 18);
+
+    return 0;
 }

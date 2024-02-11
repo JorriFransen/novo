@@ -14,5 +14,7 @@ main :: () -> s64 {
     s : Vec = { 3, 4 };
     r : AABB = { { 1, 2 }, s };
 
-    return r.pos.x + r.pos.y + r.size.x + r.size.y;
+    assert(r.pos.x + r.pos.y + r.size.x + r.size.y == 10);
+
+    return 0;
 }

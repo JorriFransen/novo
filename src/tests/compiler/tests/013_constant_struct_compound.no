@@ -22,5 +22,7 @@ main :: () -> s64 {
 
     r2 : AABB = { { 11, 22 }, { 33, 44 } };
 
-    return add(r, r2);
+    assert(add(r, r2) == 120);
+
+    return 0;
 }

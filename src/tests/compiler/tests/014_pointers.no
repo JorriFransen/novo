@@ -13,5 +13,7 @@ main :: () -> s64 {
 
     inc(px);
 
-    return <px;
+    assert(<px == 85);
+
+    return 0;
 }

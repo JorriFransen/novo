@@ -1,0 +1,19 @@
+
+return_immediate_zero :: () -> int {
+    return 0;
+}
+
+return_42 :: () -> int {
+    return 42;
+}
+
+return_bignum :: () -> int {
+    return 72623859790382856;
+}
+
+main :: () -> int {
+    assert(return_immediate_zero() == 0);
+    assert(return_42() == 42);
+    assert(return_bignum() == 0x102030405060708);
+    return 0;
+}

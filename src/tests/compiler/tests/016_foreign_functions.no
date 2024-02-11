@@ -11,5 +11,7 @@ main :: () -> s64 {
     putchar('!');
     putchar('\n');
 
-    return c + c2 + foreign_add(1, 2);
+    assert(c + c2 + foreign_add(1, 2) == 148);
+
+    return 0;
 }

@@ -5,6 +5,8 @@ main :: () -> s64 {
 
     i += 4;
 
-    return i;
+    assert(i == 5);
+
+    return 0;
 }
 

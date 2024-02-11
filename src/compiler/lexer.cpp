@@ -66,6 +66,7 @@ bool next_token(Lexer* lex)
 next_token__start_lexing_token:
     lex->token.kind = TOK_INVALID;
     lex->token.offset = lex->stream - lex->stream_start;
+    lex->token.flags = TOK_FLAG_NONE;
     auto start = lex->stream;
 
     switch (*lex->stream) {
@@ -364,6 +365,8 @@ static bool lex_int(Lexer* lexer)
     auto start = lexer->stream;
     u64 length = 0;
 
+    Token_Flags flags = TOK_FLAG_NONE;
+
     if (*lexer->stream == '0') {
         lexer->stream += 1;
 
@@ -371,10 +374,12 @@ static bool lex_int(Lexer* lexer)
             lexer->stream += 1;
             base = 16;
             start = lexer->stream;
+            flags |= TOK_FLAG_HEX;
         } else if (tolower(*lexer->stream) == 'b') {
             lexer->stream += 1;
             base = 2;
             start = lexer->stream;
+            flags |= TOK_FLAG_BINARY;
         }
     }
 
@@ -418,6 +423,7 @@ static bool lex_int(Lexer* lexer)
 
     lexer->token.kind = TOK_INT;
     lexer->token.integer = result;
+    lexer->token.flags = flags;
 
     return true;
 }

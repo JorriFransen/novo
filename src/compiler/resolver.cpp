@@ -443,11 +443,16 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             AST_Declaration* callee_decl = nullptr;
             if (expr->call.base->kind == AST_Expression_Kind::IDENTIFIER) {
-                auto callee_decl = expr->call.base->identifier->decl;
-                assert(callee_decl);
+                callee_decl = expr->call.base->identifier->decl;
+
+                if (!callee_decl) return false;
 
                 assert(task->fn_decl);
+            } else {
+                assert(false);
             }
+
+            assert(callee_decl);
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
 
@@ -458,7 +463,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             // success
             if (callee_decl) {
-                darray_append(&task->fn_decl->function.wait_for_bytecode, ast_node(callee_decl));
+                darray_append_unique(&task->fn_decl->function.wait_for_bytecode, ast_node(callee_decl));
             }
             break;
         }

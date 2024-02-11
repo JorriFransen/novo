@@ -676,9 +676,14 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             if (suggested_type) {
                 assert(suggested_type->kind == Type_Kind::INTEGER);
 
+                bool hex = expr->flags & AST_EXPR_FLAG_HEX_LITERAL;
+                bool binary = expr->flags & AST_EXPR_FLAG_BINARY_LITERAL;
+
+                bool check_signed = !hex && !binary;
+
                 bool fit = false;
 
-                if (suggested_type->integer.sign) {
+                if (suggested_type->integer.sign && check_signed) {
                     s64 val = (s64)expr->integer_literal;
                     switch (suggested_type->bit_size) {
                         default: assert(false); break;
@@ -691,10 +696,10 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                     u64 val = (u64)expr->integer_literal;
                     switch (suggested_type->bit_size) {
                         default: assert(false); break;
-                        case 8:  fit = (val <= I8_MAX); break;
-                        case 16: fit = (val <= I16_MAX); break;
-                        case 32: fit = (val <= I32_MAX); break;
-                        case 64: fit = (val <= I64_MAX); break;
+                        case 8:  fit = (val <= U8_MAX); break;
+                        case 16: fit = (val <= U16_MAX); break;
+                        case 32: fit = (val <= U32_MAX); break;
+                        case 64: fit = (val <= U64_MAX); break;
                     }
                 }
 
@@ -808,6 +813,9 @@ bool valid_cast(Instance* inst, Type* from_type, Type* to_type)
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
     }
+
+    assert(false);
+    return false;
 }
 
 }

@@ -1,6 +1,7 @@
 #include "ssa.h"
 
 #include <containers/stack.h>
+#include <logger.h>
 #include <memory/temp_allocator.h>
 #include <string_builder.h>
 
@@ -180,6 +181,10 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     darray_append(&program->functions, local_func);
     SSA_Function* func = &program->functions[fn_index];
 
+    if (func->foreign) {
+        return true;
+    }
+
     SSA_Builder local_builder;
     local_builder.instance = inst;
     local_builder.program = program;
@@ -254,7 +259,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     if (!last_block_exits) {
         if (decl->resolved_type->function.return_type->kind == Type_Kind::VOID) {
             ssa_emit_op(builder, SSA_OP_RET_VOID);
-        } else if (func->blocks[builder->block_index].incoming.count > 0) {
+        } else if (builder->block_index == 0 || func->blocks[builder->block_index].incoming.count > 0) {
             instance_fatal_error(inst, func->source_pos, "Function '%s' does not return a value from all control paths", atom_string(func->name).data);
         }
     }
@@ -1255,6 +1260,9 @@ u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 oper
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
     }
+
+    assert(false);
+    return false;
 }
 
 u32 ssa_emit_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)

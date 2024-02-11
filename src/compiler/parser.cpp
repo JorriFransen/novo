@@ -334,7 +334,19 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
         case TOK_INT: {
             next_token(parser->lexer);
+
+            bool hex = ct.flags & TOK_FLAG_HEX;
+            bool binary = ct.flags & TOK_FLAG_BINARY;
+
+            assert(!(binary && hex));
+
             result = ast_integer_literal_expression(parser->instance, ct.integer);
+
+            if (hex) {
+                result->flags |= AST_EXPR_FLAG_HEX_LITERAL;
+            } else if (binary) {
+                result->flags |= AST_EXPR_FLAG_BINARY_LITERAL;
+            }
             break;
         }
 

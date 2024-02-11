@@ -14,5 +14,7 @@ main :: () -> s64 {
 
     i := 3;
 
-    return j + i;
+    assert(j + i == 12);
+
+    return 0;
 }
