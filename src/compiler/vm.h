@@ -1,7 +1,9 @@
 #pragma once
 
-#include <ffi.h>
 #include <defines.h>
+
+#include <containers/stack.h>
+#include <ffi.h>
 
 #define NOVO_VM_DEFAULT_REG_COUNT 128
 #define NOVO_VM_DEFAULT_REG_STACK_SIZE 64
@@ -22,13 +24,12 @@ struct VM
 
     u32 register_offset;
     u32 bp;
-    u32 sp;
-    u32 stack_size;
     u32 register_count;
     s64 constant_memory_size;
 
     u64* registers;
-    u64* stack;
+    Stack<u64> register_stack;
+
     u8* constant_memory;
 
     FFI ffi;

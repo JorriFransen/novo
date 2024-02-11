@@ -29,13 +29,12 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
     vm->block_index = 0;
 
     vm->register_offset = 0;
-    vm->sp = 0;
     vm->bp = 0;
 
     vm->register_count = 0;
 
-    vm->stack_size = NOVO_VM_DEFAULT_REG_STACK_SIZE;
-    vm->stack = allocate_array<u64>(allocator, vm->stack_size);
+    // vm->stack_size = NOVO_VM_DEFAULT_REG_STACK_SIZE;
+    // vm->stack = allocate_array<u64>(allocator, vm->stack_size);
 
     vm->constant_memory = nullptr;
     vm->constant_memory_size = 0;
@@ -50,33 +49,6 @@ NINLINE T vm_fetch(SSA_Block* block, s64* ip)
     T result = *(T*)&block->bytes[*ip];
     *ip += sizeof(T);
     return result;
-}
-
-NINLINE void vm_stack_push(VM* vm, u64 value)
-{
-    assert(vm->sp < vm->stack_size);
-    vm->stack[vm->sp] = value;
-    vm->sp += 1;
-}
-
-NINLINE u64 vm_stack_pop(VM* vm)
-{
-    assert(vm->sp >= 1);
-    u64 result = vm->stack[vm->sp - 1];
-    vm->sp -= 1;
-    return result;
-}
-
-NINLINE u64 vm_stack_top(VM *vm)
-{
-    assert(vm->sp >= 1);
-    return vm->stack[vm->sp - 1];
-}
-
-NINLINE u64 vm_stack_peek(VM *vm, s64 offset) {
-    assert(offset <= 0);
-    assert(vm->sp + offset >= 1);
-    return vm->stack[vm->sp - 1 + offset];
 }
 
 NINLINE void vm_set_register(VM* vm, u32 reg, u64 value)
@@ -108,6 +80,8 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
     vm->register_count = reg_count;
     vm->registers = allocate_array<u64>(vm->allocator, reg_count);
 
+    stack_init(vm->allocator, &vm->register_stack, NOVO_VM_DEFAULT_REG_STACK_SIZE);
+
     for (s64 i = 0; i < program->functions.count; i++) {
         SSA_Function* func = &program->functions[i];
         if (func->foreign) {
@@ -124,12 +98,12 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
         }
     }
 
-    vm_stack_push(vm, 0); // dummy bp
-    vm_stack_push(vm, 0); // dummy dest reg
-    vm_stack_push(vm, 0); // dummy ip
-    vm_stack_push(vm, 0); // dummy fn_index
-    vm_stack_push(vm, 0); // dummy block_index
-    vm_stack_push(vm, 0); // dummy register_offset
+    stack_push(&vm->register_stack, (u64)0); // dummy bp
+    stack_push(&vm->register_stack, (u64)0); // dummy dest reg
+    stack_push(&vm->register_stack, (u64)0); // dummy ip
+    stack_push(&vm->register_stack, (u64)0); // dummy fn_index
+    stack_push(&vm->register_stack, (u64)0); // dummy block_index
+    stack_push(&vm->register_stack, (u64)0); // dummy register_offset
 
     vm->constant_memory_size = program->constant_memory.count;
     vm->constant_memory = allocate_array<u8>(vm->allocator, vm->constant_memory_size);
@@ -319,7 +293,8 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 param_index = vm_fetch<u32>(block, &ip);
 
-                u64 value = vm->stack[vm->bp - fn->param_count + param_index];
+                // u64 value = vm->stack[vm->bp - fn->param_count + param_index];
+                u64 value = vm->register_stack.buffer[vm->bp - fn->param_count + param_index];
 
                 vm_set_register(vm, dest_reg, value);
                 break;
@@ -372,13 +347,13 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
                 u64 value = vm_get_register(vm, value_reg);
 
-                vm_stack_push(vm, value);
+                stack_push(&vm->register_stack, value);
                 break;
             }
 
             case SSA_OP_POP_N: {
                 u32 n = vm_fetch<u32>(block, &ip);
-                vm->sp -= n;
+                stack_pop(&vm->register_stack, n);
                 break;
             }
 
@@ -390,13 +365,13 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
                 assert(fn_index >= 0 && fn_index < vm->current_program->functions.count);
 
-                auto new_bp = vm->sp;
-                vm_stack_push(vm, vm->bp);
-                vm_stack_push(vm, dest_reg);
-                vm_stack_push(vm, ip);
-                vm_stack_push(vm, vm->fn_index);
-                vm_stack_push(vm, vm->block_index);
-                vm_stack_push(vm, vm->register_offset);
+                auto new_bp = vm->register_stack.sp;
+                stack_push(&vm->register_stack, (u64)vm->bp);
+                stack_push(&vm->register_stack, (u64)dest_reg);
+                stack_push(&vm->register_stack, (u64)ip);
+                stack_push(&vm->register_stack, (u64)vm->fn_index);
+                stack_push(&vm->register_stack, (u64)vm->block_index);
+                stack_push(&vm->register_stack, (u64)vm->register_offset);
 
                 vm->bp = new_bp;
                 ip = 0;
@@ -434,11 +409,11 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
                 dcReset(vm->ffi.vm);
 
-                s64 arg_offset = -arg_count + 1;
-                for (s64 i = 0; i < arg_count; i++, arg_offset++) {
+                s64 arg_offset = arg_count - 1;
+                for (s64 i = 0; i < arg_count; i++, arg_offset--) {
 
                     Type* arg_type = foreign_fn->type->function.param_types[i];
-                    u64 arg = vm_stack_peek(vm, arg_offset);
+                    u64 arg = stack_peek(&vm->register_stack, arg_offset);
 
                     switch (arg_type->kind) {
                         case Type_Kind::INVALID: assert(false); break;
@@ -462,7 +437,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                         case Type_Kind::STRUCT: assert(false); break;
                     }
                 }
-                assert(arg_offset == 1);
+                assert(arg_offset == -1);
 
                 void* func_sym = vm->ffi.functions[foreign_fn->ffi_index].sym;
                 Type *return_type = foreign_fn->type->function.return_type;
@@ -501,19 +476,19 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
                 u64 value = vm_get_register(vm, value_reg);
 
-                vm->register_offset = vm_stack_pop(vm);
-                vm->block_index = vm_stack_pop(vm);
-                vm->fn_index = vm_stack_pop(vm);
-                ip = vm_stack_pop(vm);
+                vm->register_offset = stack_pop(&vm->register_stack);
+                vm->block_index = stack_pop(&vm->register_stack);
+                vm->fn_index = stack_pop(&vm->register_stack);
+                ip = stack_pop(&vm->register_stack);
 
                 // This register is the callers frame
-                u32 dest_reg = vm_stack_pop(vm);
+                u32 dest_reg = stack_pop(&vm->register_stack);
 
                 auto old_bp = vm->bp;
-                vm->bp = vm_stack_pop(vm);
+                vm->bp = stack_pop(&vm->register_stack);
 
                 if (old_bp == vm->bp) {
-                    assert(vm->sp == 0);
+                    assert(vm->register_stack.sp == 0);
                     return { value, false };
 
                 } else {
@@ -530,19 +505,19 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
             case SSA_OP_RET_VOID: {
 
 
-                vm->register_offset = vm_stack_pop(vm);
-                vm->block_index = vm_stack_pop(vm);
-                vm->fn_index = vm_stack_pop(vm);
-                ip = vm_stack_pop(vm);
+                vm->register_offset = stack_pop(&vm->register_stack);
+                vm->block_index = stack_pop(&vm->register_stack);
+                vm->fn_index = stack_pop(&vm->register_stack);
+                ip = stack_pop(&vm->register_stack);
 
                 // This register is the callers frame
-                /*u32 dest_reg =*/ vm_stack_pop(vm);
+                /*u32 dest_reg =*/ stack_pop(&vm->register_stack);
 
                 auto old_bp = vm->bp;
-                vm->bp = vm_stack_pop(vm);
+                vm->bp = stack_pop(&vm->register_stack);
 
                 if (old_bp == vm->bp) {
-                    assert(vm->sp == 0);
+                    assert(vm->register_stack.sp == 0);
                     assert(false); // Exit vm
 
                 } else {

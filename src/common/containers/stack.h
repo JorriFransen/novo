@@ -3,7 +3,8 @@
 #include "defines.h"
 #include "memory/allocator.h"
 
-#include <cassert>
+#include <assert.h>
+#include <string.h>
 
 namespace Novo {
 
