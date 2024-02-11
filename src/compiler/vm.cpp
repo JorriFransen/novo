@@ -30,8 +30,8 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
     vm->bp = 0;
 
 
-    vm->register_count = 64;
-    vm->stack_size = 32;
+    vm->register_count = 128;
+    vm->stack_size = 128;
 
     vm->registers = allocate_array<u64>(allocator, vm->register_count);
     vm->stack = allocate_array<u64>(allocator, vm->stack_size);

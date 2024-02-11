@@ -47,41 +47,15 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/025_struct_pointers.no", .return_code = 19 },
     { .file_path = "tests/026_foreign_functions.no", .return_code = 148 },
 
-    { .file_path = "tests/027_trunc_u64_u8.no", .return_code = 0x11 },
-    { .file_path = "tests/028_trunc_u64_u16.no", .return_code = 0x1001 },
-    { .file_path = "tests/029_trunc_u64_u32.no", .return_code = 0x10000001 },
-    { .file_path = "tests/030_trunc_u32_u8.no", .return_code = 0x11 },
-    { .file_path = "tests/031_trunc_u32_u16.no", .return_code = 0x1001 },
-    { .file_path = "tests/032_trunc_u16_u8.no", .return_code = 0x11 },
-
-    { .file_path = "tests/033_trunc_s64_u8.no", .return_code = 0x11 },
-    { .file_path = "tests/034_trunc_s64_u16.no", .return_code = 0x1001 },
-    { .file_path = "tests/035_trunc_s64_u32.no", .return_code = 0x10000001 },
-    { .file_path = "tests/036_trunc_s32_u8.no", .return_code = 0x11 },
-    { .file_path = "tests/037_trunc_s32_u16.no", .return_code = 0x1001 },
-    { .file_path = "tests/038_trunc_s16_u8.no", .return_code = 0x11 },
-
-    { .file_path = "tests/039_trunc_u64_s8.no", .return_code = 0xfe },
-    { .file_path = "tests/040_trunc_u64_s16.no", .return_code = 0xfefe },
-    { .file_path = "tests/041_trunc_u64_s32.no", .return_code = 0xfefefefe },
-    { .file_path = "tests/042_trunc_u32_s8.no", .return_code = 0xfe },
-    { .file_path = "tests/043_trunc_u32_s16.no", .return_code = 0xfefe },
-    { .file_path = "tests/044_trunc_u16_s8.no", .return_code = 0xfe },
-
-    { .file_path = "tests/045_trunc_s64_s8.no", .return_code = 0xfe },
-    { .file_path = "tests/046_trunc_s64_s16.no", .return_code = 0xfefe },
-    { .file_path = "tests/047_trunc_s64_s32.no", .return_code = 0xfefefefe },
-    { .file_path = "tests/048_trunc_s32_s8.no", .return_code = 0xfe },
-    { .file_path = "tests/049_trunc_s32_s16.no", .return_code = 0xfefe },
-    { .file_path = "tests/050_trunc_s16_s8.no", .return_code = 0xfe },
+    { .file_path = "tests/027_trunc.no", .return_code = 0 },
 };
 
 static bool run_test_case(Test_Case* tc)
 {
     Options options = default_options();
     options.install_dir = "../../../";
-    // options.print_ast = true;
-    options.print_bytecode = true;
+    // options.print_ast = false;
+    // options.print_bytecode = true;
     options.input_file = tc->file_path;
 
     Instance instance;

@@ -1,4 +1,0 @@
-
-main :: () -> int {
-    return cast(s16, cast(s32, 0xfefefefefefefefe));
-}

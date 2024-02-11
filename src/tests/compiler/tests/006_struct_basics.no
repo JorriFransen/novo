@@ -10,6 +10,5 @@ main :: () -> s64 {
     p.x = 40;
     p.y = 2;
 
-
     return p.x + p.y;
 }

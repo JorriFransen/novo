@@ -650,24 +650,33 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             if (suggested_type) {
                 assert(suggested_type->kind == Type_Kind::INTEGER);
 
+                bool fit = false;
+
                 if (suggested_type->integer.sign) {
                     s64 val = (s64)expr->integer_literal;
                     switch (suggested_type->bit_size) {
                         default: assert(false); break;
-                        case 8: assert(val >= I8_MIN && val <= I8_MAX); break;
-                        case 16: assert(val >= I16_MIN && val <= I16_MAX); break;
-                        case 32: assert(val >= I32_MIN && val <= I32_MAX); break;
-                        case 64: assert(val >= I64_MIN && val <= I64_MAX); break;
+                        case 8:  fit = (val >= I8_MIN && val <= I8_MAX); break;
+                        case 16: fit = (val >= I16_MIN && val <= I16_MAX); break;
+                        case 32: fit = (val >= I32_MIN && val <= I32_MAX); break;
+                        case 64: fit = (val >= I64_MIN && val <= I64_MAX); break;
                     }
                 } else {
                     u64 val = (u64)expr->integer_literal;
                     switch (suggested_type->bit_size) {
                         default: assert(false); break;
-                        case 8: assert(val <= I8_MAX); break;
-                        case 16: assert(val <= I16_MAX); break;
-                        case 32: assert(val <= I32_MAX); break;
-                        case 64: assert(val <= I64_MAX); break;
+                        case 8:  fit = (val <= I8_MAX); break;
+                        case 16: fit = (val <= I16_MAX); break;
+                        case 32: fit = (val <= I32_MAX); break;
+                        case 64: fit = (val <= I64_MAX); break;
                     }
+                }
+
+                if (!fit) {
+                    Source_Pos pos = source_pos(inst, expr);
+                    instance_fatal_error(inst, pos, "Integer literal %d (0x%x) not within bounds of suggested type '%s'",
+                            expr->integer_literal, expr->integer_literal,
+                            temp_type_string(inst, suggested_type).data);
                 }
 
                 expr->resolved_type = suggested_type;
