@@ -1,6 +1,6 @@
 // TODO:
+//  - pointer casts cleanup
 //  - test pointer math (requires arrays and/or sizeof())
-//  - pointer casts
 //  - sizeof()
 //  - Make sure ssa allocs are emitted in variable declaration order
 //  - Move FFI to instance?
@@ -34,10 +34,26 @@ main :: () -> int {
 
     assert(end - str.length == start);
 
-    c := start;
-    while (c != end) {
-        putchar(cast(s32, <c));
-        c += 1;
+    {
+        c := start;
+        while (c != end) {
+            putchar(cast(s32, <c));
+            c += 1;
+        }
+    }
+
+    ustart := cast(u64, start);
+    uend := cast(u64, end);
+
+    assert(cast(s64, uend - ustart) == str.length);
+
+
+    {
+        c := cast(*u8, ustart);
+        while (c != end) {
+            putchar(cast(s32, <c));
+            c += 1;
+        }
     }
 
     return end - start;

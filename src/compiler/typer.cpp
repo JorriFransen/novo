@@ -835,16 +835,22 @@ Type* type_pointer_math(Instance* inst, Type_Task* task, AST_Node err_node, AST_
 
 bool valid_cast(Instance* inst, Type* from_type, Type* to_type)
 {
+    Type_Kind to_kind = to_type->kind;
+
     switch (from_type->kind) {
         case Type_Kind::INVALID: assert(false); break;
         case Type_Kind::VOID: assert(false); break;
 
         case Type_Kind::INTEGER: {
-            return to_type->kind == Type_Kind::INTEGER;
+            return to_kind == Type_Kind::INTEGER || to_kind == Type_Kind::POINTER;
         }
 
         case Type_Kind::BOOLEAN: assert(false); break;
-        case Type_Kind::POINTER: assert(false); break;
+
+        case Type_Kind::POINTER: {
+            return to_kind == Type_Kind::INTEGER || to_kind == Type_Kind::BOOLEAN;
+        }
+
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
     }

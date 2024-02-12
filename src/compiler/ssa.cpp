@@ -1273,12 +1273,36 @@ u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 oper
         case Type_Kind::VOID: assert(false); break;
 
         case Type_Kind::INTEGER: {
-            assert(to_type->kind == Type_Kind::INTEGER);
-            return ssa_emit_integer_cast(builder, from_type, to_type, operand_reg);
+            switch (to_type->kind) {
+                case Type_Kind::INVALID: assert(false); break;
+                case Type_Kind::VOID: assert(false); break;
+
+                case Type_Kind::INTEGER: {
+                    return ssa_emit_integer_integer_cast(builder, from_type, to_type, operand_reg);
+                }
+
+                case Type_Kind::BOOLEAN: assert(false); break;
+
+                case Type_Kind::POINTER: {
+                    // bitcast
+                    return operand_reg;
+                    break;
+                }
+
+                case Type_Kind::FUNCTION: assert(false); break;
+                case Type_Kind::STRUCT: assert(false); break;
+            }
         }
 
         case Type_Kind::BOOLEAN: assert(false); break;
-        case Type_Kind::POINTER: assert(false); break;
+
+        case Type_Kind::POINTER: {
+            assert(to_type->kind == Type_Kind::INTEGER);
+            assert(to_type->bit_size == 64);
+            // bitcast
+            return operand_reg;
+        }
+
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
     }
@@ -1287,12 +1311,13 @@ u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 oper
     return false;
 }
 
-u32 ssa_emit_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
+u32 ssa_emit_integer_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
 {
     assert(from_type->kind == Type_Kind::INTEGER);
     assert(to_type->kind == Type_Kind::INTEGER);
 
     if (from_type->bit_size == to_type->bit_size) {
+        // bitcast
         return operand_reg;
 
     } else if (from_type->bit_size > to_type->bit_size) {

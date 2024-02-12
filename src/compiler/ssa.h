@@ -174,7 +174,7 @@ NAPI void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u3
 NAPI void ssa_emit_jmp(SSA_Builder* builder, u32 block);
 
 NAPI u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg);
-NAPI u32 ssa_emit_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg);
+NAPI u32 ssa_emit_integer_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg);
 
 NAPI u32 ssa_emit_op(SSA_Builder* builder, SSA_Op op);
 
