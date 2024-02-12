@@ -220,6 +220,7 @@ enum class AST_Expression_Kind : u32
     REAL_LITERAL,
     CHAR_LITERAL,
     BOOL_LITERAL,
+    NULL_LITERAL,
     STRING_LITERAL,
 };
 
@@ -369,6 +370,7 @@ NAPI AST_Expression* ast_integer_literal_expression(Instance* inst, u64 i);
 NAPI AST_Expression* ast_real_literal_expression(Instance* inst, Real_Value rv);
 NAPI AST_Expression* ast_char_literal_expression(Instance* inst, char c);
 NAPI AST_Expression* ast_bool_literal_expression(Instance* inst, bool b);
+NAPI AST_Expression* ast_null_literal_expression(Instance* inst);
 NAPI AST_Expression* ast_string_literal_expression(Instance* inst, Atom atom);
 
 NAPI AST_Type_Spec* ast_type_spec(Instance* inst, AST_Type_Spec_Kind kind);

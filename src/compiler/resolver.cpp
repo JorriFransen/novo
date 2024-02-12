@@ -513,6 +513,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
         case AST_Expression_Kind::INTEGER_LITERAL:
         case AST_Expression_Kind::BOOL_LITERAL:
+        case AST_Expression_Kind::NULL_LITERAL:
         case AST_Expression_Kind::REAL_LITERAL:
         case AST_Expression_Kind::CHAR_LITERAL:
         case AST_Expression_Kind::STRING_LITERAL: {

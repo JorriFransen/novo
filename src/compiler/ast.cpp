@@ -321,6 +321,12 @@ AST_Expression* ast_bool_literal_expression(Instance* inst, bool b)
     return result;
 }
 
+AST_Expression* ast_null_literal_expression(Instance* inst)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::NULL_LITERAL, AST_EXPR_FLAG_CONST);
+    return result;
+}
+
 AST_Expression* ast_string_literal_expression(Instance* inst, Atom atom)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::STRING_LITERAL, AST_EXPR_FLAG_CONST);

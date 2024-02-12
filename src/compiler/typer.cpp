@@ -730,6 +730,14 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
+        case AST_Expression_Kind::NULL_LITERAL: {
+            assert(suggested_type);
+            assert(suggested_type->kind == Type_Kind::POINTER);
+
+            expr->resolved_type = suggested_type;
+            break;
+        }
+
         case AST_Expression_Kind::STRING_LITERAL: {
 
             assert(inst->type_string);

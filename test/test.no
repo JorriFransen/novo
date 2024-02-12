@@ -1,7 +1,5 @@
 // TODO:
-//  - use 64 bit immediates for sizes in ssa
 //  - test pointer math (requires arrays and/or sizeof())
-//  - null
 //  - pointer casts
 //  - sizeof()
 //  - Make sure ssa allocs are emitted in variable declaration order
@@ -30,8 +28,9 @@ putchar :: (char: s32) -> s32 #foreign;
 main :: () -> int {
 
     str := "abcd\n";
+    end : *u8 = null;
     start := str.data;
-    end := start + str.length;
+    end = start + str.length;
 
     assert(end - str.length == start);
 

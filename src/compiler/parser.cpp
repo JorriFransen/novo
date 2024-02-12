@@ -385,6 +385,8 @@ AST_Expression* parse_leaf_expression(Parser* parser)
                 result = ast_bool_literal_expression(parser->instance, true);
             } else if (match_keyword(parser, g_keyword_false)) {
                 result = ast_bool_literal_expression(parser->instance, false);
+            } else if (match_keyword(parser, g_keyword_null)) {
+                result = ast_null_literal_expression(parser->instance);
 
             } else if (match_keyword(parser, g_keyword_cast)) {
 

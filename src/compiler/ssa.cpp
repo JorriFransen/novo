@@ -745,6 +745,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
         case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
 
         case AST_Expression_Kind::STRING_LITERAL: {
             u32 string_data_const = ssa_emit_constant(builder, lvalue_expr);
@@ -1025,6 +1026,11 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
         case AST_Expression_Kind::BOOL_LITERAL: {
             result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->bool_literal);
+            break;
+        }
+
+        case AST_Expression_Kind::NULL_LITERAL: {
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, 0);
             break;
         }
 
@@ -1441,6 +1447,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
         case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
 
         case AST_Expression_Kind::STRING_LITERAL: {
 

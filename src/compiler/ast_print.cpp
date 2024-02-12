@@ -499,7 +499,7 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
 
         case AST_Expression_Kind::DEREF: {
             string_builder_append(sb, "DEREF:\n");
-            ast_expr_to_string(inst, sb, expr->call.base, indent + 1);
+            ast_expr_to_string(inst, sb, expr->unary.operand, indent + 1);
             break;
         }
 
@@ -536,6 +536,11 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
 
         case AST_Expression_Kind::BOOL_LITERAL: {
             string_builder_append(sb, "EXPR_BOOL: '%s'\n", expr->bool_literal ? "true" : "false");
+            break;
+        }
+
+        case AST_Expression_Kind::NULL_LITERAL: {
+            string_builder_append(sb, "EXPR_NULL\n");
             break;
         }
 
