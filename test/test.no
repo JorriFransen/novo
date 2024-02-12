@@ -2,7 +2,6 @@
 //  - pointer math in arithmetic assignment
 //  - use 64 bit immediates for sizes in ssa
 //  - test pointer math (requires arrays and/or sizeof())
-//  - ssa ops for pointer difference
 //  - null
 //  - pointer casts
 //  - sizeof()
@@ -37,7 +36,7 @@ main :: () -> int {
 
     assert(end - str.length == start);
 
-    end -= 1;
+    // end -= 1;
     end = end - 1;
 
     return end - start;

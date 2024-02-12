@@ -418,6 +418,22 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 break;
             }
 
+            case SSA_OP_POINTER_DIFF: {
+                u64 size = vm_fetch<u64>(block, &ip);
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 left_reg = vm_fetch<u32>(block, &ip);
+                u32 right_reg = vm_fetch<u32>(block, &ip);
+
+                u8* left_ptr = (u8*)vm_get_register(vm, left_reg);
+                u8* right_ptr = (u8*)vm_get_register(vm, right_reg);
+
+                s64 byte_diff = left_ptr - right_ptr;
+                s64 diff = byte_diff / size;
+
+                vm_set_register(vm, dest_reg, diff);
+                break;
+            }
+
             case SSA_OP_PUSH: {
                 u32 value_reg = vm_fetch<u32>(block, &ip);
 
