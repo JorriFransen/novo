@@ -180,7 +180,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
             case SSA_OP_MEMCPY: {
                 u32 dest_ptr_reg = vm_fetch<u32>(block, &ip);
                 u32 src_ptr_reg = vm_fetch<u32>(block, &ip);
-                u32 size = vm_fetch<u32>(block, &ip);
+                s64 size = vm_fetch<s64>(block, &ip);
 
                 auto dest = (void*)vm_get_register(vm, dest_ptr_reg);
                 auto src = (void*)vm_get_register(vm, src_ptr_reg);
@@ -257,7 +257,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
             case SSA_OP_ALLOC: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
-                u32 size = vm_fetch<u32>(block, &ip);
+                s64 size = vm_fetch<s64>(block, &ip);
 
                 if (size > vm->current_alloc_block->cap - vm->current_alloc_block->used) {
 

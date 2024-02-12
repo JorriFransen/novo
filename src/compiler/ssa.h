@@ -39,9 +39,9 @@ enum SSA_Op : u8
     SSA_OP_SEXT,            // SEXT [8-bit dest size reg] [8-bit src size reg] [32-bit dest reg] [32-bit operand reg]
     SSA_OP_ZEXT,            // ZEXT [8-bit dest size reg] [32-bit dest reg] [32-bit operand reg]
 
-    SSA_OP_ALLOC,           // ALLOC [32-bit dest reg] [32-bit size in bytes]
+    SSA_OP_ALLOC,           // ALLOC [32-bit dest reg] [64-bit size in bytes]
 
-    SSA_OP_MEMCPY,          // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [32-bit size in bytes]
+    SSA_OP_MEMCPY,          // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [64-bit size in bytes]
 
     SSA_OP_STORE_PTR,       // STORE_PTR [8-bit size reg] [32-bit ptr reg] [32-bit value reg]
 

@@ -1088,13 +1088,12 @@ u32 ssa_emit_alloc(SSA_Builder* builder, s64 bit_size)
 {
     assert(bit_size >= 0);
     assert(bit_size % 8 == 0);
-    auto byte_size = bit_size / 8;
-    assert(byte_size <= U8_MAX);
+    s64 byte_size = bit_size / 8;
 
     u32 alloc_reg = ssa_register_create(builder);
     ssa_emit_op(builder, SSA_OP_ALLOC);
     ssa_emit_32(builder, alloc_reg);
-    ssa_emit_32(builder, byte_size);
+    ssa_emit_64(builder, byte_size);
 
     builder->program->functions[builder->function_index].total_alloc_size += byte_size;
 
@@ -1105,15 +1104,14 @@ void ssa_emit_memcpy(SSA_Builder* builder, u32 dest_ptr_reg, u32 src_ptr_reg, s6
 {
     assert(bit_size >= 0);
     assert(bit_size % 8 == 0);
-    auto size = bit_size / 8;
-    assert(size < U32_MAX);
+    s64 size = bit_size / 8;
 
     if (dest_ptr_reg == src_ptr_reg) return;
 
     ssa_emit_op(builder, SSA_OP_MEMCPY);
     ssa_emit_32(builder, dest_ptr_reg);
     ssa_emit_32(builder, src_ptr_reg);
-    ssa_emit_32(builder, size);
+    ssa_emit_64(builder, size);
 }
 
 NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, u32 dest_reg, u32 source_reg)
@@ -1678,10 +1676,10 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             u32 dest_reg = *(u32*)&bytes[ip];
             ip += sizeof(u32);
 
-            u32 size = *(u32*)&bytes[ip];
-            ip += sizeof(u32);
+            s64 size = *(s64*)&bytes[ip];
+            ip += sizeof(s64);
 
-            string_builder_append(sb, "  %%%u = ALLOC %u\n", dest_reg, size);
+            string_builder_append(sb, "  %%%u = ALLOC %lld\n", dest_reg, size);
             break;
         }
 
@@ -1692,10 +1690,10 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             u32 source_ptr_reg = *(u32*)&bytes[ip];
             ip += sizeof(u32);
 
-            u32 size = *(u32*)&bytes[ip];
-            ip += sizeof(u32);
+            s64 size = *(s64*)&bytes[ip];
+            ip += sizeof(s64);
 
-            string_builder_append(sb, "  MEMCPY %%%u %%%u %u\n", dest_ptr_reg, source_ptr_reg, size);
+            string_builder_append(sb, "  MEMCPY %%%u %%%u %lld\n", dest_ptr_reg, source_ptr_reg, size);
             break;
         }
 
