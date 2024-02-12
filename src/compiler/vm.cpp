@@ -189,6 +189,15 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 break;
             }
 
+            case SSA_OP_BITCAST: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 source_reg = vm_fetch<u32>(block, &ip);
+
+                vm_set_register(vm, dest_reg, vm_get_register(vm, source_reg));
+
+                break;
+            }
+
             case SSA_OP_TRUNC: {
                 u8 target_size = vm_fetch<u8>(block, &ip);
                 u32 dest_reg = vm_fetch<u32>(block, &ip);

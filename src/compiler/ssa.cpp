@@ -1040,6 +1040,20 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
     return result_reg;
 }
 
+u32 ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
+{
+    assert(from_type->bit_size == to_type->bit_size);
+    assert(to_type->bit_size <= 64);
+
+    u32 result_reg = ssa_register_create(builder);
+
+    ssa_emit_op(builder, SSA_OP_BITCAST);
+    ssa_emit_32(builder, result_reg);
+    ssa_emit_32(builder, operand_reg);
+
+    return result_reg;
+}
+
 u32 ssa_emit_trunc(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg)
 {
     assert(target_bit_size % 8 == 0);
@@ -1284,8 +1298,7 @@ u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 oper
                 case Type_Kind::BOOLEAN: assert(false); break;
 
                 case Type_Kind::POINTER: {
-                    // bitcast
-                    return operand_reg;
+                    return ssa_emit_bitcast(builder, from_type, to_type, operand_reg);
                     break;
                 }
 
@@ -1299,8 +1312,7 @@ u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 oper
         case Type_Kind::POINTER: {
             assert(to_type->kind == Type_Kind::INTEGER);
             assert(to_type->bit_size == 64);
-            // bitcast
-            return operand_reg;
+            return ssa_emit_bitcast(builder, from_type, to_type, operand_reg);
         }
 
         case Type_Kind::FUNCTION: assert(false); break;
@@ -1658,6 +1670,17 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
         BINOP_CASE(GTEQ);
 
 #undef BINOP_CASE
+
+        case SSA_OP_BITCAST: {
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 source_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = BITCAST %%%u\n", dest_reg, source_reg);
+            break;
+        }
 
         case SSA_OP_TRUNC: {
             u8 size = *(u8*)&bytes[ip];

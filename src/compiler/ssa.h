@@ -35,6 +35,7 @@ enum SSA_Op : u8
     SSA_OP_LTEQ,            // LTEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
     SSA_OP_GTEQ,            // GTEQ [8-bit size reg] [32-bit dest reg] [32-bit left operand reg] [32-bit right operand reg]
 
+    SSA_OP_BITCAST,         // BITCAST [32-bit dest reg] [32-bit operand reg]
     SSA_OP_TRUNC,           // TRUNC [8-bit size reg] [32-bit dest reg] [32-bit operand reg]
     SSA_OP_SEXT,            // SEXT [8-bit dest size reg] [8-bit src size reg] [32-bit dest reg] [32-bit operand reg]
     SSA_OP_ZEXT,            // ZEXT [8-bit dest size reg] [32-bit dest reg] [32-bit operand reg]
@@ -157,6 +158,7 @@ NAPI void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* s
 NAPI u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* scope);
 NAPI s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
 
+NAPI u32 ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg);
 NAPI u32 ssa_emit_trunc(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg);
 NAPI u32 ssa_emit_sext(SSA_Builder* builder, s64 target_bit_size, s64 source_bit_size, u32 operand_reg);
 NAPI u32 ssa_emit_zext(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg);
