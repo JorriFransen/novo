@@ -630,11 +630,8 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             Type* from_type = expr->cast.operand->resolved_type;
             Type* to_type = expr->cast.ts->resolved_type;
 
-            if (!valid_cast(inst, from_type, to_type)) {
-                Source_Pos pos = source_pos(inst, expr);
-                instance_fatal_error(inst, pos, "Illegal type conversion in cast, from: '%s', to: '%s'",
-                        temp_type_string(inst, from_type).data,
-                        temp_type_string(inst, to_type).data);
+            if (!valid_cast(inst, from_type, to_type, expr)) {
+                return false;
             }
 
             expr->resolved_type = expr->cast.ts->resolved_type;
@@ -833,30 +830,80 @@ Type* type_pointer_math(Instance* inst, Type_Task* task, AST_Node err_node, AST_
     return left_type;
 }
 
-bool valid_cast(Instance* inst, Type* from_type, Type* to_type)
+bool valid_cast(Instance* inst, Type* from_type, Type* to_type, AST_Expression* err_node)
 {
     Type_Kind to_kind = to_type->kind;
+
+    bool result = false;
+    bool error_reported = false;
 
     switch (from_type->kind) {
         case Type_Kind::INVALID: assert(false); break;
         case Type_Kind::VOID: assert(false); break;
 
         case Type_Kind::INTEGER: {
-            return to_kind == Type_Kind::INTEGER || to_kind == Type_Kind::POINTER;
+
+            switch (to_kind) {
+                case Type_Kind::INTEGER: result = true; break;
+
+                case Type_Kind::POINTER: {
+                    result = to_type->bit_size == from_type->bit_size;
+
+                    if (!result) {
+                        error_reported = true;
+                        Source_Pos pos = source_pos(inst, err_node);
+                        instance_error(inst, pos, "Illegal cast from pointer to integer: '%s', to: '%s'",
+                                temp_type_string(inst, from_type).data,
+                                temp_type_string(inst, to_type).data);
+                        instance_fatal_error_note(inst, pos, "Integer size must match pointer size");
+                    }
+                    break;
+                }
+
+                default: result = false; break;
+            }
+            break;
         }
 
         case Type_Kind::BOOLEAN: assert(false); break;
 
         case Type_Kind::POINTER: {
-            return to_kind == Type_Kind::INTEGER || to_kind == Type_Kind::BOOLEAN;
+
+            switch (to_kind) {
+                case Type_Kind::INTEGER: {
+                    result = to_type->bit_size == from_type->bit_size;
+
+                    if (!result) {
+                        error_reported = true;
+                        Source_Pos pos = source_pos(inst, err_node);
+                        instance_error(inst, pos, "Illegal cast from pointer to integer: '%s', to: '%s'",
+                                temp_type_string(inst, from_type).data,
+                                temp_type_string(inst, to_type).data);
+                        instance_fatal_error_note(inst, pos, "Integer size must match pointer size");
+                    }
+                    break;
+                }
+
+                default: result = false; break;
+            }
+
+            break;
         }
 
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
     }
 
-    assert(false);
-    return false;
+    if (!result && !error_reported) {
+        Source_Pos pos = source_pos(inst, err_node);
+        instance_fatal_error(inst, pos, "Illegal type conversion in cast, from: '%s', to: '%s'",
+                temp_type_string(inst, from_type).data,
+                temp_type_string(inst, to_type).data);
+    }
+
+    assert(!error_reported);
+
+    return result;
 }
 
 }
