@@ -84,6 +84,12 @@ struct SSA_Block
 struct AST_Node;
 struct SSA_Alloc;
 
+struct SSA_Instruction_Metadata
+{
+    u32 dest_reg;
+    Type* type;
+};
+
 struct SSA_Function
 {
     Atom name;
@@ -97,6 +103,8 @@ struct SSA_Function
     // TODO: Use hash table if this gets too big?
     DArray<SSA_Alloc> allocs;
     u32 total_alloc_size;
+
+    DArray<SSA_Instruction_Metadata> instruction_metadata;
 
     bool sret;
     bool foreign;
@@ -193,8 +201,8 @@ NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 NAPI u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
 NAPI u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type);
 
-NAPI String ssa_to_string(Allocator* allocator, SSA_Program* program);
-NAPI void ssa_print(String_Builder* sb, SSA_Program* program);
-NAPI s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes);
+NAPI String ssa_to_string(Instance* inst, Allocator* allocator, SSA_Program* program);
+NAPI void ssa_print(Instance* inst, String_Builder* sb, SSA_Program* program);
+NAPI s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes);
 
 }

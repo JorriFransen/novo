@@ -109,7 +109,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 darray_append(&member_types, field->resolved_type);
             }
 
-            decl->resolved_type = struct_type_new(inst, member_types, struct_scope);
+            decl->resolved_type = struct_type_new(inst, decl->ident->atom, member_types, struct_scope);
 
             temp_array_destroy(&member_types);
             break;

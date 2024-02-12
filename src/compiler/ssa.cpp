@@ -81,6 +81,7 @@ void ssa_program_free(SSA_Program* program)
 
         darray_free(&func->blocks);
         darray_free(&func->allocs);
+        darray_free(&func->instruction_metadata);
 
     }
 
@@ -97,6 +98,7 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
     func->type = func_type;
     darray_init(program->allocator, &func->blocks);
     darray_init(program->allocator, &func->allocs);
+    darray_init(program->allocator, &func->instruction_metadata, 0);
     func->total_alloc_size = 0;
 
     ssa_block_create(program, func, "entry");
@@ -1051,6 +1053,9 @@ u32 ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 o
     ssa_emit_32(builder, result_reg);
     ssa_emit_32(builder, operand_reg);
 
+    SSA_Function* fn = &builder->program->functions[builder->function_index];
+    darray_append(&fn->instruction_metadata, { result_reg, to_type });
+
     return result_reg;
 }
 
@@ -1563,12 +1568,12 @@ u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type)
     return result;
 }
 
-String ssa_to_string(Allocator* allocator, SSA_Program* program)
+String ssa_to_string(Instance* inst, Allocator* allocator, SSA_Program* program)
 {
     String_Builder sb;
     string_builder_init(&sb, allocator);
 
-    ssa_print(&sb, program);
+    ssa_print(inst, &sb, program);
 
     String result = string_builder_to_string(&sb);
 
@@ -1577,7 +1582,7 @@ String ssa_to_string(Allocator* allocator, SSA_Program* program)
     return result;
 }
 
-void ssa_print(String_Builder* sb, SSA_Program* program)
+void ssa_print(Instance* inst, String_Builder* sb, SSA_Program* program)
 {
     if (program->constant_memory.count) {
         bool newline = true;
@@ -1621,7 +1626,7 @@ void ssa_print(String_Builder* sb, SSA_Program* program)
                 s64 ip = 0;
 
                 while (ip < block->bytes.count) {
-                    ip = ssa_print_instruction(sb, program, fn, ip, block->bytes);
+                    ip = ssa_print_instruction(inst, sb, program, fn, ip, block->bytes);
                 }
 
             }
@@ -1633,7 +1638,7 @@ void ssa_print(String_Builder* sb, SSA_Program* program)
     }
 }
 
-s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes)
+s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes)
 {
     assert(bytes.count);
 
@@ -1678,7 +1683,17 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             u32 source_reg = *(u32*)&bytes[ip];
             ip += sizeof(u32);
 
-            string_builder_append(sb, "  %%%u = BITCAST %%%u\n", dest_reg, source_reg);
+            Type* target_type = nullptr;
+            for (s64 i = 0; i < fn->instruction_metadata.count; i++) {
+                if (fn->instruction_metadata[i].dest_reg == dest_reg) {
+                    target_type = fn->instruction_metadata[i].type;
+                    break;
+                }
+            }
+            assert(target_type);
+
+            string_builder_append(sb, "  %%%u = BITCAST %%%u <%s>\n", dest_reg, source_reg,
+                                  temp_type_string(inst, target_type).data);
             break;
         }
 
@@ -1734,7 +1749,11 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             s64 size = *(s64*)&bytes[ip];
             ip += sizeof(s64);
 
-            string_builder_append(sb, "  %%%u = ALLOC %lld\n", dest_reg, size);
+            assert(dest_reg < fn->allocs.count);
+            Type* alloc_type = ast_node_type(fn->allocs[dest_reg].ast_node);
+
+            string_builder_append(sb, "  %%%u = ALLOC %lld <%s>\n", dest_reg, size,
+                                  temp_type_string(inst, alloc_type).data);
             break;
         }
 

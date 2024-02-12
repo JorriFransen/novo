@@ -354,7 +354,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     }
 
     if (!builtin_module && inst->options.print_bytecode) {
-        String ssa_str = ssa_to_string(c_allocator(), inst->ssa_program);
+        String ssa_str = ssa_to_string(inst, c_allocator(), inst->ssa_program);
         printf("\n%s\n", ssa_str.data);
     }
 

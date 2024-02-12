@@ -33,6 +33,20 @@ AST_Node ast_node(AST_Type_Spec* expr)
     return AST_Node { AST_Node_Kind::TYPE_SPEC, { .ts = expr } };
 }
 
+Type* ast_node_type(const AST_Node& node)
+{
+    switch (node.kind) {
+        case AST_Node_Kind::INVALID: assert(false); break;
+        case AST_Node_Kind::DECLARATION: return node.declaration->resolved_type;
+        case AST_Node_Kind::STATEMENT: assert(false); break;
+        case AST_Node_Kind::EXPRESSION: return node.expression->resolved_type;
+        case AST_Node_Kind::TYPE_SPEC: return node.ts->resolved_type;
+    }
+
+    assert(false);
+    return nullptr;
+}
+
 AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes)
 {
     auto result = allocate<AST_File>(&inst->ast_allocator);

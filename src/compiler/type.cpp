@@ -56,7 +56,7 @@ Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_
     return result;
 }
 
-Type* struct_type_new(Instance* inst, Array_Ref<Type*> member_types, Scope* scope)
+Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, Scope* scope)
 {
     DArray<Type_Struct_Member> members;
     darray_init(&inst->ast_allocator, &members, member_types.count);
@@ -77,6 +77,7 @@ Type* struct_type_new(Instance* inst, Array_Ref<Type*> member_types, Scope* scop
     }
 
     auto result = type_new(inst, Type_Kind::STRUCT, total_size);
+    result->structure.name = name;
     result->structure.members = members;
     result->structure.scope = scope;
     return result;
@@ -152,7 +153,11 @@ void type_to_string(String_Builder* sb, Type* type)
         }
 
         case Type_Kind::FUNCTION: assert(false); break;
-        case Type_Kind::STRUCT: assert(false); break;
+
+        case Type_Kind::STRUCT: {
+            string_builder_append(sb, "%s", atom_string(type->structure.name).data);
+            break;
+        }
     }
 }
 
