@@ -6,11 +6,10 @@
 
 #include "ast.h"
 #include "instance.h"
-#include "lexer.h"
-#include "parser.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "task.h"
+#include "token.h"
 #include "type.h"
 
 #include <assert.h>
@@ -211,11 +210,25 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 return false;
             }
 
-            if (!type_expression(inst, task, rvalue, scope, nullptr)) {
+            Type* suggested_type = nullptr;
+            bool pointer_math = false;
+            if (lvalue->resolved_type->kind == Type_Kind::POINTER) {
+                pointer_math = true;
+            } else {
+                suggested_type = lvalue->resolved_type;
+            }
+
+            if (!type_expression(inst, task, rvalue, scope, suggested_type)) {
                 return false;
             }
 
-            if (lvalue->resolved_type != rvalue->resolved_type) {
+            if (pointer_math) {
+                if (!type_pointer_math(inst, task, ast_node(stmt), lvalue, rvalue, stmt->arithmetic_assignment.op, scope)) {
+                    return false;
+                }
+            }
+
+            if (!pointer_math && lvalue->resolved_type != rvalue->resolved_type) {
                 Source_Pos pos = source_pos(inst, stmt);
                 instance_fatal_error(inst, pos, "Mismatching types in arithmetic assignment, left: '%s', right: '%s'",
                         temp_type_string(inst, lvalue->resolved_type).data,
@@ -456,39 +469,15 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             Type* left_type = expr->binary.lhs->resolved_type;
-            Type* right_type = expr->binary.rhs->resolved_type;
 
-            if (left_type->kind == Type_Kind::POINTER && !is_binary_cmp_op((Token_Kind)expr->binary.op)) {
+            if (left_type->kind == Type_Kind::POINTER && !is_binary_cmp_op(expr->binary.op)) {
 
-                switch (right_type->kind) {
+                Type* result_type = type_pointer_math(inst, task, ast_node(expr), expr->binary.lhs, expr->binary.rhs, expr->binary.op, scope);
 
-                    case Type_Kind::POINTER: {
-                        if (expr->binary.op != '-') {
-                            Source_Pos pos = source_pos(inst, expr);
-                            instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '-' is allowed when both sides are of pointer type");
-                        }
-
-                        break;
-                    }
-
-                    case Type_Kind::INTEGER: {
-                        if (expr->binary.op != '-' && expr->binary.op != '+') {
-                            Source_Pos pos = source_pos(inst, expr);
-                            instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '+' and '-' are allowed");
-                        }
-
-                        break;
-                    }
-
-                    default: {
-                        Source_Pos pos = source_pos(inst, expr);
-                        instance_fatal_error(inst, pos, "Invalid type in right side of pointer math binary expression. Expected integer or pointer, got '%s'",
-                                temp_type_string(inst, right_type));
-                        break;
-                    }
+                if (!result_type) {
+                    return false;
                 }
-
-                expr->resolved_type = left_type;
+                expr->resolved_type = result_type;
 
             } else {
 
@@ -512,7 +501,6 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 }
 
             }
-
 
             assert(expr->resolved_type);
             break;
@@ -797,6 +785,44 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
     assert(ts->resolved_type);
     ts->flags |= AST_TS_FLAG_TYPED;
     return true;
+}
+
+Type* type_pointer_math(Instance* inst, Type_Task* task, AST_Node err_node, AST_Expression* left, AST_Expression* right, u32 op, Scope* scope)
+{
+    Type* left_type = left->resolved_type;
+    Type* right_type = right->resolved_type;
+
+    assert(left_type->kind == Type_Kind::POINTER);
+
+    switch (right_type->kind) {
+
+        case Type_Kind::POINTER: {
+            if (op != '-') {
+                Source_Pos pos = source_pos(inst, err_node);
+                instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '-' is allowed when both sides are of pointer type");
+            }
+
+            break;
+        }
+
+        case Type_Kind::INTEGER: {
+            if (op != '-' && op != '+') {
+                Source_Pos pos = source_pos(inst, err_node);
+                instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '+' and '-' are allowed");
+            }
+
+            break;
+        }
+
+        default: {
+            Source_Pos pos = source_pos(inst, err_node);
+            instance_fatal_error(inst, pos, "Invalid type in right side of pointer math binary expression. Expected integer or pointer, got '%s'",
+                    temp_type_string(inst, right_type));
+            break;
+        }
+    }
+
+    return left_type;
 }
 
 bool valid_cast(Instance* inst, Type* from_type, Type* to_type)

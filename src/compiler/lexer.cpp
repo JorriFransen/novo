@@ -2,6 +2,7 @@
 
 #include <containers/darray.h>
 
+#include "atom.h"
 #include "instance.h"
 #include "keywords.h"
 #include "source_pos.h"
@@ -12,7 +13,6 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
-#include <string.h>
 
 namespace Novo {
 
@@ -269,67 +269,6 @@ bool is_token(Lexer* lexer, Token_Kind kind)
 bool is_token(Lexer* lexer, char c)
 {
     return is_token(lexer, (Token_Kind)c);
-}
-
-NINLINE const char* token_kind_to_string(Token_Kind kind) {
-    switch (kind) {
-        case TOK_INVALID: return "INVALID";
-        case TOK_INT: return "INT";
-        case TOK_REAL: return "REAL";
-        case TOK_STRING: return "STRING";
-        case TOK_CHAR: return "CHAR";
-        case TOK_NAME: return "NAME";
-        case TOK_KEYWORD: return "KEYWORD";
-        case TOK_RIGHT_ARROW: return "->";
-        case TOK_DOT_DOT: return "..";
-        case TOK_EQ: return "==";
-        case TOK_NEQ: return "!=";
-        case TOK_LTEQ: return "<=";
-        case TOK_GTEQ: return ">=";
-        case TOK_EOF: return "EOF";
-
-        default: assert(false);
-    }
-
-    assert(false);
-    return nullptr;
-}
-
-String_Ref tmp_token_str(Token token)
-{
-    static char buffer[1024];
-    s32 length = 0;
-
-    if (token.atom != 0) {
-        auto str = atom_string(token.atom);
-        length = str.length;
-        memcpy(buffer, str.data, length);
-        buffer[length] = '\0';
-    } else if (token.kind == TOK_EOF) {
-        return token_kind_to_string(token.kind);
-    } else {
-        assert(false);
-    }
-
-    auto buf = buffer;
-    if (length == 0) buf = nullptr;
-    return String_Ref(buf, length);
-}
-
-String_Ref tmp_token_kind_str(Token_Kind kind)
-{
-    static char buffer[256];
-    s32 length = 0;
-
-    if (isprint((char)kind)) {
-        length = string_format(buffer, "%c", (char)kind);
-    } else {
-        return token_kind_to_string(kind);
-    }
-
-    auto buf = buffer;
-    if (length == 0) buf = nullptr;
-    return String_Ref(buf, length);
 }
 
 NINLINE u8 char_to_digit(int i) {

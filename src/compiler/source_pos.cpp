@@ -2,9 +2,11 @@
 
 #include <containers/hash_table.h>
 
+#include "ast.h"
 #include "instance.h"
 #include "lexer.h"
 #include "parser.h"
+#include "token.h"
 
 #include <assert.h>
 
@@ -67,6 +69,20 @@ Source_Pos source_pos(Instance* inst, AST_Type_Spec* ts)
     bool found = hash_table_find(&inst->ts_positions, ts, &result);
     assert(found);
     return result;
+}
+
+Source_Pos source_pos(Instance* inst, AST_Node &node)
+{
+    switch (node.kind) {
+        case AST_Node_Kind::INVALID: assert(false); break;
+        case AST_Node_Kind::DECLARATION: return source_pos(inst, node.declaration);
+        case AST_Node_Kind::STATEMENT: return source_pos(inst, node.statement);
+        case AST_Node_Kind::EXPRESSION: return source_pos(inst, node.expression);
+        case AST_Node_Kind::TYPE_SPEC: return source_pos(inst, node.ts);
+    }
+
+    assert(false);
+    return {};
 }
 
 Line_Info line_info(Array_Ref<u32> newline_offsets, u32 offset)

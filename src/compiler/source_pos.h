@@ -8,6 +8,7 @@ namespace Novo {
 struct AST_Declaration;
 struct AST_Expression;
 struct AST_Identifier;
+struct AST_Node;
 struct AST_Statement;
 struct AST_Type_Spec;
 struct Instance;
@@ -36,6 +37,7 @@ NAPI Source_Pos source_pos(Instance* inst, AST_Declaration* decl);
 NAPI Source_Pos source_pos(Instance* inst, AST_Statement* stmt);
 NAPI Source_Pos source_pos(Instance* inst, AST_Expression* expr);
 NAPI Source_Pos source_pos(Instance* inst, AST_Type_Spec* ts);
+NAPI Source_Pos source_pos(Instance* inst, AST_Node &node);
 
 NAPI Line_Info line_info(Array_Ref<u32> newline_offsets, u32 offset);
 

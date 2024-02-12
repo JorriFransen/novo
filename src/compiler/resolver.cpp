@@ -9,18 +9,16 @@
 #include "ast.h"
 #include "atom.h"
 #include "instance.h"
-#include "parser.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "task.h"
+#include "token.h"
 #include "type.h"
 #include "typer.h"
 
 #include <assert.h>
 
 namespace Novo {
-
-enum Token_Kind : u32;
 
 bool resolve_node(Instance* inst, Resolve_Task* task, AST_Node* node, Scope* scope)
 {
@@ -207,7 +205,7 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
                 lvalue->identifier->decl->flags |= AST_DECL_FLAG_STORAGE_REQUIRED;
             }
 
-            assert(is_binary_arithmetic_op((Token_Kind)stmt->arithmetic_assignment.op));
+            assert(is_binary_arithmetic_op(stmt->arithmetic_assignment.op));
 
             if (!resolve_expression(inst, task, stmt->arithmetic_assignment.rvalue, scope)) {
                 return false;

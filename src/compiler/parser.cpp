@@ -10,8 +10,10 @@
 #include "filesystem.h"
 #include "instance.h"
 #include "keywords.h"
+#include "lexer.h"
 #include "scope.h"
 #include "source_pos.h"
+#include "token.h"
 
 #include <cassert>
 
@@ -882,39 +884,6 @@ bool is_token(Parser* parser, char c)
 bool is_keyword(Parser* parser, Atom kw_atom)
 {
     return parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom;
-}
-
-bool is_binary_arithmetic_op(Token_Kind op)
-{
-    switch ((u32)op) {
-        case '+':
-        case '-':
-        case '*':
-        case '/':
-            return true;
-    }
-
-    return false;
-}
-
-bool is_binary_cmp_op(Token_Kind op)
-{
-    switch ((u32)op) {
-        case '<':
-        case '>':
-        case TOK_EQ:
-        case TOK_NEQ:
-        case TOK_LTEQ:
-        case TOK_GTEQ:
-            return true;
-    }
-
-    return false;
-}
-
- bool is_binary_op(Token_Kind op)
-{
-    return is_binary_arithmetic_op(op) || is_binary_cmp_op(op);
 }
 
 u64 get_precedence(Token_Kind op)

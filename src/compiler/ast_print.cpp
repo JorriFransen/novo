@@ -9,8 +9,8 @@
 #include "ast.h"
 #include "atom.h"
 #include "instance.h"
-#include "lexer.h"
 #include "source_pos.h"
+#include "token.h"
 
 #include <assert.h>
 

@@ -4,9 +4,10 @@
 #include <nstring.h>
 
 #include "atom.h"
-#include "lexer.h" // IWYU pragma: keep
 
 namespace Novo {
+
+enum Token_Kind : u32;
 
 struct AST_Declaration;
 struct AST_Expression;
@@ -16,6 +17,7 @@ struct AST_Statement;
 struct AST_Type_Spec;
 struct Instance;
 struct Scope;
+struct Lexer;
 
 struct Parser
 {
@@ -51,11 +53,6 @@ NAPI bool match_keyword(Parser* parser, Atom kw_atom);
 NAPI bool is_token(Parser* parser, Token_Kind kind);
 NAPI bool is_token(Parser* parser, char c);
 NAPI bool is_keyword(Parser* parser, Atom kw_atom);
-
-// TODO: Move these is_binary... functions
-NAPI bool is_binary_arithmetic_op(Token_Kind op);
-NAPI bool is_binary_cmp_op(Token_Kind op);
-NAPI bool is_binary_op(Token_Kind op);
 
 NAPI u64 get_precedence(Token_Kind op);
 

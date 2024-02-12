@@ -63,6 +63,7 @@ compiler_source = [
   'src/compiler/source_pos.cpp', 'src/compiler/source_pos.h',
   'src/compiler/ssa.cpp', 'src/compiler/ssa.h',
   'src/compiler/task.cpp', 'src/compiler/task.h',
+  'src/compiler/token.cpp', 'src/compiler/token.h',
   'src/compiler/type.cpp', 'src/compiler/type.h',
   'src/compiler/typer.cpp', 'src/compiler/typer.h',
   'src/compiler/vm.cpp', 'src/compiler/vm.h',

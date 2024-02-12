@@ -7,8 +7,7 @@
 
 #include "ast.h"
 #include "instance.h"
-#include "lexer.h"
-#include "parser.h"
+#include "token.h"
 #include "type.h"
 
 #include <assert.h>
