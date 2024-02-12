@@ -51,6 +51,7 @@ enum SSA_Op : u8
     SSA_OP_LOAD_CONST,      // LOAD_CONST [32-bit dest reg] [32-bit offset]
 
     SSA_OP_STRUCT_OFFSET,   // STRUCT_OFFSET [32-bit dest reg] [32-bit base ptr reg] [32-bit offset] [16-bit index]
+    SSA_OP_POINTER_OFFSET,  // POINTER_OFFSET [64-bit size in bytes] [32-bit dest reg] [32-bit base ptr reg] [32-bit index reg]
 
     SSA_OP_PUSH,            // PUSH [32-bit value reg]
     SSA_OP_POP_N,           // POP_N [32-bit count]
@@ -166,6 +167,7 @@ NAPI u32 ssa_emit_load_param(SSA_Builder* builder, u32 param_index);
 NAPI u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg);
 NAPI u32 ssa_emit_load_constant(SSA_Builder *builder, u32 offset);
 NAPI u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, s64 bit_offset, s64 index);
+NAPI u32 ssa_emit_pointer_offset(SSA_Builder* builder, s64 pointee_bit_size, u32 base_reg, u32 index_reg);
 NAPI void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u32 false_block);
 NAPI void ssa_emit_jmp(SSA_Builder* builder, u32 block);
 

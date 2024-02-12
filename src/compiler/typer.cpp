@@ -7,6 +7,7 @@
 #include "ast.h"
 #include "instance.h"
 #include "lexer.h"
+#include "parser.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "task.h"
@@ -457,7 +458,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             Type* left_type = expr->binary.lhs->resolved_type;
             Type* right_type = expr->binary.rhs->resolved_type;
 
-            if (left_type->kind == Type_Kind::POINTER) {
+            if (left_type->kind == Type_Kind::POINTER && !is_binary_cmp_op((Token_Kind)expr->binary.op)) {
 
                 switch (right_type->kind) {
 

@@ -8,6 +8,7 @@
 #include "ast.h"
 #include "instance.h"
 #include "lexer.h"
+#include "parser.h"
 #include "type.h"
 
 #include <assert.h>
@@ -841,7 +842,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             auto size = expr->binary.lhs->resolved_type->bit_size / 8;
             assert(size >= 0 && size <= U8_MAX);
 
-            if (left_type->kind != Type_Kind::POINTER) {
+            if (left_type->kind != Type_Kind::POINTER || is_binary_cmp_op((Token_Kind)expr->binary.op)) {
 
                 switch (expr->binary.op) {
                     case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
@@ -868,29 +869,29 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
                 assert(left_type->kind == Type_Kind::POINTER);
 
-                assert(left_type->pointer.base->bit_size % 8 == 0);
                 auto pointee_size = left_type->pointer.base->bit_size / 8;
 
                 if (right_type->kind == Type_Kind::INTEGER) {
 
-                    // TODO: POINTER_OFFSET instruction
-                    u32 pointee_size_reg = ssa_emit_load_immediate(builder, 64, pointee_size);
 
-                    u32 offset_reg = ssa_register_create(builder);
-                    ssa_emit_op(builder, SSA_OP_MUL);
-                    ssa_emit_8(builder, size);
-                    ssa_emit_32(builder, offset_reg);
-                    ssa_emit_32(builder, pointee_size_reg);
-                    ssa_emit_32(builder, right_reg);
+                    if (expr->binary.op == '-') {
 
-                    SSA_Op op = expr->binary.op == '+' ? SSA_OP_ADD : SSA_OP_SUB;
+                        u32 zero_reg = ssa_emit_load_immediate(builder, size, 0);
+                        u32 new_right = ssa_register_create(builder);
 
-                    result_reg = ssa_register_create(builder);
-                    ssa_emit_op(builder, op);
-                    ssa_emit_8(builder, size);
-                    ssa_emit_32(builder, result_reg);
-                    ssa_emit_32(builder, left_reg);
-                    ssa_emit_32(builder, offset_reg);
+                        // TODO:  Negate op?
+                        ssa_emit_op(builder, SSA_OP_SUB);
+                        ssa_emit_8(builder, size);
+                        ssa_emit_32(builder, new_right);
+                        ssa_emit_32(builder, zero_reg);
+                        ssa_emit_32(builder, right_reg);
+
+                        right_reg = new_right;
+                    }
+
+
+                    result_reg = ssa_emit_pointer_offset(builder, left_type->pointer.base->bit_size, left_reg, right_reg);
+
                 } else {
                     assert(expr->binary.op == '-');
 
@@ -1220,6 +1221,22 @@ u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, s64 bit_off
     ssa_emit_32(builder, struct_ptr_reg);
     ssa_emit_32(builder, (u32)offset);
     ssa_emit_16(builder, (u16)index);
+
+    return result;
+}
+
+u32 ssa_emit_pointer_offset(SSA_Builder* builder, s64 pointee_bit_size, u32 base_reg, u32 index_reg)
+{
+    assert(pointee_bit_size % 8 == 0);
+    s64 pointee_size = pointee_bit_size / 8;
+
+    u32 result = ssa_register_create(builder);
+
+    ssa_emit_op(builder, SSA_OP_POINTER_OFFSET);
+    ssa_emit_64(builder, pointee_size);
+    ssa_emit_32(builder, result);
+    ssa_emit_32(builder, base_reg);
+    ssa_emit_32(builder, index_reg);
 
     return result;
 }
@@ -1788,6 +1805,23 @@ s64 ssa_print_instruction(String_Builder* sb, SSA_Program* program, SSA_Function
             ip += sizeof(u16);
 
             string_builder_append(sb, "  %%%u = STRUCT_OFFSET %%%u %u %hhu\n", dest_reg, ptr_reg, offset, index);
+            break;
+        }
+
+        case SSA_OP_POINTER_OFFSET: {
+            u64 size = *(u64*)&bytes[ip];
+            ip += sizeof(u64);
+
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 base_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 index_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            string_builder_append(sb, "  %%%u = POINTER_OFFSET %llu %%%u %%%u\n", dest_reg, size, base_reg, index_reg);
             break;
         }
 

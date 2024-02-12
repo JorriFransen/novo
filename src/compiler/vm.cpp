@@ -402,6 +402,22 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 break;
             }
 
+            case SSA_OP_POINTER_OFFSET: {
+                u64 size = vm_fetch<u64>(block, &ip);
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 base_reg = vm_fetch<u32>(block, &ip);
+                u32 index_reg = vm_fetch<u32>(block, &ip);
+
+                u8* base_ptr = (u8*)vm_get_register(vm, base_reg);
+                s64 index = vm_get_register(vm, index_reg);
+
+                s64 offset = index * size;
+                u8* result_ptr = base_ptr + offset;
+
+                vm_set_register(vm, dest_reg, (u64)result_ptr);
+                break;
+            }
+
             case SSA_OP_PUSH: {
                 u32 value_reg = vm_fetch<u32>(block, &ip);
 
