@@ -144,7 +144,12 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
 
             Type* return_type = decl->function.return_ts ? decl->function.return_ts->resolved_type : inst->builtin_type_void;
 
-            decl->resolved_type = function_type_get(inst, param_types, return_type);
+            Type_Flags flags = TYPE_FLAG_NONE;
+            if (decl->flags & AST_DECL_FLAG_FOREIGN_VARARG) {
+                flags |= TYPE_FLAG_FOREIGN_VARARG;
+            }
+
+            decl->resolved_type = function_type_get(inst, param_types, return_type, flags);
 
             temp_allocator_reset(&inst->temp_allocator_data, mark);
             break;
@@ -547,15 +552,35 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             assert(expr->call.base->resolved_type->kind == Type_Kind::FUNCTION);
             auto fn_type = expr->call.base->resolved_type;
 
+            if (expr->call.args.count != fn_type->function.param_types.count) {
+
+                bool foreign_vararg = fn_type->flags & TYPE_FLAG_FOREIGN_VARARG;
+
+                bool valid_foreign_varargs = foreign_vararg &&
+                                             expr->call.args.count > fn_type->function.param_types.count;
+
+
+                if (!valid_foreign_varargs) {
+                    Source_Pos pos = source_pos(inst, expr);
+                    instance_fatal_error(inst, pos, "Invalid argument count");
+                }
+            }
+
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (!type_expression(inst, task, expr->call.args[i], scope, fn_type->function.param_types[i])) {
+
+                Type* param_type = nullptr;
+
+                if (i < fn_type->function.param_types.count) {
+                    param_type = fn_type->function.param_types[i];
+                }
+
+                if (!type_expression(inst, task, expr->call.args[i], scope, param_type)) {
                     return false;
                 }
 
                 AST_Expression* arg_expr = expr->call.args[i];
-                Type* param_type = fn_type->function.param_types[i];
 
-                if (arg_expr->resolved_type != param_type) {
+                if (param_type && arg_expr->resolved_type != param_type) {
 
                     Source_Pos pos = source_pos(inst, arg_expr);
 
@@ -738,11 +763,6 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
         case AST_Expression_Kind::STRING_LITERAL: {
 
             assert(inst->type_string);
-
-            if (suggested_type) {
-                assert(suggested_type == inst->type_string);
-            }
-
             expr->resolved_type = inst->type_string;
             break;
         }

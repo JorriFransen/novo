@@ -510,10 +510,19 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
                 dcReset(vm->ffi.vm);
 
+                bool foreign_vararg = foreign_fn->type->flags & TYPE_FLAG_FOREIGN_VARARG;
+
                 s64 arg_offset = arg_count - 1;
                 for (s64 i = 0; i < arg_count; i++, arg_offset--) {
 
-                    Type* arg_type = foreign_fn->type->function.param_types[i];
+                    Type* arg_type = nullptr;
+                    if (i < foreign_fn->type->function.param_types.count) {
+                        arg_type = foreign_fn->type->function.param_types[i];
+                    } else {
+                        assert(foreign_vararg);
+                        arg_type = vm->instance->builtin_type_int;
+                    }
+
                     u64 arg = stack_peek(&vm->register_stack, arg_offset);
 
                     switch (arg_type->kind) {

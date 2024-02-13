@@ -237,15 +237,20 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
     Source_Pos pos = source_pos(parser->instance, ident);
 
     auto params = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 2);
-
     Scope* fn_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
     u32 arg_index = 0;
+    bool c_vararg = false;
 
     expect_token(parser, '(');
     while (!is_token(parser, ')')) {
         if (params.array.count) {
             expect_token(parser, ',');
+        }
+
+        if (match_token(parser, TOK_DOT_DOT)) {
+            c_vararg = true;
+            break;
         }
 
         AST_Declaration* param_decl = parse_declaration(parser, fn_scope, false);
@@ -258,21 +263,38 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
         darray_append(&params, param_decl);
     }
-    expect_token(parser, ')');
+
+    AST_Declaration_Flags flags = AST_DECL_FLAG_NONE;
+
+    if (c_vararg) {
+        if (!match_token(parser, ')')) {
+            instance_fatal_error(parser->instance, source_pos(parser->lexer), "Expected ')' after '..' while parsing foreign vararg function");
+        }
+
+        flags |= AST_DECL_FLAG_FOREIGN_VARARG;
+    } else {
+        expect_token(parser, ')');
+    }
 
     auto params_array = temp_array_finalize(&parser->instance->ast_allocator, &params);
 
     AST_Type_Spec* return_ts = nullptr;
-    if (match_token(parser, TOK_RIGHT_ARROW)) {
+
+    Token ct = parser->lexer->token;
+    if (ct.kind != '#' && ct.kind != '{' && ct.kind != ';') {
+        expect_token(parser, TOK_RIGHT_ARROW);
         return_ts = parse_type_spec(parser);
     }
 
     DArray<AST_Statement*> body_array = {};
 
-    AST_Declaration_Flags flags = AST_DECL_FLAG_NONE;
-
     Source_Pos body_pos = source_pos(parser->lexer);
     if (is_token(parser, '{')) {
+
+        if (c_vararg) {
+            Source_Pos pos = source_pos(parser->lexer);
+            instance_fatal_error(parser->instance, pos, "Expected '#foreign' while parsing foreign vararg function, got '}'");
+        }
 
         auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 4);
 
@@ -305,6 +327,9 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         flags |= AST_DECL_FLAG_FOREIGN;
     }
 
+    if (c_vararg && ! (flags & AST_DECL_FLAG_FOREIGN)) {
+        instance_fatal_error(parser->instance, source_pos(parser->lexer), "Expected directive '#foreign' while parsing foreign varargs function");
+    }
 
     AST_Declaration* result = ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope);
     result->flags |= flags;

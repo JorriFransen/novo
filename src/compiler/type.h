@@ -33,9 +33,17 @@ struct Type_Struct_Member
     u32 offset;
 };
 
+typedef u32 Type_Flags;
+enum Type_Flag : Type_Flags
+{
+    TYPE_FLAG_NONE              = 0x00,
+    TYPE_FLAG_FOREIGN_VARARG    = 0x01,
+};
+
 struct Type
 {
     Type_Kind kind;
+    Type_Flags flags;
     u32 bit_size;
 
     Type *pointer_to;
@@ -62,16 +70,16 @@ struct Type
     };
 };
 
-NAPI Type* type_new(Instance* inst, Type_Kind kind, u32 bit_size);
+NAPI Type* type_new(Instance* instance, Type_Kind kind, Type_Flags flags, u32 bit_size);
 NAPI Type* void_type_new(Instance* inst);
 NAPI Type* integer_type_new(Instance* inst, bool sign, u32 bit_size);
 NAPI Type* boolean_type_new(Instance* inst, u32 bit_size);
 NAPI Type* pointer_type_new(Instance* inst, Type* base);
-NAPI Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type);
+NAPI Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type, Type_Flags flags);
 NAPI Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, Scope* scope);
 
 NAPI Type* pointer_type_get(Instance *inst, Type* base);
-NAPI Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type);
+NAPI Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type, Type_Flags flags);
 
 NAPI String temp_type_string(Instance* inst, Type* type);
 NAPI void type_to_string(String_Builder* sb, Type* type);
