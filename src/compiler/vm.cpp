@@ -19,8 +19,6 @@
 
 namespace Novo {
 
-
-
 void vm_init(VM* vm, Allocator* allocator, Instance* inst)
 {
     vm->allocator = allocator;
@@ -32,18 +30,59 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
     vm->register_offset = 0;
     vm->bp = 0;
 
-    vm->register_count = 0;
-    vm->registers = nullptr;
-    vm->register_stack = {};
+    u32 reg_count = NOVO_VM_DEFAULT_REG_COUNT;
+    vm->register_count = reg_count;
+    vm->registers = allocate_array<u64>(vm->allocator, reg_count);
+
+    stack_init(vm->allocator, &vm->register_stack, NOVO_VM_DEFAULT_REG_STACK_SIZE);
 
     vm->current_alloc_block = nullptr;
     vm->free_alloc_blocks = nullptr;
     vm->first_alloc_block = {};
 
-    vm->constant_memory = nullptr;
-    vm->constant_memory_size = 0;
+    vm->first_alloc_block.mem = allocate_array<u8>(vm->allocator, NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE);
+    vm->first_alloc_block.used = 0;
+    vm->first_alloc_block.cap = NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE;
+    vm->first_alloc_block.next = nullptr;
+    vm->current_alloc_block = &vm->first_alloc_block;
+    vm->free_alloc_blocks = nullptr;
+
+    vm->constant_memory_size = NOVO_VM_DEFAULT_CONST_MEM_SIZE;
+    vm->constant_memory = allocate_array<u8>(vm->allocator, vm->constant_memory_size);
 
     ffi_init(&vm->ffi, allocator);
+}
+
+void vm_free(VM* vm)
+{
+    if (vm->registers) free(vm->allocator, vm->registers);
+    stack_free(&vm->register_stack);
+
+    VM_Alloc_Block* block = vm->current_alloc_block;
+    while (block && block != &vm->first_alloc_block) {
+        VM_Alloc_Block* next = block->next;
+        assert(next);
+
+        free(vm->allocator, block);
+
+        block = next;
+    }
+
+    assert(block == &vm->first_alloc_block);
+    assert(block->next == nullptr);
+    free(vm->allocator, vm->first_alloc_block.mem);
+
+    block = vm->free_alloc_blocks;
+    while (block) {
+        VM_Alloc_Block* next = block->next;
+
+        free(vm->allocator, block);
+
+        block = next;
+    }
+
+    free(vm->allocator, vm->constant_memory);
+    ffi_free(&vm->ffi);
 }
 
 template <typename T>
@@ -79,18 +118,15 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
     SSA_Function* fn = &vm->current_program->functions[vm->current_program->entry_fn_index];
 
-    u32 reg_count = NOVO_VM_DEFAULT_REG_COUNT;
-    while (reg_count < fn->register_count) reg_count *= 2;
-    vm->register_count = reg_count;
-    vm->registers = allocate_array<u64>(vm->allocator, reg_count);
-
-    stack_init(vm->allocator, &vm->register_stack, NOVO_VM_DEFAULT_REG_STACK_SIZE);
-
-    vm->first_alloc_block.mem = allocate_array<u8>(vm->allocator, NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE);
-    vm->first_alloc_block.used = 0;
-    vm->first_alloc_block.cap = NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE;
-    vm->first_alloc_block.next = nullptr;
-    vm->current_alloc_block = &vm->first_alloc_block;
+    if (fn->register_count > vm->register_count) {
+        u32 reg_count = vm->register_count;
+        while (reg_count < fn->register_count) reg_count *= 2;
+        u64 *old_regs = vm->registers;
+        vm->registers = allocate_array<u64>(vm->allocator, reg_count);
+        memcpy(vm->registers, old_regs, sizeof(vm->registers[0]) * vm->register_count);
+        vm->register_count = reg_count;
+        free(vm->allocator, old_regs);
+    }
 
     for (s64 i = 0; i < program->functions.count; i++) {
         SSA_Function* func = &program->functions[i];
@@ -115,9 +151,16 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
     stack_push(&vm->register_stack, (u64)0); // dummy block_index
     stack_push(&vm->register_stack, (u64)0); // dummy register_offset
 
-    vm->constant_memory_size = program->constant_memory.count;
-    vm->constant_memory = allocate_array<u8>(vm->allocator, vm->constant_memory_size);
-    memcpy(vm->constant_memory, program->constant_memory.data, vm->constant_memory_size);
+    if (program->constant_memory.count > vm->constant_memory_size) {
+        s64 new_size = vm->constant_memory_size * 2;
+        while (new_size < program->constant_memory.count) new_size *= 2;
+        u8* old_consts = vm->constant_memory;
+        vm->constant_memory = allocate_array<u8>(vm->allocator, new_size);
+        vm->constant_memory_size = new_size;
+        free(vm->allocator, old_consts);
+    }
+
+    memcpy(vm->constant_memory, program->constant_memory.data, program->constant_memory.count);
 
     for (s64 i = 0; i < program->constant_patch_offsets.count; i++) {
         s64 patch_offset = program->constant_patch_offsets[i];

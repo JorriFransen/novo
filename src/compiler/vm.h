@@ -8,6 +8,7 @@
 #define NOVO_VM_DEFAULT_REG_COUNT 128
 #define NOVO_VM_DEFAULT_REG_STACK_SIZE 64
 #define NOVO_VM_DEFAULT_ALLOC_BLOCK_SIZE 128
+#define NOVO_VM_DEFAULT_CONST_MEM_SIZE KIBIBYTE(1)
 
 namespace Novo {
 
@@ -56,6 +57,8 @@ struct VM_Result
 };
 
 NAPI void vm_init(VM* vm, Allocator* allocator, Instance* inst);
+NAPI void vm_free(VM* vm);
+
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program);
 
 }

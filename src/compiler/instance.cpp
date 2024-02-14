@@ -69,6 +69,9 @@ void instance_init(Instance* inst, Options options)
     inst->ssa_program = allocate<SSA_Program>(c_allocator());
     ssa_program_init(inst->ssa_program, c_allocator());
 
+    // TODO: Custom allocator
+    vm_init(&inst->vm, c_allocator(), inst);
+
     inst->builtin_type_void = void_type_new(inst);
     auto void_decl = ast_builtin_type_decl(inst, inst->builtin_type_void, "void");
     scope_add_symbol(inst->global_scope, void_decl->ident->atom, void_decl);
@@ -167,6 +170,7 @@ void instance_free(Instance* inst)
     darray_free(&inst->function_types);
 
     ssa_program_free(inst->ssa_program);
+    vm_free(&inst->vm);
 
     temp_allocator_free(&inst->temp_allocator_data);
     linear_allocator_free(&inst->ast_allocator_data);
@@ -373,6 +377,14 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     if (!builtin_module && inst->options.print_bytecode) {
         String ssa_str = ssa_to_string(inst, c_allocator(), inst->ssa_program);
         printf("\n%s\n", ssa_str.data);
+    }
+
+    if (!builtin_module && inst->ssa_program->entry_fn_index >= 0) {
+        inst->entry_run_result = vm_run(&inst->vm, inst->ssa_program);
+        if (inst->entry_run_result.assert_fail) {
+            log_warn("Bytecode vm quit after failed assert");
+        }
+        log_trace("Bytecode vm returned: %llu\n", inst->entry_run_result.return_value);
     }
 
     return true;

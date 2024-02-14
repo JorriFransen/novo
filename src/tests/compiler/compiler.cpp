@@ -61,10 +61,7 @@ static bool run_test_case(Test_Case* tc)
 
     assert(instance.ssa_program->entry_fn_index >= 0);
 
-    VM vm;
-    vm_init(&vm, c_allocator(), &instance);
-
-    VM_Result run_result = vm_run(&vm, instance.ssa_program);
+    VM_Result run_result = instance.entry_run_result;
 
     bool result = false;
 

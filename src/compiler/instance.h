@@ -10,6 +10,7 @@
 
 #include "atom.h"
 #include "options.h"
+#include "vm.h"
 
 namespace Novo {
 
@@ -27,6 +28,7 @@ struct SSA_Program;
 struct SSA_Task;
 struct Type;
 struct Type_Task;
+struct VM;
 
 struct Imported_File
 {
@@ -64,6 +66,8 @@ struct Instance
     bool fatal_error;
 
     SSA_Program* ssa_program;
+    VM vm;
+    VM_Result entry_run_result;
 
     Type* builtin_type_void;
     Type* builtin_type_u8;
