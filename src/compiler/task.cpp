@@ -125,6 +125,7 @@ void add_type_task(Instance* inst, AST_Node node, Scope* scope, AST_Declaration*
         .node = node,
         .scope = scope,
         .fn_decl = fn,
+        .waiting_for = nullptr,
     };
     darray_append(&inst->type_tasks, task);
 }

@@ -70,6 +70,7 @@ AST_Declaration* ast_builtin_type_decl(Instance* inst, Type* type, const char* n
     auto ident = ast_identifier(inst, atom_get(name));
     auto result = ast_declaration(inst, AST_Declaration_Kind::BUILTIN_TYPE, ident);
     result->resolved_type = type;
+    result->flags |= AST_DECL_FLAG_TYPED;
     return result;
 }
 

@@ -34,6 +34,7 @@ struct Type_Task
     Scope* scope;
 
     AST_Declaration* fn_decl;
+    AST_Identifier* waiting_for;
 };
 
 struct SSA_Task

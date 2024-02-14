@@ -6,6 +6,7 @@ namespace Novo {
 
 struct AST_Declaration;
 struct AST_Expression;
+struct AST_Identifier;
 struct AST_Node;
 struct AST_Statement;
 struct AST_Type_Spec;
@@ -19,6 +20,7 @@ NAPI bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* dec
 NAPI bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope* scope);
 NAPI bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scope* scope, Type* suggested_type);
 NAPI bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* scope);
+NAPI bool type_identifier(Instance* inst, Type_Task*task, AST_Identifier* ident, Scope* scope);
 
 NAPI Type* type_pointer_math(Instance* inst, Type_Task* task, AST_Node err_node, AST_Expression* left, AST_Expression* right, u32 op, Scope* scope);
 NAPI bool valid_cast(Instance* inst, Type* from_type, Type* to_type, AST_Expression* err_node);

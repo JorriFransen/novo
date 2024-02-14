@@ -266,22 +266,23 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         }
 
         for (s64 i = 0; i < inst->type_tasks.count; i++) {
-            Type_Task task = inst->type_tasks[i];
+            Type_Task* task = &inst->type_tasks[i];
 
-            bool success = type_node(inst, &task, &task.node, task.scope);
+            bool success = type_node(inst, task, &task->node, task->scope);
 
             if (success) {
                 progress = true;
 
+                if (task->node.kind == AST_Node_Kind::DECLARATION &&
+                    task->node.declaration->kind == AST_Declaration_Kind::FUNCTION) {
+
+                    add_ssa_task(inst, task->node);
+
+                }
+
                 darray_remove_unordered(&inst->type_tasks, i);
                 i--;
 
-                if (task.node.kind == AST_Node_Kind::DECLARATION &&
-                    task.node.declaration->kind == AST_Declaration_Kind::FUNCTION) {
-
-                    add_ssa_task(inst, task.node);
-
-                }
             }
         }
 
@@ -335,6 +336,22 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 auto name = atom_string(t->waiting_for->atom);
                 Source_Pos pos = source_pos(inst, t->waiting_for);
                 instance_error(inst, pos, "Reference to undecared identifier: '%s'", name.data);
+                error_reported = true;
+            }
+        }
+
+        if (error_reported) {
+            return false;
+        }
+
+        for (s64 i = 0; i < inst->type_tasks.count; i++) {
+            auto t = &inst->type_tasks[i];
+
+            if (t->waiting_for) {
+                assert(t->waiting_for);
+                String name = atom_string(t->waiting_for->atom);
+                Source_Pos pos = source_pos(inst, t->waiting_for);
+                instance_error(inst, pos, "Waiting for untyped declaration: '%s'", name.data);
                 error_reported = true;
             }
         }

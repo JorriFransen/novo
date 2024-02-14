@@ -460,7 +460,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             }
 
             // success
-            if (callee_decl) {
+            if (callee_decl && callee_decl != task->fn_decl) {
                 darray_append_unique(&task->fn_decl->function.wait_for_bytecode, ast_node(callee_decl));
             }
             break;

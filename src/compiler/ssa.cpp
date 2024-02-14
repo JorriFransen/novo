@@ -169,6 +169,10 @@ u32 ssa_register_create(SSA_Builder* builder)
 
 bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl)
 {
+    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+    assert(decl->resolved_type);
+    assert(decl->resolved_type->kind == Type_Kind::FUNCTION);
+
     SSA_Function local_func;
     assert(decl->ident);
 
