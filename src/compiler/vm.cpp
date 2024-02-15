@@ -614,7 +614,12 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                     }
 
                     case Type_Kind::BOOLEAN: assert(false); break;
-                    case Type_Kind::POINTER: assert(false); break;
+
+                    case Type_Kind::POINTER: {
+                        result = (u64)dcCallPointer(vm->ffi.vm, func_sym);
+                        break;
+                    }
+
                     case Type_Kind::FUNCTION: assert(false); break;
                     case Type_Kind::STRUCT: assert(false); break;
                 }

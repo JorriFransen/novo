@@ -918,6 +918,11 @@ bool valid_cast(Instance* inst, Type* from_type, Type* to_type, AST_Expression* 
         case Type_Kind::POINTER: {
 
             switch (to_kind) {
+                case Type_Kind::POINTER: {
+                    return true;
+                    break;
+                }
+
                 case Type_Kind::INTEGER: {
                     result = to_type->bit_size == from_type->bit_size;
 

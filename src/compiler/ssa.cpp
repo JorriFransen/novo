@@ -424,29 +424,56 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
         case AST_Statement_Kind::ARITHMETIC_ASSIGNMENT: {
 
             auto bit_size = stmt->arithmetic_assignment.lvalue->resolved_type->bit_size;
-            u32 lvalue = ssa_emit_lvalue(builder, stmt->arithmetic_assignment.lvalue, scope);
-            u32 lhs = ssa_emit_load_ptr(builder, bit_size, lvalue);
-            u32 rhs = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
+            AST_Expression* lvalue_expr = stmt->arithmetic_assignment.lvalue;
+            AST_Expression* rvalue_expr = stmt->arithmetic_assignment.rvalue;
 
-            switch (stmt->arithmetic_assignment.op) {
-                default: assert(false); break;
-                case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
-                case '-': ssa_emit_op(builder, SSA_OP_SUB); break;
-                case '*': ssa_emit_op(builder, SSA_OP_MUL); break;
-                case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
+            u32 op = stmt->arithmetic_assignment.op;
+
+            if (lvalue_expr->resolved_type->kind == Type_Kind::POINTER) {
+                assert(bit_size == 64); // pointer size
+
+                u32 lvalue = ssa_emit_lvalue(builder, stmt->arithmetic_assignment.lvalue, scope);
+                u32 rhs = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
+
+                if (rvalue_expr->resolved_type->kind == Type_Kind::INTEGER) {
+                    if (op == '-') {
+                        assert(false);
+                    } else {
+
+                        u32 lhs = ssa_emit_load_ptr(builder, bit_size, lvalue);
+                        u32 new_ptr_reg = ssa_emit_pointer_offset(builder, lvalue_expr->resolved_type->pointer.base->bit_size, lhs, rhs);
+                        ssa_emit_store_ptr(builder, bit_size, lvalue, new_ptr_reg);
+                    }
+                } else {
+                    assert(op == '-');
+                    assert(false);
+                }
+
+            } else {
+                u32 lvalue = ssa_emit_lvalue(builder, lvalue_expr, scope);
+                u32 lhs = ssa_emit_load_ptr(builder, bit_size, lvalue);
+                u32 rhs = ssa_emit_expression(builder, rvalue_expr, scope);
+
+                switch (op) {
+                    default: assert(false); break;
+                    case '+': ssa_emit_op(builder, SSA_OP_ADD); break;
+                    case '-': ssa_emit_op(builder, SSA_OP_SUB); break;
+                    case '*': ssa_emit_op(builder, SSA_OP_MUL); break;
+                    case '/': ssa_emit_op(builder, SSA_OP_DIV); break;
+                }
+
+                assert(bit_size % 8 == 0);
+                auto size = bit_size / 8;
+                assert(size >= 0 && size <= U8_MAX);
+                ssa_emit_8(builder, (u8)size);
+
+                u32 result = ssa_register_create(builder);
+                ssa_emit_32(builder, result);
+                ssa_emit_32(builder, lhs);
+                ssa_emit_32(builder, rhs);
+
+                ssa_emit_store_ptr(builder, bit_size, lvalue, result);
             }
-
-            assert(bit_size % 8 == 0);
-            auto size = bit_size / 8;
-            assert(size >= 0 && size <= U8_MAX);
-            ssa_emit_8(builder, (u8)size);
-
-            u32 result = ssa_register_create(builder);
-            ssa_emit_32(builder, result);
-            ssa_emit_32(builder, lhs);
-            ssa_emit_32(builder, rhs);
-
-            ssa_emit_store_ptr(builder, bit_size, lvalue, result);
 
             break;
         }
@@ -1325,9 +1352,15 @@ u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 oper
         case Type_Kind::BOOLEAN: assert(false); break;
 
         case Type_Kind::POINTER: {
-            assert(to_type->kind == Type_Kind::INTEGER);
-            assert(to_type->bit_size == 64);
-            return ssa_emit_bitcast(builder, from_type, to_type, operand_reg);
+            switch (to_type->kind) {
+                default: assert(false); break;
+
+                case Type_Kind::POINTER:
+                case Type_Kind::INTEGER: {
+                    assert(to_type->bit_size == 64);
+                    return ssa_emit_bitcast(builder, from_type, to_type, operand_reg);
+                }
+            }
         }
 
         case Type_Kind::FUNCTION: assert(false); break;
