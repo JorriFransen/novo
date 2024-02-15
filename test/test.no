@@ -1,5 +1,4 @@
 // TODO:
-//  - Make sure ssa allocs are emitted in variable declaration order
 //  - align types
 //  - sizeof(), alignof(), offsetof()
 //  - test pointer math (requires arrays and/or sizeof())
@@ -35,8 +34,8 @@ INT :: struct {
 main :: () -> int {
     assert(true);
     x : INT = { 1 };
-    y := 2;
+    y : s32 = 2;
 
-    return x.v + y;
+    return x.v + cast(s64, y);
 }
 

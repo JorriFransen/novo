@@ -575,6 +575,7 @@ bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* iden
             assert(ident_pos.file_index == decl_pos.file_index);
 
             if (found_decl->kind == AST_Declaration_Kind::VARIABLE &&
+                !(found_decl->flags & AST_DECL_FLAG_PARAM) &&
                 found_decl->ident->index >= ident->index) {
 
                 const char* ident_string = atom_string(ident->atom).data;

@@ -450,31 +450,34 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
         }
 
         case AST_Expression_Kind::BINARY: {
+            AST_Expression* lhs = expr->binary.lhs;
+            AST_Expression* rhs = expr->binary.rhs;
+
             if (suggested_type && suggested_type->kind == Type_Kind::BOOLEAN) {
                 suggested_type = nullptr;
             }
 
-            if (!type_expression(inst, task, expr->binary.lhs, scope, suggested_type)) {
+            if (!type_expression(inst, task, lhs, scope, suggested_type)) {
                 return false;
             }
 
             if (!suggested_type) {
-                suggested_type = expr->binary.lhs->resolved_type;
+                suggested_type = lhs->resolved_type;
             }
 
             if (suggested_type->kind == Type_Kind::POINTER) {
                 suggested_type = nullptr;
             }
 
-            if (!type_expression(inst, task, expr->binary.rhs, scope, suggested_type)) {
+            if (!type_expression(inst, task, rhs, scope, suggested_type)) {
                 return false;
             }
 
-            Type* left_type = expr->binary.lhs->resolved_type;
+            Type* left_type = lhs->resolved_type;
 
             if (left_type->kind == Type_Kind::POINTER && !is_binary_cmp_op(expr->binary.op)) {
 
-                Type* result_type = type_pointer_math(inst, task, ast_node(expr), expr->binary.lhs, expr->binary.rhs, expr->binary.op, scope);
+                Type* result_type = type_pointer_math(inst, task, ast_node(expr), lhs, rhs, expr->binary.op, scope);
 
                 if (!result_type) {
                     return false;
@@ -483,7 +486,18 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             } else {
 
-                assert(expr->binary.lhs->resolved_type == expr->binary.rhs->resolved_type);
+                if (lhs->resolved_type->kind != Type_Kind::INTEGER) {
+                    instance_fatal_error(inst, source_pos(inst, lhs), "Expected integer or pointer type on left side of binary operator '%s', got: '%s'",
+                            tmp_token_kind_str((Token_Kind)expr->binary.op).data,
+                            temp_type_string(inst, lhs->resolved_type).data);
+                }
+
+                if (lhs->resolved_type != rhs->resolved_type) {
+                    instance_fatal_error(inst, source_pos(inst, expr), "Mismatching types in binary expression: '%s' %s '%s'",
+                            temp_type_string(inst, lhs->resolved_type).data,
+                            tmp_token_kind_str((Token_Kind)expr->binary.op).data,
+                            temp_type_string(inst, rhs->resolved_type).data);
+                }
 
                 switch (expr->binary.op) {
                     case '<':
@@ -497,7 +511,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                     }
 
                     default: {
-                        expr->resolved_type = expr->binary.lhs->resolved_type;
+                        expr->resolved_type = lhs->resolved_type;
                         break;
                     }
                 }
