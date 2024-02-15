@@ -10,6 +10,7 @@
 namespace Novo {
 
 #define NOVO_DARRAY_DEFAULT_CAPACITY 8
+#define NOVO_QUICKSORT_INSERT_THRESHOLD 16
 
 template <typename Element_Type>
 struct DArray
@@ -275,83 +276,31 @@ static void darray_append(Temp_Array<T>* ta, T element) {
 }
 
 #define QS_SWAP(a, b) { \
-    T t = a; \
-    a = b; \
-    b = t; \
+    T t = (a); \
+    (a) = (b); \
+    (b) = t; \
 }
 
 template <typename T>
-static void quicksort1(Array_Ref<T> &ta, s64 lo, s64 hi) {
-
-    s64 len = (hi + 1) - lo;
-    if (len == 2) {
-        if (ta[lo] > ta[hi]) {
-            QS_SWAP(ta[lo], ta[hi]);
-        }
-        return;
-    }
-
-    s64 pivot_index = (lo + hi) / 2;
-    T pivot = ta[pivot_index];
-
-    QS_SWAP(ta[pivot_index], ta[hi]);
-
-    s64 left_index = lo;
-    s64 right_index = hi - 1;
-
-    do {
-
-        for (; left_index < hi; left_index++) {
-            if (ta[left_index] > pivot) break;
-        }
-
-        for (; right_index >= lo; right_index--) {
-            if(ta[right_index] < pivot) break;
-        }
-
-        if (left_index > right_index) break;
-
-        QS_SWAP(ta[left_index], ta[right_index]);
-
-    } while (true);
-
-    QS_SWAP(ta[left_index], ta[hi]);
-
-    if (left_index > lo + 1) {
-        quicksort1(ta, lo, left_index - 1);
-    }
-
-    if (left_index <= hi - 2) {
-        quicksort1(ta, left_index + 1, hi);
-    }
-
+NINLINE int compare(T a, T b) {
+    return (int)(a - b);
 }
 
 template <typename T>
-static void quicksort1(Array_Ref<T> &ta) {
-    quicksort1(ta, 0, ta.count - 1);
-}
+using Compare_FN_Type = int(*)(T, T);
 
 template <typename T>
-static void quicksort2(Array_Ref<T> &ta, s64 lo, s64 hi) {
-
-    s64 len = (hi + 1) - lo;
-    if (len == 2) {
-        if (ta[lo] > ta[hi]) {
-            QS_SWAP(ta[lo], ta[hi]);
-        }
-        return;
-    }
+static void pivot_sort(Array_Ref<T> &ta, s64 lo, s64 hi, Compare_FN_Type<T> compare_fn) {
 
     s64 mi = (lo + hi) / 2;
 
-    if (ta[mi] < ta[lo]) {
+    if (compare_fn(ta[mi], ta[lo]) < 0) {
         QS_SWAP(ta[mi], ta[lo]);
     }
-    if (ta[hi] < ta[lo]) {
+    if (compare_fn(ta[hi], ta[lo]) < 0) {
         QS_SWAP(ta[hi], ta[lo]);
     }
-    if (ta[mi] < ta[hi]) {
+    if (compare_fn(ta[mi], ta[hi]) < 0) {
         QS_SWAP(ta[mi], ta[hi]);
     }
 
@@ -363,11 +312,11 @@ static void quicksort2(Array_Ref<T> &ta, s64 lo, s64 hi) {
     do {
 
         for (; left_index < hi; left_index++) {
-            if (ta[left_index] > pivot) break;
+            if (compare_fn(ta[left_index], pivot) > 0) break;
         }
 
         for (; right_index >= lo; right_index--) {
-            if(ta[right_index] < pivot) break;
+            if(compare_fn(ta[right_index], pivot) < 0) break;
         }
 
         if (left_index > right_index) break;
@@ -379,18 +328,32 @@ static void quicksort2(Array_Ref<T> &ta, s64 lo, s64 hi) {
     QS_SWAP(ta[left_index], ta[hi]);
 
     if (left_index > lo + 1) {
-        quicksort2(ta, lo, left_index - 1);
+        pivot_sort(ta, lo, left_index - 1, compare_fn);
     }
 
     if (left_index <= hi - 2) {
-        quicksort2(ta, left_index + 1, hi);
+        pivot_sort(ta, left_index + 1, hi, compare_fn);
     }
 
 }
 
 template <typename T>
-static void quicksort2(Array_Ref<T> &ta) {
-    quicksort2(ta, 0, ta.count - 1);
+static void quicksort(Array_Ref<T> &array, Compare_FN_Type<T> compare_fn = compare) {
+    if (array.count > NOVO_QUICKSORT_INSERT_THRESHOLD) {
+        pivot_sort(array, 0, array.count - 1, compare_fn);
+    } else {
+        // Insertion sort
+        for (s64 i = 1; i < array.count; i++) {
+            T t = array[i];
+            s64 j = i;
+            for (; j > 0 && compare_fn(array[j - 1], t) > 0; j--) {
+                 array[j] = array[j - 1];
+            }
+            array[j] = t;
+        }
+    }
 }
+
+#undef QS_SWAP
 
 }
