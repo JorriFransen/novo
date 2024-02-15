@@ -572,10 +572,11 @@ bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* iden
             Source_Pos decl_pos = source_pos(inst, found_decl);
 
             // The declaration is inside the current function, check the order...
-            assert(ident_pos.file_index ==  decl_pos.file_index);
+            assert(ident_pos.file_index == decl_pos.file_index);
 
-            // TODO: This should not rely on positional info, add some other way to enforce declaration/usage order
-            if (ident_pos.offset <= decl_pos.offset) {
+            if (found_decl->kind == AST_Declaration_Kind::VARIABLE &&
+                found_decl->ident->index >= ident->index) {
+
                 const char* ident_string = atom_string(ident->atom).data;
                 instance_error(inst, ident_pos, "Reference to identifier '%s' before declaration", ident_string);
                 instance_fatal_error_note(inst, decl_pos, "'%s' was first declared here", ident_string);

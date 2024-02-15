@@ -167,6 +167,10 @@ u32 ssa_register_create(SSA_Builder* builder)
     return function->register_count++;
 }
 
+static int cmp_decl_order(AST_Declaration* a, AST_Declaration* b) {
+    return (int)(a->variable.index - b->variable.index);
+}
+
 bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl)
 {
     assert(decl->kind == AST_Declaration_Kind::FUNCTION);
@@ -216,6 +220,8 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
             darray_append(&func->allocs, { ast_node(param_decl), alloc_reg });
         }
     }
+
+    quicksort(Array_Ref(decl->function.variables), cmp_decl_order);
 
     // Emit storage for local variables
     for (s64 i = 0; i < decl->function.variables.count; i++) {

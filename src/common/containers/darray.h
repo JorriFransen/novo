@@ -290,7 +290,7 @@ template <typename T>
 using Compare_FN_Type = int(*)(T, T);
 
 template <typename T>
-static void pivot_sort(Array_Ref<T> &ta, s64 lo, s64 hi, Compare_FN_Type<T> compare_fn) {
+static void pivot_sort(Array_Ref<T> ta, s64 lo, s64 hi, Compare_FN_Type<T> compare_fn) {
 
     s64 mi = (lo + hi) / 2;
 
@@ -338,7 +338,7 @@ static void pivot_sort(Array_Ref<T> &ta, s64 lo, s64 hi, Compare_FN_Type<T> comp
 }
 
 template <typename T>
-static void quicksort(Array_Ref<T> &array, Compare_FN_Type<T> compare_fn = compare) {
+static void quicksort(Array_Ref<T> array, Compare_FN_Type<T> compare_fn = compare) {
     if (array.count > NOVO_QUICKSORT_INSERT_THRESHOLD) {
         pivot_sort(array, 0, array.count - 1, compare_fn);
     } else {

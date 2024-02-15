@@ -324,6 +324,7 @@ struct AST_Identifier
     Atom atom;
 
     AST_Declaration* decl;
+    s64 index;
 };
 
 NAPI bool operator==(const AST_Node &a, const AST_Node &b);

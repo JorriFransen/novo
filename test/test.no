@@ -36,7 +36,7 @@ main :: () -> int {
     assert(true);
     x : INT = { 1 };
     y := 2;
+
     return x.v + y;
-    // return x + y;
 }
 

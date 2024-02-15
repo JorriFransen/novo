@@ -23,6 +23,9 @@ struct Parser
 {
     Instance* instance;
     Lexer* lexer;
+
+    s64 next_index_in_function;
+    bool parsing_function_body;
 };
 
 NAPI AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index);

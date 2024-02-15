@@ -38,6 +38,8 @@ AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_
     Parser parser;
     parser.instance = instance;
     parser.lexer = &lexer;
+    parser.next_index_in_function = 0;
+    parser.parsing_function_body = false;
 
     auto nodes = temp_array_create<AST_Node>(&instance->temp_allocator, 4);
 
@@ -298,6 +300,10 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
         auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 4);
 
+        assert(parser->next_index_in_function == 0); // TODO: push/pop when dealing with nested functions
+        assert(!parser->parsing_function_body);
+        parser->parsing_function_body = true;
+
         expect_token(parser, '{');
         while (!is_token(parser, '}')) {
 
@@ -311,6 +317,10 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         pos = source_pos(pos, current_pos);
         body_pos = source_pos(body_pos, current_pos);
         expect_token(parser, '}');
+
+        parser->next_index_in_function = 0;
+        assert(parser->parsing_function_body);
+        parser->parsing_function_body = false;
 
         body_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
     } else {
@@ -806,6 +816,10 @@ AST_Identifier* parse_identifier(Parser* parser)
     expect_token(parser, TOK_NAME);
 
     AST_Identifier* result = ast_identifier(parser->instance, ident_tok.atom);
+
+    if (parser->parsing_function_body) {
+        result->index = parser->next_index_in_function++;
+    }
 
     save_source_pos(parser->instance, result, source_pos(parser, ident_tok));
 

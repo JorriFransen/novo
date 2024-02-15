@@ -343,7 +343,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
 
                     if (!found_free_block) {
 
-                        u64 new_block_size = vm->current_alloc_block->cap;
+                        u32 new_block_size = vm->current_alloc_block->cap;
                         while (new_block_size < size) new_block_size *= 2;
 
                         u64 alloc_size = new_block_size + sizeof(VM_Alloc_Block);
