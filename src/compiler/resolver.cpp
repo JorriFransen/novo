@@ -70,7 +70,7 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
                 assert(decl->variable.type_spec || decl->variable.init_expr);
                 assert(task->fn_decl);
 
-                darray_append(&task->fn_decl->function.variables, decl); // Make sure this is only done once!
+                darray_append_unique(&task->fn_decl->function.variables, decl);
             }
             break;
         }

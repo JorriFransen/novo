@@ -1,7 +1,5 @@
 // TODO:
-//  - Free vm?
 //  - Make sure ssa allocs are emitted in variable declaration order
-//  - Move FFI to instance?
 //  - align types
 //  - sizeof(), alignof(), offsetof()
 //  - test pointer math (requires arrays and/or sizeof())
@@ -28,34 +26,17 @@
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
 
-printf :: (format: *u8, ..) -> s32 #foreign;
+// printf :: (format: *u8, ..) -> s32 #foreign;
+
+INT :: struct {
+    v: int;
+}
 
 main :: () -> int {
-
-    // printf("Hello, printf(%hhd, %hd, %d, %lld, %d, %hd, %hhd);\n".data, 1, 2, 3, 4, 5, 6, 7);
-    //
-    // msg := "Hello, World!";
-    // printf("%.*s\n".data, msg.length, msg.data);
-
-    for i := 0; i < 20; i += 1; {
-        f := fib(i);
-        printf("fib(%d) = %d\n".data, i, f);
-    }
-
-    return fib(10);
+    assert(true);
+    x : INT = { 1 };
+    y := 2;
+    return x.v + y;
+    // return x + y;
 }
 
-recurse :: (x: s64) {
-
-    if (x > 0) {
-        recurse(x - 1);
-    }
-
-    printf("recurse(%d)\n".data, x);
-}
-
-fib :: (x: s64) -> s64 {
-
-    if (x < 2) return x;
-    return fib(x - 1) + fib(x - 2);
-}

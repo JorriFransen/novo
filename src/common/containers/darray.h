@@ -274,4 +274,123 @@ static void darray_append(Temp_Array<T>* ta, T element) {
     darray_append(&ta->array, element);
 }
 
+#define QS_SWAP(a, b) { \
+    T t = a; \
+    a = b; \
+    b = t; \
+}
+
+template <typename T>
+static void quicksort1(Array_Ref<T> &ta, s64 lo, s64 hi) {
+
+    s64 len = (hi + 1) - lo;
+    if (len == 2) {
+        if (ta[lo] > ta[hi]) {
+            QS_SWAP(ta[lo], ta[hi]);
+        }
+        return;
+    }
+
+    s64 pivot_index = (lo + hi) / 2;
+    T pivot = ta[pivot_index];
+
+    QS_SWAP(ta[pivot_index], ta[hi]);
+
+    s64 left_index = lo;
+    s64 right_index = hi - 1;
+
+    do {
+
+        for (; left_index < hi; left_index++) {
+            if (ta[left_index] > pivot) break;
+        }
+
+        for (; right_index >= lo; right_index--) {
+            if(ta[right_index] < pivot) break;
+        }
+
+        if (left_index > right_index) break;
+
+        QS_SWAP(ta[left_index], ta[right_index]);
+
+    } while (true);
+
+    QS_SWAP(ta[left_index], ta[hi]);
+
+    if (left_index > lo + 1) {
+        quicksort1(ta, lo, left_index - 1);
+    }
+
+    if (left_index <= hi - 2) {
+        quicksort1(ta, left_index + 1, hi);
+    }
+
+}
+
+template <typename T>
+static void quicksort1(Array_Ref<T> &ta) {
+    quicksort1(ta, 0, ta.count - 1);
+}
+
+template <typename T>
+static void quicksort2(Array_Ref<T> &ta, s64 lo, s64 hi) {
+
+    s64 len = (hi + 1) - lo;
+    if (len == 2) {
+        if (ta[lo] > ta[hi]) {
+            QS_SWAP(ta[lo], ta[hi]);
+        }
+        return;
+    }
+
+    s64 mi = (lo + hi) / 2;
+
+    if (ta[mi] < ta[lo]) {
+        QS_SWAP(ta[mi], ta[lo]);
+    }
+    if (ta[hi] < ta[lo]) {
+        QS_SWAP(ta[hi], ta[lo]);
+    }
+    if (ta[mi] < ta[hi]) {
+        QS_SWAP(ta[mi], ta[hi]);
+    }
+
+    T pivot = ta[hi];
+
+    s64 left_index = lo;
+    s64 right_index = hi - 1;
+
+    do {
+
+        for (; left_index < hi; left_index++) {
+            if (ta[left_index] > pivot) break;
+        }
+
+        for (; right_index >= lo; right_index--) {
+            if(ta[right_index] < pivot) break;
+        }
+
+        if (left_index > right_index) break;
+
+        QS_SWAP(ta[left_index], ta[right_index]);
+
+    } while (true);
+
+    QS_SWAP(ta[left_index], ta[hi]);
+
+    if (left_index > lo + 1) {
+        quicksort2(ta, lo, left_index - 1);
+    }
+
+    if (left_index <= hi - 2) {
+        quicksort2(ta, left_index + 1, hi);
+    }
+
+}
+
+template <typename T>
+static void quicksort2(Array_Ref<T> &ta) {
+    quicksort2(ta, 0, ta.count - 1);
+}
+
 }
