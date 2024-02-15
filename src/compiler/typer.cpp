@@ -486,7 +486,9 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             } else {
 
-                if (lhs->resolved_type->kind != Type_Kind::INTEGER) {
+                if (lhs->resolved_type->kind != Type_Kind::INTEGER &&
+                    lhs->resolved_type->kind != Type_Kind::POINTER) {
+
                     instance_fatal_error(inst, source_pos(inst, lhs), "Expected integer or pointer type on left side of binary operator '%s', got: '%s'",
                             tmp_token_kind_str((Token_Kind)expr->binary.op).data,
                             temp_type_string(inst, lhs->resolved_type).data);
@@ -855,7 +857,7 @@ Type* type_pointer_math(Instance* inst, Type_Task* task, AST_Node err_node, AST_
                 instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '-' is allowed when both sides are of pointer type");
             }
 
-            break;
+            return inst->builtin_type_s64;
         }
 
         case Type_Kind::INTEGER: {
@@ -864,7 +866,7 @@ Type* type_pointer_math(Instance* inst, Type_Task* task, AST_Node err_node, AST_
                 instance_fatal_error(inst, pos, "Invalid operator in pointer math binary expression. Only '+' and '-' are allowed");
             }
 
-            break;
+            return left_type;
         }
 
         default: {

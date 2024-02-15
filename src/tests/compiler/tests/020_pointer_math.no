@@ -1,0 +1,29 @@
+
+strings :: () {
+
+    str1 := "Hello!";
+    start : *u8 = str1.data;
+
+    {
+        end := start + str1.length;
+        assert(end - start == str1.length);
+        assert(end - str1.length == start);
+    }
+
+    {
+        end := start;
+        end += str1.length;
+        assert(end - start == str1.length);
+        s2 := end;
+        s2 -= str1.length;
+        assert(s2 == start);
+    }
+
+}
+
+main :: () -> int {
+
+    strings();
+
+    return 0;
+}

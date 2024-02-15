@@ -433,21 +433,28 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 assert(bit_size == 64); // pointer size
 
                 u32 lvalue = ssa_emit_lvalue(builder, stmt->arithmetic_assignment.lvalue, scope);
-                u32 rhs = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
+                u32 left_reg = ssa_emit_load_ptr(builder, bit_size, lvalue);
+                u32 right_reg = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
 
-                if (rvalue_expr->resolved_type->kind == Type_Kind::INTEGER) {
-                    if (op == '-') {
-                        assert(false);
-                    } else {
+                assert(rvalue_expr->resolved_type->kind == Type_Kind::INTEGER);
 
-                        u32 lhs = ssa_emit_load_ptr(builder, bit_size, lvalue);
-                        u32 new_ptr_reg = ssa_emit_pointer_offset(builder, lvalue_expr->resolved_type->pointer.base->bit_size, lhs, rhs);
-                        ssa_emit_store_ptr(builder, bit_size, lvalue, new_ptr_reg);
-                    }
-                } else {
-                    assert(op == '-');
-                    assert(false);
+                if (op == '-') {
+                    u32 zero_reg = ssa_emit_load_immediate(builder, bit_size, 0);
+                    u32 new_right = ssa_register_create(builder);
+
+                    // TODO:  Negate op?
+                    ssa_emit_op(builder, SSA_OP_SUB);
+                    ssa_emit_8(builder, bit_size / 8);
+                    ssa_emit_32(builder, new_right);
+                    ssa_emit_32(builder, zero_reg);
+                    ssa_emit_32(builder, right_reg);
+
+                    right_reg = new_right;
                 }
+
+                u32 new_ptr_reg = ssa_emit_pointer_offset(builder, lvalue_expr->resolved_type->pointer.base->bit_size, left_reg, right_reg);
+                ssa_emit_store_ptr(builder, bit_size, lvalue, new_ptr_reg);
+
 
             } else {
                 u32 lvalue = ssa_emit_lvalue(builder, lvalue_expr, scope);

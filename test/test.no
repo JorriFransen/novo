@@ -1,4 +1,5 @@
 // TODO:
+//  - report error for pointer diff with arithmethic assignment (changes left type)
 //  - align types
 //  - sizeof(), alignof(), offsetof()
 //  - test pointer math (requires arrays and/or sizeof())
@@ -45,7 +46,6 @@ main :: () -> int {
     v := vecs;
     for i := 0; i < 5; i += 1; {
         <v = { i + 1, i };
-        // v = v + 1;
         v += 1;
     }
 

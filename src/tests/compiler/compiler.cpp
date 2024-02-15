@@ -42,6 +42,8 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/017_trunc.no" },
     { .file_path = "tests/018_sext.no" },
     { .file_path = "tests/019_zext.no" },
+
+    { .file_path = "tests/020_pointer_math.no" },
 };
 
 static bool run_test_case(Test_Case* tc)
