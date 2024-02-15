@@ -149,6 +149,9 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
         }
 
         result = ast_variable_declaration(parser->instance, ident, ts, init_expr);
+        if (parser->parsing_function_body) {
+            result->variable.index = parser->next_index_in_function++;
+        }
         save_source_pos(parser->instance, result, pos);
     }
 
