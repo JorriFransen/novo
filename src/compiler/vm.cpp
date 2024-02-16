@@ -405,7 +405,6 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 param_index = vm_fetch<u32>(block, &ip);
 
-                // u64 value = vm->stack[vm->bp - fn->param_count + param_index];
                 u64 value = vm->register_stack.buffer[vm->bp - fn->param_count + param_index];
 
                 vm_set_register(vm, dest_reg, value);
@@ -600,7 +599,11 @@ VM_Result vm_run(VM* vm, SSA_Program* program)
                 switch (return_type->kind) {
                     default: assert(false); break;
                     case Type_Kind::INVALID: assert(false); break;
-                    case Type_Kind::VOID: assert(false); break;
+
+                    case Type_Kind::VOID: {
+                        dcCallVoid(vm->ffi.vm, func_sym);
+                        break;
+                    }
 
                     case Type_Kind::INTEGER: {
                         switch (return_type->bit_size) {

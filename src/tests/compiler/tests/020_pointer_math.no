@@ -1,5 +1,5 @@
 
-strings :: () {
+string_test :: () {
 
     str1 := "Hello!";
     start : *u8 = str1.data;
@@ -21,9 +21,60 @@ strings :: () {
 
 }
 
+malloc :: (size: s64) -> *void #foreign;
+free :: (ptr: *void) #foreign;
+
+vec_test :: () {
+
+
+    Vec :: struct {
+        x :s64;
+        y: s64;
+    }
+
+    // Array of vectors
+    count := 5;
+    vecs := cast(*Vec, malloc(16 * count));
+
+    // Write some values
+    for i := 0; i < count; i += 1; {
+
+        b := i + 1;
+        <(vecs + i) = { b, b * 3 };
+    }
+
+    // Test written values
+    for i := 0; i < count; i += 1; {
+
+        b := i + 1;
+
+        v := vecs;
+        v += i;
+
+        assert(v.x == b);
+        assert(v.y == b * 3);
+    }
+
+    end := vecs + count;
+    start := end - count;
+    assert(start == vecs);
+    assert(end - start == count);
+
+    end2 := vecs;
+    end2 += count;
+    assert(end2 == end);
+
+    start2 := end;
+    start2 -= count;
+    assert(start2 == start);
+
+    free(cast(*void, vecs));
+}
+
 main :: () -> int {
 
-    strings();
+    string_test();
+    vec_test();
 
     return 0;
 }

@@ -71,6 +71,7 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
                 assert(task->fn_decl);
 
                 darray_append_unique(&task->fn_decl->function.variables, decl);
+                add_type_task(inst, ast_node(decl), scope, task->fn_decl);
             }
             break;
         }
@@ -263,11 +264,11 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
 
             stack_push(&task->loop_control_stack, stmt);
 
-            if (!resolve_statement(inst, task, stmt->while_stmt.stmt, scope)) {
+            bool while_result = resolve_statement(inst, task, stmt->while_stmt.stmt, scope);
+            stack_pop(&task->loop_control_stack);
+            if (!while_result) {
                 return false;
             }
-
-            stack_pop(&task->loop_control_stack);
 
             break;
         }
@@ -289,12 +290,11 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             }
 
             stack_push(&task->loop_control_stack, stmt);
-
-            if (!resolve_statement(inst, task, stmt->for_stmt.stmt, for_scope)) {
+            bool for_stmt_result = resolve_statement(inst, task, stmt->for_stmt.stmt, for_scope);
+            stack_pop(&task->loop_control_stack);
+            if (!for_stmt_result) {
                 return false;
             }
-
-            stack_pop(&task->loop_control_stack);
 
             break;
         }
@@ -568,15 +568,15 @@ bool resolve_identifier(Instance* inst, Resolve_Task* task, AST_Identifier* iden
             (found_in_scope == task->fn_decl->function.scope ||
              scope_is_parent(found_in_scope, task->fn_decl->function.scope))) {
 
-            Source_Pos ident_pos = source_pos(inst, ident);
-            Source_Pos decl_pos = source_pos(inst, found_decl);
-
             // The declaration is inside the current function, check the order...
-            assert(ident_pos.file_index == decl_pos.file_index);
-
             if (found_decl->kind == AST_Declaration_Kind::VARIABLE &&
                 !(found_decl->flags & AST_DECL_FLAG_PARAM) &&
                 found_decl->ident->index >= ident->index) {
+
+                Source_Pos ident_pos = source_pos(inst, ident);
+                Source_Pos decl_pos = source_pos(inst, found_decl);
+
+                assert(ident_pos.file_index == decl_pos.file_index);
 
                 const char* ident_string = atom_string(ident->atom).data;
                 instance_error(inst, ident_pos, "Reference to identifier '%s' before declaration", ident_string);

@@ -1,8 +1,8 @@
 // TODO:
+//  - local variables can shadow function names, probably dissalow this
 //  - report error for pointer diff with arithmethic assignment (changes left type)
 //  - align types
 //  - sizeof(), alignof(), offsetof()
-//  - test pointer math (requires arrays and/or sizeof())
 //  - #run
 //  - #insert
 
@@ -28,31 +28,44 @@
 
 printf :: (format: *u8, ..) -> s32 #foreign;
 malloc :: (size: s64) -> *void #foreign;
+free :: (ptr: *void) -> void #foreign;
 
 Vec :: struct {
     x: s64;
     y: s64;
 }
 
-print_v :: (v: *Vec) {
-    printf("{ %lld, %lld }\n".data, v.x, v.y);
-}
-
 main :: () -> int {
 
-    // TODO: sizeof
-    vecs := cast(*Vec, malloc(5 * 16));
-
-    v := vecs;
-    for i := 0; i < 5; i += 1; {
-        <v = { i + 1, i };
-        v += 1;
-    }
-
-    for i := 0; i < 5; i += 1; {
-        print_v(vecs + i);
-    }
+    vec_test();
 
     return 0;
 }
 
+vec_test :: () {
+
+    // Array of vectors
+    count := 5;
+    vecs := cast(*Vec, malloc(16 * count));
+
+    // // Write some values
+    for i := 0; i < count; i += 1; {
+
+        b := i + 1;
+        <(vecs + i) = { b, b * 3 };
+    }
+
+    // Test written values
+    for i := 0; i < 5; i += 1; {
+
+        b := i + 1;
+
+        v := vecs + i;
+
+        assert(v.x == b);
+        assert(v.y == b * 3);
+        printf("%d, %d\n".data, v.x, v.y);
+    }
+
+    free(cast(*void, vecs));
+}
