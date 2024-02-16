@@ -232,6 +232,12 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 if (!type_pointer_math(inst, task, ast_node(stmt), lvalue, rvalue, stmt->arithmetic_assignment.op, scope)) {
                     return false;
                 }
+
+                if (stmt->arithmetic_assignment.op == '-' && rvalue->resolved_type->kind != Type_Kind::INTEGER) {
+                    Source_Pos pos = source_pos(inst, rvalue);
+                    instance_fatal_error(inst, pos, "Expected integer type on right side of arithmethic assignment (pointer math), got: '%s'",
+                            temp_type_string(inst, rvalue->resolved_type).data);
+                }
             }
 
             if (!pointer_math && lvalue->resolved_type != rvalue->resolved_type) {

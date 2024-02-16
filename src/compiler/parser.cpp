@@ -89,6 +89,11 @@ AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi)
 {
     AST_Identifier* ident = parse_identifier(parser);
 
+    return parse_declaration(parser, ident, scope, eat_semi);
+}
+
+AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi)
+{
     // Report redeclarations in higher level scopes first
     if (scope_find_symbol(scope, ident->atom, nullptr)) {
         auto name = atom_string(ident->atom);
@@ -105,11 +110,15 @@ AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi)
         return nullptr;
     }
 
-    return parse_declaration(parser, ident, scope, eat_semi);
-}
+    if (parser->parsing_function_body && parser->current_function_name == ident->atom) {
+        auto name = atom_string(ident->atom);
 
-AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi)
-{
+        Source_Pos ident_pos = source_pos(parser->instance, ident);
+
+        instance_fatal_error(parser->instance, ident_pos, "Declaration shadows parent function: '%s'", name.data);
+        return nullptr;
+    }
+
     Source_Pos pos = source_pos(parser->instance, ident);
 
     AST_Declaration* result = nullptr;
@@ -157,20 +166,8 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
 
     if (!result) return nullptr;
 
-    if (!scope_add_symbol(scope, ident->atom, result)) {
-        auto name = atom_string(ident->atom);
-
-        auto ex_decl = scope_find_symbol(scope, ident->atom, nullptr);
-        assert(ex_decl);
-        assert(ex_decl->ident);
-
-        Source_Pos ident_pos = source_pos(parser->instance, ident);
-        Source_Pos decl_pos = source_pos(parser->instance, ex_decl);
-
-        instance_error(parser->instance, ident_pos, "Redeclaration of symbol: '%s'", name.data);
-        instance_fatal_error_note(parser->instance, decl_pos, "Previous declaration was here");
-        return nullptr;
-    }
+    bool scope_add_res = scope_add_symbol(scope, ident->atom, result, SCOPE_FIND_OPTS_NO_REDECL_CHECK);
+    assert(scope_add_res);
 
     return result;
 }
@@ -306,6 +303,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         assert(parser->next_index_in_function == 0); // TODO: push/pop when dealing with nested functions
         assert(!parser->parsing_function_body);
         parser->parsing_function_body = true;
+        parser->current_function_name = ident->atom;
 
         expect_token(parser, '{');
         while (!is_token(parser, '}')) {
@@ -324,6 +322,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         parser->next_index_in_function = 0;
         assert(parser->parsing_function_body);
         parser->parsing_function_body = false;
+        parser->current_function_name = 0;
 
         body_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
     } else {

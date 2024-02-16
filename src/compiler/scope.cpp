@@ -20,8 +20,10 @@ Scope* scope_new(Instance* instance, Scope_Kind kind, Scope* parent/*=nullptr*/)
 
 bool scope_add_symbol(Scope* scope, Atom atom, AST_Declaration* decl, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
 {
-    if (scope_find_symbol(scope, atom, nullptr, opts)) {
-        return false;
+    if (!(opts & SCOPE_FIND_OPTS_NO_REDECL_CHECK)) {
+        if (scope_find_symbol(scope, atom, nullptr, opts)) {
+            return false;
+        }
     }
 
     darray_append(&scope->symbols, { atom, decl });

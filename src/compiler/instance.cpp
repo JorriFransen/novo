@@ -384,7 +384,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         if (inst->entry_run_result.assert_fail) {
             log_warn("Bytecode vm quit after failed assert");
         }
-        log_trace("Bytecode vm returned: %llu\n", inst->entry_run_result.return_value);
+        log_debug("Bytecode vm returned: %llu\n", inst->entry_run_result.return_value);
     }
 
     return true;
