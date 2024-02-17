@@ -110,13 +110,18 @@ NINLINE u64 vm_get_register(VM* vm, u32 reg)
 
 VM_Result vm_run(VM* vm, SSA_Program* program)
 {
-    assert(program->entry_fn_index >= 0 && program->entry_fn_index < program->functions.count);
+    return vm_run(vm, program, program->entry_fn_index);
+}
+
+VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
+{
+    assert(fn_index >= 0 && fn_index < program->functions.count);
 
     vm->current_program = program;
-    vm->fn_index = program->entry_fn_index;
+    vm->fn_index = fn_index;
     vm->block_index = 0;
 
-    SSA_Function* fn = &vm->current_program->functions[vm->current_program->entry_fn_index];
+    SSA_Function* fn = &vm->current_program->functions[fn_index];
 
     if (fn->register_count > vm->register_count) {
         u32 reg_count = vm->register_count;

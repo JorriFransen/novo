@@ -1,6 +1,8 @@
 // TODO:
+//  - Make sure functions called in #run are emitted before emitting #run
+//  - #run expr with aggregate return type
+
 //  - sizeof(), alignof(), offsetof()
-//  - #run
 //  - #insert
 
 //  - // AST_DECL_FLAG_STORAGE_REQUIRED is only used for arguments/parameters?
@@ -22,32 +24,22 @@
 // putchar :: (char: s32) -> s32 #foreign;
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-printf :: (format: *u8, ..) -> s32 #foreign;
+// printf :: (format: *u8, ..) -> s32 #foreign;
 // malloc :: (size: s64) -> *void #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
-TEST :: struct {
-    a : u8;     // byte-offset  0
-    b : u16;    // byte-offset  2
-    c : u8;     // byte-offset  4
-    d : u32;    // byte-offset  8
-    e : u8;     // byte-offset 12
-    f : u64;    // byte-offset 16
-                //                + 8 = 24 = total-size
+
+fib :: (x: s64) -> s64 {
+
+    if x < 2 return x;
+
+    return fib(x - 1) + fib(x - 2);
 }
 
 main :: () -> int {
-
-    t : TEST;
-    t.a = 1;
-    t.b = 2;
-    t.c = 3;
-    t.d = 4;
-    t.e = 5;
-    t.f = 6;
-
-    printf("a = %hhu, b = %hu, c = %hhu, d = %u, e = %hhu, f = %llu\n".data, t.a, t.b, t.c, t.d, t.e, t.f);
-
-    return 0;
+    y := 1;
+    x := #run fib(20);
+    return x + y;
 }
 
+#run main();

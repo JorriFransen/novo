@@ -703,6 +703,28 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
+        case AST_Expression_Kind::RUN: {
+
+            AST_Expression* run_expr = expr->run.expression;
+            assert(run_expr->kind == AST_Expression_Kind::CALL);
+
+            if (suggested_type) assert(suggested_type->kind == Type_Kind::INTEGER);
+
+            if (!type_expression(inst, task, run_expr, scope, suggested_type)) {
+                return false;
+            }
+
+            if (run_expr->resolved_type->kind == Type_Kind::VOID) {
+                instance_fatal_error(inst, source_pos(inst, run_expr), "#run at expression level must return a value, got 'void'");
+            }
+
+            expr->resolved_type = run_expr->resolved_type;
+
+            add_ssa_task(inst, expr, scope);
+
+            break;
+        }
+
         case AST_Expression_Kind::INTEGER_LITERAL: {
 
             if (suggested_type) {

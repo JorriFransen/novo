@@ -308,6 +308,16 @@ AST_Expression* ast_compound_expression(Instance* inst, DArray<AST_Expression*> 
     return result;
 }
 
+AST_Expression* ast_run_expression(Instance* inst, AST_Expression* expr)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::RUN);
+    result->run.expression = expr;
+    result->run.done = false;
+    result->run.result_value = 0;
+    return result;
+}
+
+
 AST_Expression* ast_integer_literal_expression(Instance* inst, u64 i)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::INTEGER_LITERAL, AST_EXPR_FLAG_CONST);

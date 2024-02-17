@@ -519,6 +519,12 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
             break;
         }
 
+        case AST_Expression_Kind::RUN: {
+            string_builder_append(sb, "EXPR_RUN:\n");
+            ast_expr_to_string(inst, sb, expr->run.expression, indent + 1);
+            break;
+        }
+
         case AST_Expression_Kind::INTEGER_LITERAL: {
             string_builder_append(sb, "EXPR_INT: %llu\n", expr->integer_literal);
             break;

@@ -498,6 +498,26 @@ AST_Expression* parse_leaf_expression(Parser* parser)
             break;
         }
 
+        case '#': {
+            next_token(parser->lexer);
+
+            if (match_name(parser, "run")) {
+                AST_Expression* expr = parse_expression(parser);
+
+                if (expr->kind != AST_Expression_Kind::CALL) {
+                    instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #run");
+                }
+
+                result = ast_run_expression(parser->instance, expr);
+                pos = source_pos(pos, source_pos(parser->lexer));
+
+            } else {
+                instance_fatal_error(parser->instance, source_pos(parser->lexer), "Invalid directive at expression level. Expected 'run' after '#', got: '%s'", tmp_token_str(parser->lexer->token).data);
+            }
+            break;
+
+        }
+
         default: {
             assert(!result);
             auto tok_str = atom_string(ct.atom);

@@ -60,5 +60,6 @@ NAPI void vm_init(VM* vm, Allocator* allocator, Instance* inst);
 NAPI void vm_free(VM* vm);
 
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program);
+NAPI VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index);
 
 }

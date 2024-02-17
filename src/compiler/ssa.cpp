@@ -90,26 +90,33 @@ void ssa_program_free(SSA_Program* program)
 
 void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, AST_Declaration *decl)
 {
-    Type *func_type = decl->resolved_type;
+    bool foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
+    Source_Pos pos = source_pos(inst, decl);
+    ssa_function_init(inst, program, func, decl->resolved_type, decl->ident->atom, foreign, pos);
+}
 
-    func->name = decl->ident->atom;
+void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, Type* type, Atom name, bool foreign, Source_Pos source_pos)
+{
+    assert(type->kind == Type_Kind::FUNCTION);
+
+    func->name = name;
     func->register_count = 0;
-    func->param_count = func_type->function.param_types.count;
-    func->type = func_type;
+    func->param_count = type->function.param_types.count;
+    func->type = type;
     darray_init(program->allocator, &func->blocks);
     darray_init(program->allocator, &func->allocs);
     darray_init(program->allocator, &func->instruction_metadata, 0);
     func->total_alloc_size = 0;
 
-    ssa_block_create(program, func, "entry");
+    if (!foreign) ssa_block_create(program, func, "entry");
 
-    bool sret = func_type->function.return_type->kind == Type_Kind::STRUCT;
+    bool sret = type->function.return_type->kind == Type_Kind::STRUCT;
 
     func->sret = sret;
     if (sret) func->param_count++;
 
-    func->foreign = decl->flags & AST_DECL_FLAG_FOREIGN;
-    func->source_pos = source_pos(inst, decl);
+    func->foreign = foreign;
+    func->source_pos = source_pos;
 }
 
 void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name)
@@ -280,6 +287,49 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     temp_allocator_reset(&inst->temp_allocator_data, mark);
 
     return true;
+}
+
+s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* run_expr, Scope* scope)
+{
+    assert(run_expr->kind == AST_Expression_Kind::RUN);
+
+    AST_Expression* expr = run_expr->run.expression;
+    assert(expr->kind == AST_Expression_Kind::CALL);
+
+    Type* called_fn_type = expr->call.base->resolved_type;
+    assert(called_fn_type->kind == Type_Kind::FUNCTION);
+
+    Type* return_type = called_fn_type->function.return_type;
+    assert(return_type->kind == Type_Kind::INTEGER);
+
+    Type* wrapper_fn_type = function_type_get(inst, {}, return_type, TYPE_FLAG_NONE);
+
+    Source_Pos pos = source_pos(inst, run_expr);
+
+    SSA_Function local_func;
+    s64 fn_index = program->functions.count;
+    ssa_function_init(inst, program, &local_func, wrapper_fn_type, atom_get("run_wrapper"), false, pos);
+
+    darray_append(&program->functions, local_func);
+
+    SSA_Builder local_builder;
+    local_builder.instance = inst;
+    local_builder.program = program;
+    local_builder.function_index = fn_index;
+    local_builder.block_index = 0;
+
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+    stack_init(&inst->temp_allocator, &local_builder.break_info_stack, 0);
+
+    SSA_Builder* builder = &local_builder;
+
+    u32 result_reg = ssa_emit_expression(builder, expr, scope);
+    ssa_emit_op(builder, SSA_OP_RET);
+    ssa_emit_32(builder, result_reg);
+
+    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+    return fn_index;
 }
 
 bool ssa_find_function(SSA_Program* program, Atom atom, u32* index)
@@ -787,6 +837,8 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             }
         }
 
+        case AST_Expression_Kind::RUN: assert(false); break;
+
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
         case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
@@ -1055,6 +1107,16 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
         case AST_Expression_Kind::COMPOUND: {
             return ssa_emit_lvalue(builder, expr, scope);
+            break;
+        }
+
+        case AST_Expression_Kind::RUN: {
+
+            assert(expr->run.done);
+            assert(expr->resolved_type->kind == Type_Kind::INTEGER);
+
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->run.result_value);
+
             break;
         }
 
@@ -1520,6 +1582,8 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
             }
             break;
         }
+
+        case AST_Expression_Kind::RUN: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
             Type *inttype = const_expr->resolved_type;

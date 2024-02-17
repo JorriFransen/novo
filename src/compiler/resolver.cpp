@@ -403,11 +403,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             if (!(expr->member.base->flags & AST_EXPR_FLAG_TYPED)) {
 
-                Type_Task type_task = {
-                    .node = ast_node(expr->member.base),
-                    .scope = scope,
-                    .fn_decl = task->fn_decl,
-                };
+                Type_Task type_task = type_task_create(inst, ast_node(expr->member.base), scope, task->fn_decl);
                 if (!type_expression(inst, &type_task, expr->member.base, scope, nullptr)) {
                     return false;
                 }
@@ -506,6 +502,28 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             if (all_const) {
                 expr->flags |= AST_EXPR_FLAG_CONST;
+            }
+
+            break;
+        }
+
+        case AST_Expression_Kind::RUN: {
+
+            AST_Expression* run_expr = expr->run.expression;
+            assert(run_expr->kind == AST_Expression_Kind::CALL);
+
+            if (!resolve_expression(inst, task, run_expr, scope)) {
+                return false;
+            }
+
+            for (s64 i = 0; i < run_expr->call.args.count; i++) {
+
+                AST_Expression* arg_expr= run_expr->call.args[i];
+
+                if (!(arg_expr->flags & AST_EXPR_FLAG_CONST)) {
+                    instance_fatal_error(inst, source_pos(inst, arg_expr), "Argument expression inside #run must be a constant.");
+                }
+
             }
 
             break;

@@ -121,24 +121,45 @@ void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope)
 
 void add_type_task(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn)
 {
-    Type_Task task = {
-        .node = node,
-        .scope = scope,
-        .fn_decl = fn,
-        .waiting_for = nullptr,
-    };
+    Type_Task task = type_task_create(inst, node, scope, fn);
     darray_append(&inst->type_tasks, task);
 }
 
-void add_ssa_task(Instance* inst, AST_Node node)
+void add_ssa_task(Instance* inst, AST_Declaration* decl)
 {
-    assert(node.kind == AST_Node_Kind::DECLARATION);
-    assert(node.declaration->kind == AST_Declaration_Kind::FUNCTION);
+    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
     SSA_Task task = {
-        .func_decl = node.declaration,
+        .func_decl = decl,
+        .run_scope = nullptr,
+        .run_expr = nullptr,
+        .is_run = false,
     };
     darray_append(&inst->ssa_tasks, task);
+}
+
+void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope)
+{
+    assert(expr->kind == AST_Expression_Kind::RUN);
+
+    SSA_Task task = {
+        .func_decl = nullptr,
+        .run_scope = scope,
+        .run_expr = expr,
+        .is_run = true,
+    };
+    darray_append(&inst->ssa_tasks, task);
+}
+
+void add_run_task(Instance* inst, AST_Expression* run_expr, s64 wrapper_index)
+{
+    assert(run_expr->kind == AST_Expression_Kind::RUN);
+
+    Run_Task task = {
+        .run_expr = run_expr,
+        .wrapper_index = wrapper_index,
+    };
+    darray_append(&inst->run_tasks, task);
 }
 
 Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl)
@@ -151,6 +172,17 @@ Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AS
 
     // TODO: Dynamic allocator?
     stack_init(c_allocator(), &result.loop_control_stack, 0);
+
+    return result;
+}
+
+Type_Task type_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl)
+{
+    Type_Task result;
+    result.node = node;
+    result.scope = scope;
+    result.fn_decl = fn_decl;
+    result.waiting_for = nullptr;
 
     return result;
 }

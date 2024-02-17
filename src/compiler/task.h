@@ -40,6 +40,16 @@ struct Type_Task
 struct SSA_Task
 {
     AST_Declaration* func_decl;
+
+    Scope* run_scope;
+    AST_Expression* run_expr;
+    bool is_run;
+};
+
+struct Run_Task
+{
+    AST_Expression* run_expr;
+    s64 wrapper_index;
 };
 
 NAPI void add_parse_task(Instance* inst, Atom path);
@@ -51,8 +61,12 @@ NAPI void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope);
 
 NAPI void add_type_task(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn);
 
-NAPI void add_ssa_task(Instance* inst, AST_Node node);
+NAPI void add_ssa_task(Instance* inst, AST_Declaration* decl);
+NAPI void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope);
+
+NAPI void add_run_task(Instance* inst, AST_Expression* run_expr, s64 wrapper_index);
 
 NAPI Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl);
+NAPI Type_Task type_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl);
 
 }

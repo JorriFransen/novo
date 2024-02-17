@@ -145,6 +145,7 @@ NAPI void ssa_program_init(SSA_Program* program, Allocator* allocator);
 NAPI void ssa_program_free(SSA_Program* program);
 
 NAPI void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, AST_Declaration *decl);
+NAPI void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, Type* type, Atom name, bool foreign, Source_Pos source_pos);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, const char* name);
 
@@ -153,6 +154,8 @@ NAPI u32 ssa_block_create(SSA_Builder* builder, const char* name);
 NAPI u32 ssa_register_create(SSA_Builder* builder);
 
 NAPI bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl);
+
+NAPI s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* run_expr, Scope* scope);
 
 NAPI bool ssa_find_function(SSA_Program* program, Atom atom, u32* index);
 NAPI bool ssa_find_alloc(SSA_Builder* builder, AST_Node* node, u32* result);

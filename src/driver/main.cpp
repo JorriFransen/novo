@@ -20,12 +20,5 @@ int main(int argc, char* argv[])
     }
 
     instance_free(&instance);
-
-    u64 o = 1;
-    u64 a = 8;
-
-    u64 r = get_aligned(o, a);
-
-    log_info("get_aligned(%llu, %llu) = %llu", o, a, r);
     return 0;
 }

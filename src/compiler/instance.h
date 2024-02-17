@@ -22,6 +22,7 @@ struct AST_Statement;
 struct AST_Type_Spec;
 struct Parse_Task;
 struct Resolve_Task;
+struct Run_Task;
 struct Scope;
 struct Source_Pos;
 struct SSA_Program;
@@ -56,6 +57,7 @@ struct Instance
     DArray<Resolve_Task> resolve_tasks;
     DArray<Type_Task> type_tasks;
     DArray<SSA_Task> ssa_tasks;
+    DArray<Run_Task> run_tasks;
 
     Scope* global_scope;
 

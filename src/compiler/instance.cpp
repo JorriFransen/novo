@@ -50,6 +50,7 @@ void instance_init(Instance* inst, Options options)
     darray_init(default_alloc, &inst->resolve_tasks);
     darray_init(default_alloc, &inst->type_tasks);
     darray_init(default_alloc, &inst->ssa_tasks);
+    darray_init(default_alloc, &inst->run_tasks);
 
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
@@ -168,6 +169,7 @@ void instance_free(Instance* inst)
     darray_free(&inst->resolve_tasks);
     darray_free(&inst->type_tasks);
     darray_free(&inst->ssa_tasks);
+    darray_free(&inst->run_tasks);
 
     darray_free(&inst->imported_files);
     darray_free(&inst->function_types);
@@ -283,7 +285,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 if (task->node.kind == AST_Node_Kind::DECLARATION &&
                     task->node.declaration->kind == AST_Declaration_Kind::FUNCTION) {
 
-                    add_ssa_task(inst, task->node);
+                    add_ssa_task(inst, task->node.declaration);
 
                 }
 
@@ -298,32 +300,62 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             bool success;
 
-            auto wait_for = &task.func_decl->function.wait_for_bytecode;
-            for (s64 i = 0; i < wait_for->count; i++) {
-                auto wait_node = (*wait_for)[i];
-                assert(wait_node.kind == AST_Node_Kind::DECLARATION);
-                auto decl = wait_node.declaration;
-                assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-                assert(decl->ident);
+            if (task.is_run) {
 
-                if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
-                    darray_remove_ordered(wait_for, i);
-                    i--;
+                s64 wrapper_index = ssa_emit_run_wrapper(inst, inst->ssa_program, task.run_expr, task.run_scope);
+                success = wrapper_index >= 0;
+
+                if (success) {
+                    add_run_task(inst, task.run_expr, wrapper_index);
+                }
+
+            } else {
+
+                auto wait_for = &task.func_decl->function.wait_for_bytecode;
+
+                for (s64 i = 0; i < wait_for->count; i++) {
+                    auto wait_node = (*wait_for)[i];
+                    assert(wait_node.kind == AST_Node_Kind::DECLARATION);
+                    auto decl = wait_node.declaration;
+                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+                    assert(decl->ident);
+
+                    if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
+                        darray_remove_ordered(wait_for, i);
+                        i--;
+                    }
+                }
+
+                success = wait_for->count == 0;
+
+                if (success) {
+
+                    success = ssa_emit_function(inst, inst->ssa_program, task.func_decl);
+                    assert(success);
                 }
             }
 
-            success = wait_for->count == 0;
-
             if (success) {
-
-                success = ssa_emit_function(inst, inst->ssa_program, task.func_decl);
-                assert(success);
-
                 progress = true;
-
                 darray_remove_unordered(&inst->ssa_tasks, i);
                 i--;
             }
+        }
+
+
+        for (s64 i = 0; i < inst->run_tasks.count; i++) {
+            Run_Task* task = &inst->run_tasks[i];
+            assert(!task->run_expr->run.done);
+
+            VM_Result run_result = vm_run(&inst->vm, inst->ssa_program, task->wrapper_index);
+            assert(!run_result.assert_fail);
+
+            task->run_expr->run.result_value = run_result.return_value;
+            task->run_expr->run.done = true;
+
+            progress = true;
+            darray_remove_unordered(&inst->run_tasks, i);
+            i--;
         }
     }
 
