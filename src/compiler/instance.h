@@ -69,6 +69,8 @@ struct Instance
     VM vm;
     VM_Result entry_run_result;
 
+    s64 pointer_byte_size;
+
     Type* builtin_type_void;
     Type* builtin_type_u8;
     Type* builtin_type_u16;

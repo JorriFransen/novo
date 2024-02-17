@@ -72,6 +72,9 @@ void instance_init(Instance* inst, Options options)
     // TODO: Custom allocator
     vm_init(&inst->vm, c_allocator(), inst);
 
+    assert(sizeof(void*) == 8);
+    inst->pointer_byte_size = 8;
+
     inst->builtin_type_void = void_type_new(inst);
     auto void_decl = ast_builtin_type_decl(inst, inst->builtin_type_void, "void");
     scope_add_symbol(inst->global_scope, void_decl->ident->atom, void_decl);
@@ -384,7 +387,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         if (inst->entry_run_result.assert_fail) {
             log_warn("Bytecode vm quit after failed assert");
         }
-        log_debug("Bytecode vm returned: %llu\n", inst->entry_run_result.return_value);
+        log_debug("Bytecode vm returned: %llu", inst->entry_run_result.return_value);
     }
 
     return true;

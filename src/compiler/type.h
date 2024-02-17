@@ -45,6 +45,7 @@ struct Type
     Type_Kind kind;
     Type_Flags flags;
     u32 bit_size;
+    u32 alignment; // in bytes
 
     Type *pointer_to;
 
@@ -70,7 +71,7 @@ struct Type
     };
 };
 
-NAPI Type* type_new(Instance* instance, Type_Kind kind, Type_Flags flags, u32 bit_size);
+NAPI Type* type_new(Instance* instance, Type_Kind kind, Type_Flags flags, u32 bit_size, u32 alignment);
 NAPI Type* void_type_new(Instance* inst);
 NAPI Type* integer_type_new(Instance* inst, bool sign, u32 bit_size);
 NAPI Type* boolean_type_new(Instance* inst, u32 bit_size);

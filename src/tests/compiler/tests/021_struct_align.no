@@ -1,0 +1,33 @@
+
+// TODO: Beter test when there is more language features.
+
+TEST :: struct {
+    a : u8;     // byte-offset  0
+    b : u16;    // byte-offset  2
+    c : u8;     // byte-offset  4
+    d : u32;    // byte-offset  8
+    e : u8;     // byte-offset 12
+    f : u64;    // byte-offset 16
+                //                + 8 = 24 = total-size
+}
+
+
+main :: () -> int {
+
+    t : TEST;
+    t.a = 1;
+    t.b = 2;
+    t.c = 3;
+    t.d = 4;
+    t.e = 5;
+    t.f = 6;
+
+    assert(t.a == 1);
+    assert(t.b == 2);
+    assert(t.c == 3);
+    assert(t.d == 4);
+    assert(t.e == 5);
+    assert(t.f == 6);
+
+    return 0;
+}

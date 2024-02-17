@@ -44,6 +44,7 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/019_zext.no" },
 
     { .file_path = "tests/020_pointer_math.no" },
+    { .file_path = "tests/021_struct_align.no" },
 };
 
 static bool run_test_case(Test_Case* tc)

@@ -9,32 +9,35 @@
 
 namespace Novo {
 
-Type* type_new(Instance* instance, Type_Kind kind, Type_Flags flags, u32 bit_size)
+Type* type_new(Instance* instance, Type_Kind kind, Type_Flags flags, u32 bit_size, u32 alignment)
 {
     auto result = allocate<Type>(&instance->ast_allocator);
     result->kind = kind;
     result->flags = flags;
     result->bit_size = bit_size;
+    result->alignment = alignment;
     result->pointer_to = nullptr;
     return result;
 }
 
 Type* void_type_new(Instance* inst)
 {
-    auto result = type_new(inst, Type_Kind::VOID, TYPE_FLAG_NONE, 0);
+    auto result = type_new(inst, Type_Kind::VOID, TYPE_FLAG_NONE, 0, 0);
     return result;
 }
 
 Type* integer_type_new(Instance* instance, bool sign, u32 bit_size)
 {
-    auto result = type_new(instance, Type_Kind::INTEGER, TYPE_FLAG_NONE, bit_size);
+    assert(bit_size % 8 == 0);
+    auto result = type_new(instance, Type_Kind::INTEGER, TYPE_FLAG_NONE, bit_size, bit_size / 8);
     result->integer.sign = sign;
     return result;
 }
 
 Type* boolean_type_new(Instance* inst, u32 bit_size)
 {
-    auto result = type_new(inst, Type_Kind::BOOLEAN, TYPE_FLAG_NONE, bit_size);
+    assert(bit_size % 8 == 0);
+    auto result = type_new(inst, Type_Kind::BOOLEAN, TYPE_FLAG_NONE, bit_size, bit_size / 8);
     return result;
 }
 
@@ -42,7 +45,7 @@ Type* pointer_type_new(Instance* inst, Type* base)
 {
     assert(!base->pointer_to);
 
-    auto result = type_new(inst, Type_Kind::POINTER, TYPE_FLAG_NONE, 64);
+    auto result = type_new(inst, Type_Kind::POINTER, TYPE_FLAG_NONE, inst->pointer_byte_size * 8, inst->pointer_byte_size);
     result->pointer.base = base;
     base->pointer_to = result;
 
@@ -51,7 +54,7 @@ Type* pointer_type_new(Instance* inst, Type* base)
 
 Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type, Type_Flags flags)
 {
-    auto result = type_new(inst, Type_Kind::FUNCTION, flags, 64);
+    auto result = type_new(inst, Type_Kind::FUNCTION, flags, inst->pointer_byte_size * 8, inst->pointer_byte_size);
     result->function.param_types = param_types;
     result->function.return_type = return_type;
     return result;
@@ -63,21 +66,28 @@ Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, 
     darray_init(&inst->ast_allocator, &members, member_types.count);
 
     s64 total_size = 0;
-    u32 current_offset = 0;
+    u32 max_alignment = 1;
 
     for (s64 i = 0; i < member_types.count; i++) {
-        total_size += member_types[i]->bit_size;
 
         Type_Struct_Member member;
-        member.type = member_types[i];
-        member.offset = current_offset;
+        Type* member_type = member_types[i];
+        member.type = member_type;
+
+        s64 member_size = member_type->bit_size;
+        assert(member_size % 8 == 0);
+
+        total_size = get_aligned(total_size, member_type->alignment * 8);
+        max_alignment = max(max_alignment, member_type->alignment);
+
+        member.offset = total_size;
 
         darray_append(&members, member);
 
-        current_offset += member_types[i]->bit_size;
+        total_size += member_size;
     }
 
-    auto result = type_new(inst, Type_Kind::STRUCT, TYPE_FLAG_NONE, total_size);
+    auto result = type_new(inst, Type_Kind::STRUCT, TYPE_FLAG_NONE, total_size, max_alignment);
     result->structure.name = name;
     result->structure.members = members;
     result->structure.scope = scope;
