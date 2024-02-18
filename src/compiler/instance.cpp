@@ -297,7 +297,33 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         for (s64 i = 0; i < inst->ssa_tasks.count; i++) {
             SSA_Task task = inst->ssa_tasks[i];
 
-            // assert(task.bytecode_deps);
+            assert(task.bytecode_deps);
+
+            auto wait_for = task.bytecode_deps;
+
+            for (s64 i = 0; i < wait_for->count; i++) {
+                auto wait_node = (*wait_for)[i];
+                if (wait_node.kind == AST_Node_Kind::DECLARATION) {
+                    auto decl = wait_node.declaration;
+                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+                    assert(decl->ident);
+
+                    if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
+                        darray_remove_ordered(wait_for, i);
+                        i--;
+                    }
+                } else {
+                    assert(wait_node.kind == AST_Node_Kind::EXPRESSION);
+                    assert(wait_node.expression->kind == AST_Expression_Kind::RUN);
+
+                    if (wait_node.expression->run.done) {
+                        darray_remove_ordered(wait_for, i);
+                        i--;
+                    }
+                }
+            }
+
+            if (wait_for->count != 0) continue;
 
             bool success;
 
@@ -312,38 +338,17 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             } else {
 
-                // auto wait_for = &task.func_decl->function.wait_for_bytecode;
-                auto wait_for = task.bytecode_deps;
-
-                for (s64 i = 0; i < wait_for->count; i++) {
-                    auto wait_node = (*wait_for)[i];
-                    assert(wait_node.kind == AST_Node_Kind::DECLARATION);
-                    auto decl = wait_node.declaration;
-                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-                    assert(decl->ident);
-
-                    if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
-                        darray_remove_ordered(wait_for, i);
-                        i--;
-                    }
-                }
-
-                success = wait_for->count == 0;
-
-                if (success) {
-
-                    success = ssa_emit_function(inst, inst->ssa_program, task.func_decl);
-                    assert(success);
-
-                    darray_free(task.bytecode_deps);
-                    free(c_allocator(), task.bytecode_deps);
-                }
+                success = ssa_emit_function(inst, inst->ssa_program, task.func_decl);
+                assert(success);
             }
 
             if (success) {
                 progress = true;
                 darray_remove_unordered(&inst->ssa_tasks, i);
                 i--;
+
+                darray_free(task.bytecode_deps);
+                free(c_allocator(), task.bytecode_deps);
             }
         }
 

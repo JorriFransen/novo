@@ -629,7 +629,8 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             AST_Declaration* callee_decl = base->identifier->decl;
 
             assert(callee_decl);
-            if (callee_decl != task->fn_decl && task->bytecode_deps) {
+            if (callee_decl != task->fn_decl) {
+                assert(task->bytecode_deps);
                 darray_append_unique(task->bytecode_deps, ast_node(callee_decl));
             }
             break;
@@ -718,7 +719,15 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             if (suggested_type) assert(suggested_type->kind == Type_Kind::INTEGER);
 
+            DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
+
+            task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
+            darray_init(c_allocator(), task->bytecode_deps);
+
             if (!type_expression(inst, task, run_expr, scope, suggested_type)) {
+                darray_free(task->bytecode_deps);
+                free(c_allocator(), task->bytecode_deps);
+                task->bytecode_deps = old_bc_deps;
                 return false;
             }
 
@@ -728,7 +737,11 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             expr->resolved_type = run_expr->resolved_type;
 
-            add_ssa_task(inst, expr, scope, nullptr);
+            add_ssa_task(inst, expr, scope, task->bytecode_deps);
+
+            task->bytecode_deps = old_bc_deps;
+
+            darray_append(task->bytecode_deps, ast_node(expr));
 
             break;
         }

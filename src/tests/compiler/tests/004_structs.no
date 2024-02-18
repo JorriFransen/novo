@@ -11,10 +11,6 @@ main :: () -> s64 {
     return 0;
 }
 
-
-
-
-
 Vec :: struct {
     x: s64;
     y: s64;

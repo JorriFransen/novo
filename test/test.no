@@ -28,17 +28,16 @@
 // malloc :: (size: s64) -> *void #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
-fib :: (x: s64) -> s64 {
-
-    if x < 2 return x;
-
-    return fib(x - 1) + fib(x - 2);
-}
-
 main :: () -> int {
     y := 1;
     x := #run fib(20);
     return x + y;
 }
 
+fib :: (x: s64) -> s64 {
+
+    if x < 2 return x;
+
+    return fib(x - 1) + fib(x - 2);
+}
 
