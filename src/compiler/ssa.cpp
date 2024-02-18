@@ -99,6 +99,10 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
 {
     assert(type->kind == Type_Kind::FUNCTION);
 
+    for (s64 i = 0; i < program->functions.count; i++) {
+        assert(program->functions[i].name != name && "Duplicate ssa function name!");
+    }
+
     func->name = name;
     func->register_count = 0;
     func->param_count = type->function.param_types.count;
@@ -305,10 +309,18 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* r
     Type* wrapper_fn_type = function_type_get(inst, {}, return_type, TYPE_FLAG_NONE);
 
     Source_Pos pos = source_pos(inst, run_expr);
+    Imported_File file = inst->imported_files[pos.file_index];
+
+
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+
+    String initial_name = string_format(&inst->temp_allocator, "run_wrapper.%s.%u.%u", atom_string(file.path).data, pos.offset, pos.length);
+    Atom name = ssa_unique_function_name(inst, program, initial_name);
+    temp_allocator_reset(&inst->temp_allocator_data, mark);
 
     SSA_Function local_func;
     s64 fn_index = program->functions.count;
-    ssa_function_init(inst, program, &local_func, wrapper_fn_type, atom_get("run_wrapper"), false, pos);
+    ssa_function_init(inst, program, &local_func, wrapper_fn_type, name, false, pos);
 
     darray_append(&program->functions, local_func);
 
@@ -318,7 +330,6 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* r
     local_builder.function_index = fn_index;
     local_builder.block_index = 0;
 
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
     stack_init(&inst->temp_allocator, &local_builder.break_info_stack, 0);
 
     SSA_Builder* builder = &local_builder;
@@ -1680,6 +1691,34 @@ u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type)
     }
 
     return result;
+}
+
+Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref name)
+{
+    String_Ref original_name = name;
+
+    bool unique = true;
+    u64 counter = 1;
+
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+
+    do {
+        for (s64 i = 0; i < program->functions.count; i++) {
+            if (string_equal(name, atom_string(program->functions[i].name))) {
+                unique = false;
+                break;
+            }
+        }
+
+        if (!unique) {
+            name = string_format(&inst->temp_allocator, "%.*s.%llu", (int)original_name.length, original_name.data, counter++);
+        }
+
+    } while (!unique);
+
+    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+    return atom_get(name);
 }
 
 String ssa_to_string(Instance* inst, Allocator* allocator, SSA_Program* program)

@@ -1,5 +1,4 @@
 // TODO:
-//  - Make sure functions called in #run are emitted before emitting #run
 //  - #run expr with aggregate return type
 
 //  - sizeof(), alignof(), offsetof()
@@ -31,7 +30,8 @@
 main :: () -> int {
     y := 1;
     x := #run fib(20);
-    return x + y;
+    x2 := #run fib(2);
+    return x + y + x2;
 }
 
 fib :: (x: s64) -> s64 {

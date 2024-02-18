@@ -204,6 +204,8 @@ NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 NAPI u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
 NAPI u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type);
 
+NAPI Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref name);
+
 NAPI String ssa_to_string(Instance* inst, Allocator* allocator, SSA_Program* program);
 NAPI void ssa_print(Instance* inst, String_Builder* sb, SSA_Program* program);
 NAPI s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes);
