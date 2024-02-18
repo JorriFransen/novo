@@ -97,7 +97,6 @@ struct AST_Declaration
             DArray<AST_Statement *> body;
             DArray<AST_Declaration *> variables;
             DArray<AST_Expression *> temp_structs;
-            DArray<AST_Node> wait_for_bytecode;
 
             Scope* scope;
 

@@ -624,6 +624,14 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
                 darray_append_unique(&task->fn_decl->function.temp_structs, expr);
             }
+
+            assert(base->kind == AST_Expression_Kind::IDENTIFIER);
+            AST_Declaration* callee_decl = base->identifier->decl;
+
+            assert(callee_decl);
+            if (callee_decl != task->fn_decl && task->bytecode_deps) {
+                darray_append_unique(task->bytecode_deps, ast_node(callee_decl));
+            }
             break;
         }
 
@@ -720,7 +728,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             expr->resolved_type = run_expr->resolved_type;
 
-            add_ssa_task(inst, expr, scope);
+            add_ssa_task(inst, expr, scope, nullptr);
 
             break;
         }

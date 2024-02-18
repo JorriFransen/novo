@@ -111,7 +111,6 @@ AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident,
     result->function.scope = scope;
     darray_init(&inst->ast_allocator, &result->function.variables, 0);
     darray_init(&inst->ast_allocator, &result->function.temp_structs, 0);
-    darray_init(&inst->ast_allocator, &result->function.wait_for_bytecode, 0);
 
     return result;
 }

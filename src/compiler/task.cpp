@@ -33,12 +33,12 @@ void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)
             case AST_Node_Kind::INVALID: assert(false); break;
 
             case AST_Node_Kind::DECLARATION: {
-                add_resolve_tasks(inst, node.declaration, scope, nullptr);
+                add_resolve_tasks(inst, node.declaration, scope, nullptr, nullptr);
                 break;
             }
 
             case AST_Node_Kind::STATEMENT: {
-                add_resolve_tasks(inst, node.statement, scope, nullptr);
+                add_resolve_tasks(inst, node.statement, scope, nullptr, nullptr);
                 break;
             }
 
@@ -48,7 +48,7 @@ void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)
     }
 }
 
-void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_Declaration* fn)
+void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps)
 {
     switch (decl->kind) {
 
@@ -63,8 +63,12 @@ void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_
 
             Scope* fn_scope = decl->function.scope;
 
+            // TODO: Dynamic allocator
+            auto fn_deps = allocate<DArray<AST_Node>>(c_allocator());
+            darray_init(c_allocator(), fn_deps, 0);
+
             for (s64 i = 0; i < decl->function.params.count; i++) {
-                add_resolve_tasks(inst, decl->function.params[i], fn_scope, decl);
+                add_resolve_tasks(inst, decl->function.params[i], fn_scope, decl, bc_deps);
             }
 
             if (decl->function.return_ts) {
@@ -72,20 +76,21 @@ void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_
             }
 
             for (s64 i = 0; i < decl->function.body.count; i++) {
-                add_resolve_tasks(inst, decl->function.body[i], fn_scope, decl);
+                add_resolve_tasks(inst, decl->function.body[i], fn_scope, decl, fn_deps);
             }
 
+            bc_deps = fn_deps;
             break;
         }
 
         case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
     }
 
-    Resolve_Task decl_task = resolve_task_create(inst, ast_node(decl), scope, fn);
+    Resolve_Task decl_task = resolve_task_create(inst, ast_node(decl), scope, fn, bc_deps);
     darray_append(&inst->resolve_tasks, decl_task);
 }
 
-void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_Declaration* fn)
+void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps)
 {
     switch (stmt->kind) {
 
@@ -104,7 +109,7 @@ void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_De
         case AST_Statement_Kind::BLOCK:
         case AST_Statement_Kind::ASSERT: {
 
-            Resolve_Task task = resolve_task_create(inst, ast_node(stmt), scope, fn);
+            Resolve_Task task = resolve_task_create(inst, ast_node(stmt), scope, fn, bc_deps);
 
             darray_append(&inst->resolve_tasks, task);
             break;
@@ -115,22 +120,23 @@ void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_De
 
 void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope)
 {
-    Resolve_Task task = resolve_task_create(inst, ast_node(ts), scope, nullptr);
+    Resolve_Task task = resolve_task_create(inst, ast_node(ts), scope, nullptr, nullptr);
     darray_append(&inst->resolve_tasks, task);
 }
 
-void add_type_task(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn)
+void add_type_task(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps)
 {
-    Type_Task task = type_task_create(inst, node, scope, fn);
+    Type_Task task = type_task_create(inst, node, scope, fn, bc_deps);
     darray_append(&inst->type_tasks, task);
 }
 
-void add_ssa_task(Instance* inst, AST_Declaration* decl)
+void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_deps)
 {
     assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
     SSA_Task task = {
         .func_decl = decl,
+        .bytecode_deps = bc_deps,
         .run_scope = nullptr,
         .run_expr = nullptr,
         .is_run = false,
@@ -138,12 +144,13 @@ void add_ssa_task(Instance* inst, AST_Declaration* decl)
     darray_append(&inst->ssa_tasks, task);
 }
 
-void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope)
+void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST_Node> *bc_deps)
 {
     assert(expr->kind == AST_Expression_Kind::RUN);
 
     SSA_Task task = {
         .func_decl = nullptr,
+        .bytecode_deps = bc_deps,
         .run_scope = scope,
         .run_expr = expr,
         .is_run = true,
@@ -162,7 +169,7 @@ void add_run_task(Instance* inst, AST_Expression* run_expr, s64 wrapper_index)
     darray_append(&inst->run_tasks, task);
 }
 
-Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl)
+Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps)
 {
     Resolve_Task result;
     result.node = node;
@@ -173,16 +180,19 @@ Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AS
     // TODO: Dynamic allocator?
     stack_init(c_allocator(), &result.loop_control_stack, 0);
 
+    result.bytecode_deps = bc_deps;
+
     return result;
 }
 
-Type_Task type_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl)
+Type_Task type_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps)
 {
     Type_Task result;
     result.node = node;
     result.scope = scope;
     result.fn_decl = fn_decl;
     result.waiting_for = nullptr;
+    result.bytecode_deps = bc_deps;
 
     return result;
 }

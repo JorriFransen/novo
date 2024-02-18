@@ -25,7 +25,6 @@
 #include <stdlib.h>
 
 namespace Novo {
-
 void instance_init(Instance* inst, Options options)
 {
     inst->options = options;
@@ -267,7 +266,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 darray_remove_unordered(&inst->resolve_tasks, i);
                 i--;
 
-                add_type_task(inst, task.node, task.scope, task.fn_decl);
+                add_type_task(inst, task.node, task.scope, task.fn_decl, task.bytecode_deps);
 
                 stack_free(&task.loop_control_stack);
 
@@ -285,7 +284,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 if (task->node.kind == AST_Node_Kind::DECLARATION &&
                     task->node.declaration->kind == AST_Declaration_Kind::FUNCTION) {
 
-                    add_ssa_task(inst, task->node.declaration);
+                    add_ssa_task(inst, task->node.declaration, task->bytecode_deps);
 
                 }
 
@@ -297,6 +296,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
         for (s64 i = 0; i < inst->ssa_tasks.count; i++) {
             SSA_Task task = inst->ssa_tasks[i];
+
+            // assert(task.bytecode_deps);
 
             bool success;
 
@@ -311,7 +312,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             } else {
 
-                auto wait_for = &task.func_decl->function.wait_for_bytecode;
+                // auto wait_for = &task.func_decl->function.wait_for_bytecode;
+                auto wait_for = task.bytecode_deps;
 
                 for (s64 i = 0; i < wait_for->count; i++) {
                     auto wait_node = (*wait_for)[i];
@@ -332,6 +334,9 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                     success = ssa_emit_function(inst, inst->ssa_program, task.func_decl);
                     assert(success);
+
+                    darray_free(task.bytecode_deps);
+                    free(c_allocator(), task.bytecode_deps);
                 }
             }
 
