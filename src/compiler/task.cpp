@@ -158,12 +158,13 @@ void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST
     darray_append(&inst->ssa_tasks, task);
 }
 
-void add_run_task(Instance* inst, AST_Expression* run_expr, s64 wrapper_index)
+void add_run_task(Instance* inst, AST_Expression* run_expr, Scope* scope, s64 wrapper_index)
 {
     assert(run_expr->kind == AST_Expression_Kind::RUN);
 
     Run_Task task = {
         .run_expr = run_expr,
+        .scope = scope,
         .wrapper_index = wrapper_index,
     };
     darray_append(&inst->run_tasks, task);

@@ -304,7 +304,6 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* r
     assert(called_fn_type->kind == Type_Kind::FUNCTION);
 
     Type* return_type = called_fn_type->function.return_type;
-    assert(return_type->kind == Type_Kind::INTEGER);
 
     Type* wrapper_fn_type = function_type_get(inst, {}, return_type, TYPE_FLAG_NONE);
 
@@ -323,6 +322,8 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* r
     ssa_function_init(inst, program, &local_func, wrapper_fn_type, name, false, pos);
 
     darray_append(&program->functions, local_func);
+    SSA_Function* func = &program->functions[fn_index];
+
 
     SSA_Builder local_builder;
     local_builder.instance = inst;
@@ -334,9 +335,21 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* r
 
     SSA_Builder* builder = &local_builder;
 
+    bool sret = return_type->kind == Type_Kind::STRUCT;
+    u32 sret_alloc_reg = 0;
+
+    if (sret) {
+        sret_alloc_reg = ssa_emit_alloc(builder, return_type->bit_size);
+        darray_append(&func->allocs, { ast_node(expr), sret_alloc_reg });
+    }
+
     u32 result_reg = ssa_emit_expression(builder, expr, scope);
     ssa_emit_op(builder, SSA_OP_RET);
-    ssa_emit_32(builder, result_reg);
+    if (sret) {
+        ssa_emit_32(builder, sret_alloc_reg);
+    } else {
+        ssa_emit_32(builder, result_reg);
+    }
 
     temp_allocator_reset(&inst->temp_allocator_data, mark);
 
@@ -848,7 +861,14 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             }
         }
 
-        case AST_Expression_Kind::RUN: assert(false); break;
+        case AST_Expression_Kind::RUN: {
+            assert(lvalue_expr->run.generated_expression);
+            assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
+
+            assert(false);
+
+            break;
+        }
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
@@ -1123,10 +1143,9 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
         case AST_Expression_Kind::RUN: {
 
-            assert(expr->run.done);
-            assert(expr->resolved_type->kind == Type_Kind::INTEGER);
+            assert(expr->run.generated_expression);
 
-            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, expr->run.result_value);
+            result_reg = ssa_emit_expression(builder, expr->run.generated_expression, scope);
 
             break;
         }

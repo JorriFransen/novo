@@ -316,7 +316,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                     assert(wait_node.kind == AST_Node_Kind::EXPRESSION);
                     assert(wait_node.expression->kind == AST_Expression_Kind::RUN);
 
-                    if (wait_node.expression->run.done) {
+                    if (wait_node.expression->run.generated_expression) {
                         darray_remove_ordered(wait_for, i);
                         i--;
                     }
@@ -333,7 +333,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 success = wrapper_index >= 0;
 
                 if (success) {
-                    add_run_task(inst, task.run_expr, wrapper_index);
+                    add_run_task(inst, task.run_expr, task.run_scope, wrapper_index);
                 }
 
             } else {
@@ -355,13 +355,28 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
         for (s64 i = 0; i < inst->run_tasks.count; i++) {
             Run_Task* task = &inst->run_tasks[i];
-            assert(!task->run_expr->run.done);
+            assert(!task->run_expr->run.generated_expression);
 
             VM_Result run_result = vm_run(&inst->vm, inst->ssa_program, task->wrapper_index);
             assert(!run_result.assert_fail);
 
-            task->run_expr->run.result_value = run_result.return_value;
-            task->run_expr->run.done = true;
+            assert(!task->run_expr->run.generated_expression);
+
+            AST_Expression* gen_expr = const_expr_from_vm_result(inst, run_result);
+            task->run_expr->run.generated_expression = gen_expr;
+
+            assert(gen_expr);
+
+            Resolve_Task resolve_task = resolve_task_create(inst, ast_node(gen_expr), task->scope, nullptr, nullptr);
+            bool resolve_result = resolve_node(inst, &resolve_task, &resolve_task.node, resolve_task.scope);
+            assert(resolve_result);
+
+            Type_Task type_task = type_task_create(inst, ast_node(gen_expr), task->scope, nullptr, nullptr);
+            bool type_result = type_node(inst, &type_task, &type_task.node, type_task.scope);
+            assert(type_result);
+
+            assert(gen_expr->resolved_type == run_result.type);
+            assert(gen_expr->flags & AST_EXPR_FLAG_CONST);
 
             progress = true;
             darray_remove_unordered(&inst->run_tasks, i);

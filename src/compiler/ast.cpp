@@ -311,8 +311,7 @@ AST_Expression* ast_run_expression(Instance* inst, AST_Expression* expr)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::RUN);
     result->run.expression = expr;
-    result->run.done = false;
-    result->run.result_value = 0;
+    result->run.generated_expression = nullptr;
     return result;
 }
 

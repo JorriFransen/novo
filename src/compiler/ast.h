@@ -285,8 +285,7 @@ struct AST_Expression
 
         struct {
             AST_Expression* expression;
-            bool done;
-            u64 result_value;
+            AST_Expression* generated_expression;
         } run;
 
         u64 integer_literal;

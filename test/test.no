@@ -23,21 +23,30 @@
 // putchar :: (char: s32) -> s32 #foreign;
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-// printf :: (format: *u8, ..) -> s32 #foreign;
+printf :: (format: *u8, ..) -> s32 #foreign;
 // malloc :: (size: s64) -> *void #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
+// Vec :: struct {
+//     x: s64;
+//     y: s64;
+// }
+//
+// vec :: (x: s64, y: s64) -> Vec {
+//     return { x, y };
+// }
+
 main :: () -> int {
-    y := 1;
-    x := #run fib(20);
-    x2 := #run fib(2);
-    return x + y + x2;
+    // v := #run vec(11, 22);
+    // printf("{ %lld, %lld }\n".data, v.x, v.y);
+
+    f := #run fib(10);
+    return f;
 }
 
-fib :: (x: s64) -> s64 {
+fib :: (x: int) -> int {
 
     if x < 2 return x;
 
     return fib(x - 1) + fib(x - 2);
 }
-

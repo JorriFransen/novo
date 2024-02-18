@@ -7,6 +7,7 @@
 #include <memory/allocator.h>
 #include <nstring.h>
 
+#include "ast.h"
 #include "atom.h"
 #include "ffi.h"
 #include "instance.h"
@@ -642,6 +643,8 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
 
                 u64 value = vm_get_register(vm, value_reg);
 
+                SSA_Function* old_fn = &vm->current_program->functions[vm->fn_index];
+
                 vm->register_offset = stack_pop(&vm->register_stack);
                 vm->block_index = stack_pop(&vm->register_stack);
                 vm->fn_index = stack_pop(&vm->register_stack);
@@ -674,7 +677,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
 
                 if (old_bp == vm->bp) {
                     assert(vm->register_stack.sp == 0);
-                    return { value, false };
+                    return { old_fn->type->function.return_type, value, false };
 
                 } else {
 
@@ -798,7 +801,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
                         instance_error(vm->instance, pos, "[Bytecode] Assertion failed!");
                     }
 
-                    return { 42, true };
+                    return { vm->instance->builtin_type_int, 42, true };
                 }
                 break;
             }
@@ -806,7 +809,27 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
     }
 
     assert(false);
-    return { 42, true };
+    return { vm->instance->builtin_type_int, 42, true };
+}
+
+AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res)
+{
+    switch (vm_res.type->kind) {
+        case Type_Kind::INVALID: assert(false); break;
+        case Type_Kind::VOID: assert(false); break;
+
+        case Type_Kind::INTEGER: {
+            return ast_integer_literal_expression(inst, vm_res.return_value);
+        }
+
+        case Type_Kind::BOOLEAN: assert(false); break;
+        case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::FUNCTION: assert(false); break;
+        case Type_Kind::STRUCT: assert(false); break;
+    }
+
+    assert(false);
+    return nullptr;
 }
 
 }

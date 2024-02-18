@@ -13,8 +13,10 @@
 namespace Novo {
 
 struct Allocator;
+struct AST_Expression;
 struct Instance;
 struct SSA_Program;
+struct Type;
 
 struct VM_Alloc_Block
 {
@@ -52,6 +54,7 @@ struct VM
 
 struct VM_Result
 {
+    Type* type;
     u64 return_value;
     bool assert_fail;
 };
@@ -61,5 +64,7 @@ NAPI void vm_free(VM* vm);
 
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program);
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index);
+
+NAPI AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res);
 
 }

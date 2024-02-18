@@ -30,7 +30,9 @@ bool type_node(Instance* inst, Type_Task* task, AST_Node* node, Scope* scope)
             return type_statement(inst, task, node->statement, scope);
         }
 
-        case AST_Node_Kind::EXPRESSION: assert(false); break;
+        case AST_Node_Kind::EXPRESSION: {
+            return type_expression(inst, task, node->expression, scope, nullptr);
+        }
 
         case AST_Node_Kind::TYPE_SPEC: {
             return type_type_spec(inst, task, node->ts, scope);

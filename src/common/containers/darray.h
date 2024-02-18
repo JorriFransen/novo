@@ -256,10 +256,12 @@ static Temp_Array<T> temp_array_create(Allocator* allocator, s64 cap = 0)
 template <typename T>
 static void temp_array_destroy(Temp_Array<T>* ta)
 {
-    auto tas = (Temp_Allocator*)ta->array.backing_allocator->user_data;
-    assert(tas);
+    if (ta->array.backing_allocator) {
+        auto tas = (Temp_Allocator*)ta->array.backing_allocator->user_data;
+        assert(tas);
 
-    temp_allocator_reset(tas, ta->mark);
+        temp_allocator_reset(tas, ta->mark);
+    }
 }
 
 template <typename T>

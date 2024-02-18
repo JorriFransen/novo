@@ -55,6 +55,7 @@ struct SSA_Task
 struct Run_Task
 {
     AST_Expression* run_expr;
+    Scope* scope;
     s64 wrapper_index;
 };
 
@@ -70,7 +71,7 @@ NAPI void add_type_task(Instance* inst, AST_Node node, Scope* scope, AST_Declara
 NAPI void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_deps);
 NAPI void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST_Node> *bc_deps);
 
-NAPI void add_run_task(Instance* inst, AST_Expression* run_expr, s64 wrapper_index);
+NAPI void add_run_task(Instance* inst, AST_Expression* run_expr, Scope* scope, s64 wrapper_index);
 
 NAPI Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps);
 NAPI Type_Task type_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps);

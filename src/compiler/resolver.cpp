@@ -34,7 +34,9 @@ bool resolve_node(Instance* inst, Resolve_Task* task, AST_Node* node, Scope* sco
             return resolve_statement(inst, task, node->statement, scope);
         }
 
-        case AST_Node_Kind::EXPRESSION: assert(false); break;
+        case AST_Node_Kind::EXPRESSION: {
+            return resolve_expression(inst, task, node->expression, scope);
+        }
 
         case AST_Node_Kind::TYPE_SPEC: {
             return resolve_ts(inst, task, node->ts, scope);
