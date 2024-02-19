@@ -46,36 +46,67 @@ AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_
 
     while (!is_token(&lexer, TOK_EOF) && !is_token(&lexer, TOK_ERROR)) {
 
-        if (match_token(&parser, '#')) {
+        Token ct = parser.lexer->token;
+        switch (ct.kind) {
 
-            if (match_name(&parser, "import")) {
-                auto str_tok = parser.lexer->token;
-                expect_token(&parser, TOK_STRING);
+            case '#': {
+                next_token(parser.lexer);
 
-                // Remove the "'s from the string literal
-                String str_lit = atom_string(str_tok.atom);
+                if (match_name(&parser, "import")) {
+                    auto str_tok = parser.lexer->token;
+                    expect_token(&parser, TOK_STRING);
 
-                String current_file_dir = fs_dirname(&instance->temp_allocator, file_path);
+                    String str_lit = atom_string(str_tok.atom);
 
-                if (!string_ends_with(current_file_dir, NPLATFORM_PATH_SEPARATOR)) {
-                    current_file_dir = string_append(&instance->temp_allocator, current_file_dir, NPLATFORM_PATH_SEPARATOR);
+                    String current_file_dir = fs_dirname(&instance->temp_allocator, file_path);
+
+                    if (!string_ends_with(current_file_dir, NPLATFORM_PATH_SEPARATOR)) {
+                        current_file_dir = string_append(&instance->temp_allocator, current_file_dir, NPLATFORM_PATH_SEPARATOR);
+                    }
+
+                    String import_path = string_append(&instance->ast_allocator, current_file_dir, String_Ref(str_lit.data + 1, str_lit.length - 2));
+                    assert(fs_is_file(import_path));
+
+                    AST_Statement* stmt = ast_import_statement(instance, import_path);
+                    if (!stmt) return nullptr;
+                    darray_append(&nodes, ast_node(stmt));
+
+                } else if (match_name(&parser, "run")) {
+
+                    AST_Expression_Flags old_flags = parser.new_expr_flags;
+                    parser.new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+
+                    AST_Expression* expr = parse_expression(&parser);
+                    expect_token(&parser, ';');
+
+                    parser.new_expr_flags = old_flags;
+
+                    if (expr->kind != AST_Expression_Kind::CALL) {
+                        instance_fatal_error(parser.instance, source_pos(parser.instance, expr), "Expected call expression after #run");
+                    }
+
+                    AST_Statement* run_stmt = ast_run_statement(parser.instance, expr);
+
+                    Source_Pos pos = source_pos(source_pos(&parser, ct), source_pos(parser.instance, expr));
+                    save_source_pos(parser.instance, run_stmt, pos);
+
+                    darray_append(&nodes, ast_node(run_stmt));
+
+                } else {
+                    assert(false && "Unhandled directive");
                 }
 
-                String import_path = string_append(&instance->ast_allocator, current_file_dir, String_Ref(str_lit.data + 1, str_lit.length - 2));
-                assert(fs_is_file(import_path));
-
-                auto stmt = ast_import_statement(instance, import_path);
-                if (!stmt) return nullptr;
-                darray_append(&nodes, ast_node(stmt));
-
-            } else {
-                assert(false && "Unhandled directive");
+                break;
             }
-        } else {
 
-            auto decl = parse_declaration(&parser, instance->global_scope, true);
-            if (!decl) return nullptr;
-            darray_append(&nodes, ast_node(decl));
+            default: {
+
+                AST_Declaration* decl = parse_declaration(&parser, instance->global_scope, true);
+                if (!decl) return nullptr;
+                darray_append(&nodes, ast_node(decl));
+
+                break;
+            }
         }
     }
 

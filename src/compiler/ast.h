@@ -127,6 +127,8 @@ enum class AST_Statement_Kind : u32
 
     BLOCK,
 
+    RUN,
+
     ASSERT,
 };
 
@@ -191,6 +193,10 @@ struct AST_Statement
             DArray<AST_Statement *> statements;
             Scope* scope;
         } block;
+
+        struct {
+            AST_Expression* expression;
+        } run;
 
         struct {
             AST_Expression* cond;
@@ -365,6 +371,7 @@ NAPI AST_Statement* ast_for_statement(Instance* inst, AST_Statement* init, AST_E
 NAPI AST_Statement* ast_break_statement(Instance* inst);
 NAPI AST_Statement* ast_continue_statement(Instance* inst);
 NAPI AST_Statement* ast_block_statement(Instance* inst, DArray<AST_Statement *> stmts, Scope* scope);
+NAPI AST_Statement* ast_run_statement(Instance*inst, AST_Expression* expr);
 NAPI AST_Statement* ast_assert_statement(Instance* inst, AST_Expression* cond, AST_Expression* message);
 
 NAPI AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, AST_Expression_Flags flags = AST_EXPR_FLAG_NONE);

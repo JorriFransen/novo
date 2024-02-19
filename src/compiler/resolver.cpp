@@ -308,6 +308,25 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             break;
         }
 
+        case AST_Statement_Kind::RUN: {
+            AST_Expression* run_expr = stmt->run.expression;
+            assert(run_expr->kind == AST_Expression_Kind::CALL);
+
+            if (!resolve_expression(inst, task, stmt->run.expression, scope)) {
+                return false;
+            }
+
+            for (s64 i = 0; i < run_expr->call.args.count; i++) {
+                AST_Expression* arg_expr = run_expr->call.args[i];
+
+                if (!(arg_expr->flags & AST_EXPR_FLAG_CONST)) {
+                    instance_fatal_error(inst, source_pos(inst, arg_expr), "Argument expression inside #run must be a constant.");
+                }
+            }
+
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
@@ -443,7 +462,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
                 if (!callee_decl) return false;
 
-                assert(task->fn_decl);
+                assert(task->fn_decl || (expr->flags & AST_EXPR_FLAG_CHILD_OF_RUN));
             } else {
                 assert(false);
             }
@@ -516,7 +535,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             for (s64 i = 0; i < run_expr->call.args.count; i++) {
 
-                AST_Expression* arg_expr= run_expr->call.args[i];
+                AST_Expression* arg_expr = run_expr->call.args[i];
 
                 if (!(arg_expr->flags & AST_EXPR_FLAG_CONST)) {
                     instance_fatal_error(inst, source_pos(inst, arg_expr), "Argument expression inside #run must be a constant.");

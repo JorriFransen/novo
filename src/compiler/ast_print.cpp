@@ -394,6 +394,14 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
             break;
         }
 
+        case AST_Statement_Kind::RUN: {
+            ast_print_pos(instance, sb, stmt);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "STMT_RUN:\n");
+            ast_expr_to_string(instance, sb, stmt->run.expression, indent + 1);
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
             ast_print_pos(instance, sb, stmt);
             ast_print_indent(sb, indent);

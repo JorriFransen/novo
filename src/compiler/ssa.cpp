@@ -293,11 +293,19 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     return true;
 }
 
-s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* run_expr, Scope* scope)
+s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Scope* scope)
 {
-    assert(run_expr->kind == AST_Expression_Kind::RUN);
+    AST_Expression* expr = nullptr;
+    if (node.kind == AST_Node_Kind::EXPRESSION) {
+        assert(false);
+    } else {
+        assert(node.kind == AST_Node_Kind::STATEMENT);
+        assert(node.statement->kind == AST_Statement_Kind::RUN);
 
-    AST_Expression* expr = run_expr->run.expression;
+        expr = node.statement->run.expression;
+    }
+
+    assert(expr);
     assert(expr->kind == AST_Expression_Kind::CALL);
 
     Type* called_fn_type = expr->call.base->resolved_type;
@@ -307,7 +315,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* r
 
     Type* wrapper_fn_type = function_type_get(inst, {}, return_type, TYPE_FLAG_NONE);
 
-    Source_Pos pos = source_pos(inst, run_expr);
+    Source_Pos pos = source_pos(inst, node);
     Imported_File file = inst->imported_files[pos.file_index];
 
 
@@ -719,6 +727,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
             break;
         }
+
+        case AST_Statement_Kind::RUN: assert(false); break;
 
         case AST_Statement_Kind::BLOCK: {
             Scope* block_scope = stmt->block.scope;

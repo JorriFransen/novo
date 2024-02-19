@@ -107,6 +107,7 @@ void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_De
         case AST_Statement_Kind::BREAK:
         case AST_Statement_Kind::CONTINUE:
         case AST_Statement_Kind::BLOCK:
+        case AST_Statement_Kind::RUN:
         case AST_Statement_Kind::ASSERT: {
 
             Resolve_Task task = resolve_task_create(inst, ast_node(stmt), scope, fn, bc_deps);
@@ -135,11 +136,23 @@ void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_de
     assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
     SSA_Task task = {
-        .func_decl = decl,
+        .node = ast_node(decl),
         .bytecode_deps = bc_deps,
         .run_scope = nullptr,
-        .run_expr = nullptr,
         .is_run = false,
+    };
+    darray_append(&inst->ssa_tasks, task);
+}
+
+void add_ssa_task(Instance* inst, AST_Statement* stmt, Scope* scope, DArray<AST_Node>* bc_deps)
+{
+    assert(stmt->kind == AST_Statement_Kind::RUN);
+
+    SSA_Task task = {
+        .node = ast_node(stmt),
+        .bytecode_deps = bc_deps,
+        .run_scope = scope,
+        .is_run = true,
     };
     darray_append(&inst->ssa_tasks, task);
 }
@@ -149,21 +162,25 @@ void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST
     assert(expr->kind == AST_Expression_Kind::RUN);
 
     SSA_Task task = {
-        .func_decl = nullptr,
+        .node = ast_node(expr),
         .bytecode_deps = bc_deps,
         .run_scope = scope,
-        .run_expr = expr,
         .is_run = true,
     };
     darray_append(&inst->ssa_tasks, task);
 }
 
-void add_run_task(Instance* inst, AST_Expression* run_expr, Scope* scope, s64 wrapper_index)
+void add_run_task(Instance* inst, AST_Node node, Scope* scope, s64 wrapper_index)
 {
-    assert(run_expr->kind == AST_Expression_Kind::RUN);
+    if (node.kind == AST_Node_Kind::EXPRESSION) {
+        assert(node.expression->kind == AST_Expression_Kind::RUN);
+    } else {
+        assert(node.kind == AST_Node_Kind::STATEMENT);
+        assert(node.statement->kind == AST_Statement_Kind::RUN);
+    }
 
     Run_Task task = {
-        .run_expr = run_expr,
+        .node = node,
         .scope = scope,
         .wrapper_index = wrapper_index,
     };

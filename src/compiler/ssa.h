@@ -155,7 +155,7 @@ NAPI u32 ssa_register_create(SSA_Builder* builder);
 
 NAPI bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl);
 
-NAPI s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* run_expr, Scope* scope);
+NAPI s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Scope* scope);
 
 NAPI bool ssa_find_function(SSA_Program* program, Atom atom, u32* index);
 NAPI bool ssa_find_alloc(SSA_Builder* builder, AST_Node* node, u32* result);

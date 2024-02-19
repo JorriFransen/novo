@@ -364,6 +364,38 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
             break;
         }
 
+        case AST_Statement_Kind::RUN: {
+
+            AST_Expression* run_expr = stmt->run.expression;
+            assert(run_expr->kind == AST_Expression_Kind::CALL);
+
+            DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
+
+            task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
+            darray_init(c_allocator(), task->bytecode_deps);
+
+            if (!type_expression(inst, task, run_expr, scope, nullptr)) {
+                darray_free(task->bytecode_deps);
+                free(c_allocator(), task->bytecode_deps);
+                task->bytecode_deps = old_bc_deps;
+                return false;
+            }
+
+            if (run_expr->resolved_type != inst->type_string && is_pointer_or_parent_of_pointer(run_expr->resolved_type)) {
+                instance_fatal_error(inst, source_pos(inst, run_expr), "Type of #run cannot be or contain pointer types, got '%s'", temp_type_string(inst, run_expr->resolved_type).data);
+            }
+
+            add_ssa_task(inst, stmt, scope, task->bytecode_deps);
+
+            task->bytecode_deps = old_bc_deps;
+
+            if (task->bytecode_deps) {
+                darray_append(task->bytecode_deps, ast_node(stmt));
+            }
+
+            break;
+        }
+
         case AST_Statement_Kind::BLOCK: {
 
             for (s64 i = 0; i < stmt->block.statements.count; i++) {
@@ -618,7 +650,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             bool child_of_run = expr->flags & AST_EXPR_FLAG_CHILD_OF_RUN;
 
             expr->resolved_type = fn_type->function.return_type;
-            assert(task->fn_decl);
+            assert(task->fn_decl || child_of_run);
             for (s64 i = 0; i < expr->call.args.count; i++) {
                 if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
                     darray_append_unique(&task->fn_decl->function.temp_structs, expr->call.args[i]);

@@ -221,6 +221,13 @@ AST_Statement* ast_block_statement(Instance* inst, DArray<AST_Statement*> stmts,
     return result;
 }
 
+AST_Statement* ast_run_statement(Instance*inst, AST_Expression* expr)
+{
+    auto result = ast_statement(inst, AST_Statement_Kind::RUN);
+    result->run.expression = expr;
+    return result;
+}
+
 AST_Statement* ast_assert_statement(Instance* inst, AST_Expression* cond, AST_Expression* message)
 {
     auto result = ast_statement(inst, AST_Statement_Kind::ASSERT);

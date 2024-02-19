@@ -47,18 +47,17 @@ struct Type_Task
 
 struct SSA_Task
 {
-    AST_Declaration* func_decl;
+    AST_Node node;
 
     DArray<AST_Node> *bytecode_deps;
 
     Scope* run_scope;
-    AST_Expression* run_expr;
     bool is_run;
 };
 
 struct Run_Task
 {
-    AST_Expression* run_expr;
+    AST_Node node;
     Scope* scope;
     s64 wrapper_index;
 };
@@ -66,18 +65,19 @@ struct Run_Task
 NAPI void add_parse_task(Instance* inst, Atom path);
 
 NAPI void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope);
-NAPI void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps);
-NAPI void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps);
+NAPI void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);
+NAPI void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);
 NAPI void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope);
 
-NAPI void add_type_task(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps);
+NAPI void add_type_task(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);
 
-NAPI void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_deps);
-NAPI void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST_Node> *bc_deps);
+NAPI void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node>* bc_deps);
+NAPI void add_ssa_task(Instance* inst, AST_Statement* stmt,Scope* scope, DArray<AST_Node>* bc_deps);
+NAPI void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST_Node>* bc_deps);
 
-NAPI void add_run_task(Instance* inst, AST_Expression* run_expr, Scope* scope, s64 wrapper_index);
+NAPI void add_run_task(Instance* inst, AST_Node node, Scope* scope, s64 wrapper_index);
 
-NAPI Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps);
-NAPI Type_Task type_task_create(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps);
+NAPI Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node>* bc_deps);
+NAPI Type_Task type_task_create(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node>* bc_deps);
 
 }
