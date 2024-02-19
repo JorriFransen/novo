@@ -1,6 +1,7 @@
 #include "typer.h"
 
 #include <containers/darray.h>
+#include <memory/allocator.h>
 #include <memory/temp_allocator.h>
 #include <nstring.h>
 

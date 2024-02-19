@@ -10,6 +10,9 @@ namespace Novo {
 
 struct Instance;
 struct Scope;
+struct Type;
+
+template <typename Element_Type> struct DArray;
 
 struct Parse_Task
 {

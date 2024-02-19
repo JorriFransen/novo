@@ -1,8 +1,6 @@
 
-#include <containers/darray.h>
 #include <defines.h>
 #include <instance.h>
-#include <logger.h>
 
 #include "command_line_args.h"
 

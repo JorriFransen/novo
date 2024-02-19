@@ -29,7 +29,6 @@ struct SSA_Program;
 struct SSA_Task;
 struct Type;
 struct Type_Task;
-struct VM;
 
 struct Imported_File
 {
