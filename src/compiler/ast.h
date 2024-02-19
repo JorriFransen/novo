@@ -237,6 +237,8 @@ enum AST_Expression_Flag : AST_Expression_Flags
 
     AST_EXPR_FLAG_HEX_LITERAL       = 0x0010,
     AST_EXPR_FLAG_BINARY_LITERAL    = 0x0020,
+
+    AST_EXPR_FLAG_CHILD_OF_RUN      = 0x0040,
 };
 
 struct AST_Expression

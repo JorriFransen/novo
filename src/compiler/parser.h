@@ -3,18 +3,13 @@
 #include <defines.h>
 #include <nstring.h>
 
+#include "ast.h"
 #include "atom.h"
 
 namespace Novo {
 
 enum Token_Kind : u32;
 
-struct AST_Declaration;
-struct AST_Expression;
-struct AST_File;
-struct AST_Identifier;
-struct AST_Statement;
-struct AST_Type_Spec;
 struct Instance;
 struct Scope;
 struct Lexer;
@@ -29,6 +24,8 @@ struct Parser
 
     // TODO: stack for nested functions
     Atom current_function_name;
+
+    AST_Expression_Flags new_expr_flags;
 };
 
 NAPI AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index);

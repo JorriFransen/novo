@@ -615,15 +615,17 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 }
             }
 
+            bool child_of_run = expr->flags & AST_EXPR_FLAG_CHILD_OF_RUN;
+
             expr->resolved_type = fn_type->function.return_type;
             assert(task->fn_decl);
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT) {
+                if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
                     darray_append_unique(&task->fn_decl->function.temp_structs, expr->call.args[i]);
                 }
             }
 
-            if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+            if (expr->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
                 assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
                 darray_append_unique(&task->fn_decl->function.temp_structs, expr);
             }

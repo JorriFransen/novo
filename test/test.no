@@ -36,9 +36,15 @@ vec :: (x: s64, y: s64) -> Vec {
     return { x, y };
 }
 
+mul2 :: (v: Vec) -> Vec {
+    return { v.x * 2, v.y * 2 };
+}
+
 main :: () -> int {
-    v := #run vec(11, 22);
+    // v := #run vec(11, 22);
     // printf("{ %lld, %lld }\n".data, v.x, v.y);
+
+    v := #run mul2({11, 22});
 
     // str := #run ret_str();
     // printf(str.data);

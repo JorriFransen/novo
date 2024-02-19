@@ -40,6 +40,7 @@ AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_
     parser.lexer = &lexer;
     parser.next_index_in_function = 0;
     parser.parsing_function_body = false;
+    parser.new_expr_flags = AST_EXPR_FLAG_NONE;
 
     auto nodes = temp_array_create<AST_Node>(&instance->temp_allocator, 4);
 
@@ -502,11 +503,19 @@ AST_Expression* parse_leaf_expression(Parser* parser)
             next_token(parser->lexer);
 
             if (match_name(parser, "run")) {
+
+                AST_Expression_Flags old_flags = parser->new_expr_flags;
+                parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+
                 AST_Expression* expr = parse_expression(parser);
+
+                parser->new_expr_flags = old_flags;
+
 
                 if (expr->kind != AST_Expression_Kind::CALL) {
                     instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #run");
                 }
+
 
                 result = ast_run_expression(parser->instance, expr);
                 pos = source_pos(pos, source_pos(parser->lexer));
@@ -527,6 +536,8 @@ AST_Expression* parse_leaf_expression(Parser* parser)
     }
 
     assert(result);
+
+    result->flags |= parser->new_expr_flags;
 
     save_source_pos(parser->instance, result, pos);
 
@@ -575,6 +586,8 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         assert(result);
+
+    result->flags |= parser->new_expr_flags;
     }
 
     return result;
