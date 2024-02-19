@@ -343,6 +343,15 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Expression* r
         darray_append(&func->allocs, { ast_node(expr), sret_alloc_reg });
     }
 
+    for (s64 i = 0; i < expr->call.args.count; i++) {
+        AST_Expression* arg_expr = expr->call.args[i];
+
+        if (arg_expr->resolved_type->kind == Type_Kind::STRUCT) {
+            u32 alloc_reg = ssa_emit_alloc(builder, arg_expr->resolved_type->bit_size);
+            darray_append(&func->allocs, { ast_node(arg_expr), alloc_reg });
+        }
+    }
+
     u32 result_reg = ssa_emit_expression(builder, expr, scope);
     ssa_emit_op(builder, SSA_OP_RET);
     if (sret) {
