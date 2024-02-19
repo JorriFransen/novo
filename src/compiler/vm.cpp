@@ -825,7 +825,65 @@ AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res)
         case Type_Kind::BOOLEAN: assert(false); break;
         case Type_Kind::POINTER: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
-        case Type_Kind::STRUCT: assert(false); break;
+
+        case Type_Kind::STRUCT: {
+            u8* ptr = (u8*)vm_res.return_value;
+            return const_expr_from_memory(inst, vm_res.type, ptr);
+        }
+    }
+
+    assert(false);
+    return nullptr;
+}
+
+AST_Expression* const_expr_from_memory(Instance* inst, Type* type, u8* mem)
+{
+    switch (type->kind) {
+        case Type_Kind::INVALID: assert(false); break;
+        case Type_Kind::VOID: assert(false); break;
+
+        case Type_Kind::INTEGER:
+        case Type_Kind::BOOLEAN: {
+            u64 val = 0;
+
+            switch (type->bit_size) {
+                default: assert(false); break;
+                case 8: val = *mem; break;
+                case 16: val = *(u16*)mem; break;
+                case 32: val = *(u32*)mem; break;
+                case 64: val = *(u64*)mem; break;
+            }
+
+            return ast_integer_literal_expression(inst, val);
+        }
+
+        case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::FUNCTION: assert(false); break;
+
+        case Type_Kind::STRUCT: {
+
+            if (type == inst->type_string) {
+
+                char* data = *(char**)mem;
+                s64 length = *(s64*)(mem + inst->pointer_byte_size);
+
+                return ast_string_literal_expression(inst, atom_get(data, length));
+
+            } else {
+                DArray<AST_Expression*> expressions;
+                darray_init(&inst->ast_allocator, &expressions, type->structure.members.count);
+
+                for (s64 i = 0; i < type->structure.members.count; i++) {
+                    Type_Struct_Member member = type->structure.members[i];
+
+                    assert(member.offset % 8 == 0);
+                    AST_Expression* mem_expr = const_expr_from_memory(inst, member.type, mem + (member.offset / 8));
+                    darray_append(&expressions, mem_expr);
+                }
+
+                return ast_compound_expression(inst, expressions);
+            }
+        }
     }
 
     assert(false);

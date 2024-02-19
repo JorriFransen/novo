@@ -266,7 +266,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 darray_remove_unordered(&inst->resolve_tasks, i);
                 i--;
 
-                add_type_task(inst, task.node, task.scope, task.fn_decl, task.bytecode_deps);
+                add_type_task(inst, task.node, nullptr, task.scope, task.fn_decl, task.bytecode_deps);
 
                 stack_free(&task.loop_control_stack);
 
@@ -371,7 +371,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             bool resolve_result = resolve_node(inst, &resolve_task, &resolve_task.node, resolve_task.scope);
             assert(resolve_result);
 
-            Type_Task type_task = type_task_create(inst, ast_node(gen_expr), task->scope, nullptr, nullptr);
+            Type_Task type_task = type_task_create(inst, ast_node(gen_expr), run_result.type, task->scope, nullptr, nullptr);
             bool type_result = type_node(inst, &type_task, &type_task.node, type_task.scope);
             assert(type_result);
 

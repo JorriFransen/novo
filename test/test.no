@@ -1,5 +1,5 @@
 // TODO:
-//  - #run expr with aggregate return type
+//  - Ensure struct types returned from run don't generated temp_structs entries (resulting in unused allocs for the replace call expression).
 
 //  - sizeof(), alignof(), offsetof()
 //  - #insert
@@ -23,30 +23,29 @@
 // putchar :: (char: s32) -> s32 #foreign;
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-printf :: (format: *u8, ..) -> s32 #foreign;
+// printf :: (format: *u8, ..) -> s32 #foreign;
 // malloc :: (size: s64) -> *void #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
-// Vec :: struct {
-//     x: s64;
-//     y: s64;
-// }
-//
-// vec :: (x: s64, y: s64) -> Vec {
-//     return { x, y };
-// }
+Vec :: struct {
+    x: s64;
+    y: s64;
+}
+
+vec :: (x: s64, y: s64) -> Vec {
+    return { x, y };
+}
 
 main :: () -> int {
-    // v := #run vec(11, 22);
+    v := #run vec(11, 22);
     // printf("{ %lld, %lld }\n".data, v.x, v.y);
 
-    f := #run fib(10);
-    return f;
+    // str := #run ret_str();
+    // printf(str.data);
+    return v.x + v.y;
 }
 
-fib :: (x: int) -> int {
 
-    if x < 2 return x;
-
-    return fib(x - 1) + fib(x - 2);
-}
+// ret_str :: () -> string {
+//     return "Hello, World!\n";
+// }

@@ -31,7 +31,7 @@ bool type_node(Instance* inst, Type_Task* task, AST_Node* node, Scope* scope)
         }
 
         case AST_Node_Kind::EXPRESSION: {
-            return type_expression(inst, task, node->expression, scope, nullptr);
+            return type_expression(inst, task, node->expression, scope, task->suggested_type);
         }
 
         case AST_Node_Kind::TYPE_SPEC: {
@@ -719,8 +719,6 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             AST_Expression* run_expr = expr->run.expression;
             assert(run_expr->kind == AST_Expression_Kind::CALL);
 
-            if (suggested_type) assert(suggested_type->kind == Type_Kind::INTEGER);
-
             DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
 
             task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
@@ -735,6 +733,8 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             if (run_expr->resolved_type->kind == Type_Kind::VOID) {
                 instance_fatal_error(inst, source_pos(inst, run_expr), "#run at expression level must return a value, got 'void'");
+            } else if (run_expr->resolved_type != inst->type_string && is_pointer_or_parent_of_pointer(run_expr->resolved_type)) {
+                instance_fatal_error(inst, source_pos(inst, run_expr), "Type of #run cannot be or contain pointer types, got '%s'", temp_type_string(inst, run_expr->resolved_type).data);
             }
 
             expr->resolved_type = run_expr->resolved_type;

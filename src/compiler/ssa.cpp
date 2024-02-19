@@ -865,9 +865,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             assert(lvalue_expr->run.generated_expression);
             assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
 
-            assert(false);
-
-            break;
+            return ssa_emit_lvalue(builder, lvalue_expr->run.generated_expression, scope);
         }
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;

@@ -73,7 +73,7 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
                 assert(task->fn_decl);
 
                 darray_append_unique(&task->fn_decl->function.variables, decl);
-                add_type_task(inst, ast_node(decl), scope, task->fn_decl, task->bytecode_deps);
+                add_type_task(inst, ast_node(decl), nullptr, scope, task->fn_decl, task->bytecode_deps);
             }
             break;
         }
@@ -405,7 +405,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             if (!(expr->member.base->flags & AST_EXPR_FLAG_TYPED)) {
 
-                Type_Task type_task = type_task_create(inst, ast_node(expr->member.base), scope, task->fn_decl, task->bytecode_deps);
+                Type_Task type_task = type_task_create(inst, ast_node(expr->member.base), nullptr, scope, task->fn_decl, task->bytecode_deps);
                 if (!type_expression(inst, &type_task, expr->member.base, scope, nullptr)) {
                     return false;
                 }

@@ -130,6 +130,43 @@ Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* ret
     return new_type;
 }
 
+bool is_pointer_or_parent_of_pointer(Type* type)
+{
+    switch (type->kind) {
+        case Type_Kind::INVALID: assert(false); break;
+
+        case Type_Kind::VOID:
+        case Type_Kind::INTEGER:
+        case Type_Kind::BOOLEAN:
+        case Type_Kind::FUNCTION: {
+            return false;
+        }
+
+        case Type_Kind::POINTER: {
+            return true;
+        }
+
+
+        case Type_Kind::STRUCT: {
+            bool result = false;
+
+            for (s64 i = 0; i < type->structure.members.count; i++) {
+
+                if (is_pointer_or_parent_of_pointer(type->structure.members[i].type)) {
+                    result = true;
+                    break;
+                }
+
+            }
+
+            return result;
+        }
+    }
+
+    return false;
+    assert(false);
+}
+
 String temp_type_string(Instance* inst, Type* type)
 {
     String_Builder sb;

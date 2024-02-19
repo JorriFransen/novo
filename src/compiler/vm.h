@@ -66,5 +66,6 @@ NAPI VM_Result vm_run(VM* vm, SSA_Program* program);
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index);
 
 NAPI AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res);
+NAPI AST_Expression* const_expr_from_memory(Instance* inst, Type* type, u8* mem);
 
 }

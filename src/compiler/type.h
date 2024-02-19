@@ -82,6 +82,8 @@ NAPI Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_ty
 NAPI Type* pointer_type_get(Instance *inst, Type* base);
 NAPI Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type, Type_Flags flags);
 
+NAPI bool is_pointer_or_parent_of_pointer(Type* type);
+
 NAPI String temp_type_string(Instance* inst, Type* type);
 NAPI void type_to_string(String_Builder* sb, Type* type);
 
