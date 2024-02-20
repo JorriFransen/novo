@@ -726,6 +726,10 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
         result = ast_arithmetic_assignment_statement(parser->instance, op, expr, rhs);
 
     } else {
+
+        if (expr->kind == AST_Expression_Kind::RUN) {
+            instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Invalid #run, use as expression, or as statement on file level (global scope)");
+        }
         assert(false);
     }
 
