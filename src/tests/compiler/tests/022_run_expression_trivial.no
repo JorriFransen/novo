@@ -1,0 +1,11 @@
+
+main :: () -> int {
+    assert(fib(10) == 55);
+    assert(fib(10) == #run fib(10));
+    return 0;
+}
+
+fib :: (x: int) -> int {
+    if x < 2 return x;
+    return fib(x - 1) + fib(x - 2);
+}

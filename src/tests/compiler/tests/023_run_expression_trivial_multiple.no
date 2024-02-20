@@ -1,0 +1,31 @@
+
+main :: () -> int {
+
+    f1 := #run fib_it(10);
+    f2 := #run fib(9);
+    f3 := #run fib(8);
+
+    assert(f1 == f2 + f3);
+
+    return 0;
+}
+
+fib_it :: (x: int) -> int {
+
+    p  : int = 0;
+    pp : int = 0;
+    n  : int = 1;
+
+    for i := 1; i < x; i += 1; {
+        pp = p;
+        p = n;
+        n = pp + p;
+    }
+
+    return n;
+}
+
+fib :: (x: int) -> int {
+    if x < 2 return x;
+    return fib(x - 1) + fib(x - 2);
+}

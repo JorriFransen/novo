@@ -1,0 +1,26 @@
+
+main :: () -> int {
+
+    v := make_vec(11, 22);
+    assert(v.x == 11);
+    assert(v.y == 22);
+
+    v2 := double_vec({12, 34});
+    assert(v2.x == 24);
+    assert(v2.y == 68);
+
+    return 0;
+}
+
+Vec :: struct {
+    x: int;
+    y: int;
+}
+
+make_vec :: (x: int, y: int) -> Vec {
+    return { x, y };
+}
+
+double_vec :: (v: Vec) -> Vec {
+    return { v.x * 2, v.y * 2 };
+}

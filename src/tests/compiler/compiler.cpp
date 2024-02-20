@@ -44,6 +44,12 @@ static Test_Case test_cases[] = {
 
     { .file_path = "tests/020_pointer_math.no" },
     { .file_path = "tests/021_struct_align.no" },
+
+    { .file_path = "tests/022_run_expression_trivial.no" },
+    { .file_path = "tests/023_run_expression_trivial_multiple.no" },
+    { .file_path = "tests/024_run_expression_aggregate.no" },
+    { .file_path = "tests/025_run_expression_aggregate_nested.no" },
+    { .file_path = "tests/026_run_statement.no", .return_code = 2 },
 };
 
 static bool run_test_case(Test_Case* tc)
@@ -54,16 +60,17 @@ static bool run_test_case(Test_Case* tc)
     // options.print_bytecode = true;
     options.input_file = tc->file_path;
 
-    Instance instance;
-    instance_init(&instance, options);
+    Instance inst;
+    instance_init(&inst, options);
 
-    if (!instance_start(&instance)) {
+
+    if (!instance_start(&inst)) {
         return false;
     }
 
-    assert(instance.ssa_program->entry_fn_index >= 0);
+    assert(inst.ssa_program->entry_fn_index >= 0);
 
-    VM_Result run_result = instance.entry_run_result;
+    VM_Result run_result = inst.entry_run_result;
 
     bool result = false;
 
@@ -80,7 +87,7 @@ static bool run_test_case(Test_Case* tc)
         result = true;
     }
 
-    instance_free(&instance);
+    instance_free(&inst);
 
     return result;
 }

@@ -1,0 +1,19 @@
+
+main :: () -> int {
+
+    return 0;
+}
+
+Vec :: struct {
+    x: int;
+    y: int;
+}
+
+AABB :: struct {
+    pos  : Vec;
+    size : Vec;
+}
+
+make_aabb :: (p: Vec, s: Vec) -> AABB {
+    return { p, s };
+}

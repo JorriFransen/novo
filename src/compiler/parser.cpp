@@ -916,7 +916,11 @@ AST_Type_Spec* parse_type_spec(Parser* parser)
             break;
         }
 
-        default: assert(false);
+        default: {
+
+            instance_fatal_error(parser->instance, source_pos(parser, ct), "Unexpected token when parsing type: '%s'", tmp_token_str(ct));
+
+        }
     }
 
     save_source_pos(parser->instance, result, pos);

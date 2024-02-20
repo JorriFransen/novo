@@ -297,7 +297,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
 {
     AST_Expression* expr = nullptr;
     if (node.kind == AST_Node_Kind::EXPRESSION) {
-        assert(false);
+        expr = node.expression->run.expression;
     } else {
         assert(node.kind == AST_Node_Kind::STATEMENT);
         assert(node.statement->kind == AST_Statement_Kind::RUN);
