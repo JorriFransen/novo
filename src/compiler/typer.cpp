@@ -371,6 +371,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
 
             DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
 
+            // TODO: Dynamic allocator
             task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
             darray_init(c_allocator(), task->bytecode_deps);
 
@@ -383,6 +384,38 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
 
             if (run_expr->resolved_type != inst->type_string && is_pointer_or_parent_of_pointer(run_expr->resolved_type)) {
                 instance_fatal_error(inst, source_pos(inst, run_expr), "Type of #run cannot be or contain pointer types, got '%s'", temp_type_string(inst, run_expr->resolved_type).data);
+            }
+
+            add_ssa_task(inst, stmt, scope, task->bytecode_deps);
+
+            task->bytecode_deps = old_bc_deps;
+
+            if (task->bytecode_deps) {
+                darray_append(task->bytecode_deps, ast_node(stmt));
+            }
+
+            break;
+        }
+
+        case AST_Statement_Kind::INSERT: {
+
+            AST_Expression* insert_expr = stmt->insert.expression;
+            assert(insert_expr->kind == AST_Expression_Kind::CALL);
+
+            DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
+
+            task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
+            darray_init(c_allocator(), task->bytecode_deps);
+
+            if (!type_expression(inst, task, insert_expr, scope, inst->type_string)) {
+                darray_free(task->bytecode_deps);
+                free(c_allocator(), task->bytecode_deps);
+                task->bytecode_deps = old_bc_deps;
+                return false;
+            }
+
+            if (insert_expr->resolved_type != inst->type_string) {
+                instance_fatal_error(inst, source_pos(inst, insert_expr), "Type of #insert must be string, got '%s'", temp_type_string(inst, insert_expr->resolved_type).data);
             }
 
             add_ssa_task(inst, stmt, scope, task->bytecode_deps);

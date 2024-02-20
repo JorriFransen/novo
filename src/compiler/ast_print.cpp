@@ -81,7 +81,7 @@ static void ast_print_pos(Instance* instance, String_Builder* sb, Source_Pos pos
     Line_Info start_li = line_info(file.newline_offsets, pos.offset);
     Line_Info end_li = line_info(file.newline_offsets, end.offset);
 
-    String file_name = atom_string(file.path);
+    String file_name = atom_string(file.name);
 
     if (start_li.line == end_li.line) {
         string_builder_append(sb, "%s:%03u:%03u-%07u: ", file_name.data, start_li.line, start_li.offset, pos.length);
@@ -399,6 +399,14 @@ static void ast_stmt_to_string(Instance* instance, String_Builder* sb, AST_State
             ast_print_indent(sb, indent);
             string_builder_append(sb, "STMT_RUN:\n");
             ast_expr_to_string(instance, sb, stmt->run.expression, indent + 1);
+            break;
+        }
+
+        case AST_Statement_Kind::INSERT: {
+            ast_print_pos(instance, sb, stmt);
+            ast_print_indent(sb, indent);
+            string_builder_append(sb, "STMT_INSERT:\n");
+            ast_expr_to_string(instance, sb, stmt->insert.expression, indent + 1);
             break;
         }
 

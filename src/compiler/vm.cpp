@@ -812,7 +812,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
     return { vm->instance->builtin_type_int, 42, true };
 }
 
-AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res)
+AST_Expression* vm_const_expr_from_result(Instance* inst, VM_Result vm_res)
 {
     switch (vm_res.type->kind) {
         case Type_Kind::INVALID: assert(false); break;
@@ -828,7 +828,7 @@ AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res)
 
         case Type_Kind::STRUCT: {
             u8* ptr = (u8*)vm_res.return_value;
-            return const_expr_from_memory(inst, vm_res.type, ptr);
+            return vm_const_expr_from_memory(inst, vm_res.type, ptr);
         }
     }
 
@@ -836,7 +836,7 @@ AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res)
     return nullptr;
 }
 
-AST_Expression* const_expr_from_memory(Instance* inst, Type* type, u8* mem)
+AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem)
 {
     switch (type->kind) {
         case Type_Kind::INVALID: assert(false); break;
@@ -864,10 +864,13 @@ AST_Expression* const_expr_from_memory(Instance* inst, Type* type, u8* mem)
 
             if (type == inst->type_string) {
 
-                char* data = *(char**)mem;
-                s64 length = *(s64*)(mem + inst->pointer_byte_size);
+                auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
 
-                return ast_string_literal_expression(inst, atom_get(data, length));
+                String temp_str = vm_string_from_memory(inst, &inst->temp_allocator, mem);
+                Atom str = atom_get(temp_str);
+                temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+                return ast_string_literal_expression(inst, str);
 
             } else {
                 DArray<AST_Expression*> expressions;
@@ -877,7 +880,7 @@ AST_Expression* const_expr_from_memory(Instance* inst, Type* type, u8* mem)
                     Type_Struct_Member member = type->structure.members[i];
 
                     assert(member.offset % 8 == 0);
-                    AST_Expression* mem_expr = const_expr_from_memory(inst, member.type, mem + (member.offset / 8));
+                    AST_Expression* mem_expr = vm_const_expr_from_memory(inst, member.type, mem + (member.offset / 8));
                     darray_append(&expressions, mem_expr);
                 }
 
@@ -888,6 +891,20 @@ AST_Expression* const_expr_from_memory(Instance* inst, Type* type, u8* mem)
 
     assert(false);
     return nullptr;
+}
+
+String vm_string_from_result(Instance* inst, Allocator* allocator, VM_Result vm_res)
+{
+    u8* ptr = (u8*)vm_res.return_value;
+    return vm_string_from_memory(inst, allocator, ptr);
+}
+
+String vm_string_from_memory(Instance* inst, Allocator* allocator, u8* mem)
+{
+    char* data = *(char**)mem;
+    s64 length = *(s64*)(mem + inst->pointer_byte_size);
+
+    return string_copy(allocator, data, length);
 }
 
 }

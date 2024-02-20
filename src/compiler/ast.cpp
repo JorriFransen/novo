@@ -228,6 +228,13 @@ AST_Statement* ast_run_statement(Instance*inst, AST_Expression* expr)
     return result;
 }
 
+AST_Statement* ast_insert_statement(Instance* inst, AST_Expression* expr)
+{
+    auto result = ast_statement(inst, AST_Statement_Kind::INSERT);
+    result->insert.expression = expr;
+    return result;
+}
+
 AST_Statement* ast_assert_statement(Instance* inst, AST_Expression* cond, AST_Expression* message)
 {
     auto result = ast_statement(inst, AST_Statement_Kind::ASSERT);

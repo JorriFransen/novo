@@ -32,7 +32,7 @@ struct Type_Task;
 
 struct Imported_File
 {
-    Atom path;
+    Atom name;
     AST_File *ast;
     DArray<u32> newline_offsets;
 };
