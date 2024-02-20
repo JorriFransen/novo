@@ -1,6 +1,19 @@
 
 main :: () -> int {
 
+    r := #run make_aabb({ 11, 22 }, { 33, 44 });
+
+    assert(r.pos.x == 11);
+    assert(r.pos.y == 22);
+    assert(r.size.x == 33);
+    assert(r.size.y == 44);
+
+    r2 := aabb_swap({{ 3, 4 }, { 1, 2 }});
+    assert(r2.pos.x == 1);
+    assert(r2.pos.y == 2);
+    assert(r2.size.x == 3);
+    assert(r2.size.y == 4);
+
     return 0;
 }
 
@@ -16,4 +29,8 @@ AABB :: struct {
 
 make_aabb :: (p: Vec, s: Vec) -> AABB {
     return { p, s };
+}
+
+aabb_swap :: (r: AABB) -> AABB {
+    return { r.size, r.pos };
 }
