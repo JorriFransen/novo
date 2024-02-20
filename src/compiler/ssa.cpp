@@ -864,12 +864,19 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
                 for (s64 i = 0; i < lvalue_expr->compound.expressions.count; i++) {
 
                     AST_Expression* expr = lvalue_expr->compound.expressions[i];
-                    u32 value_reg = ssa_emit_expression(builder, expr, scope);
+                    bool member_is_aggregate = expr->resolved_type->kind == Type_Kind::STRUCT;
+
+                    u32 value_reg;
+                    if (member_is_aggregate) {
+                        value_reg = ssa_emit_lvalue(builder, expr, scope);
+                    } else {
+                        value_reg = ssa_emit_expression(builder, expr, scope);
+                    }
 
                     u32 ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, offset, i);
                     offset += expr->resolved_type->bit_size;
 
-                    if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+                    if (member_is_aggregate) {
                         ssa_emit_memcpy(builder, ptr_reg, value_reg, expr->resolved_type->bit_size);
                     } else {
                         ssa_emit_store_ptr(builder, expr->resolved_type->bit_size, ptr_reg, value_reg);
