@@ -1,6 +1,7 @@
 // TODO:
 //  - sizeof(), alignof(), offsetof()
 //  - #insert
+//  - #insert in local scopes? (This probably requires flattening all statements...)
 //  - builtin atoms for foreign, run import etc.
 
 // Need this wrapper (for run) because "abc".data is not const, maybe it should be?
@@ -32,15 +33,11 @@ printf :: (format: *u8, ..) -> s32 #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
 
-main :: () -> int {
+#insert main_str();
 
-    #run print("Hello!\n");
-    return 0;
+main_str :: () -> string {
+    
+    return "main :: () -> int { return 42; }";
 }
 
-#run print("Hello!\n");
-
-print :: (msg: string) {
-    printf(msg.data);
-}
-
+// #run main();

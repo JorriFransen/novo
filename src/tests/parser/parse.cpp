@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     instance_init(&instance, options);
 
     Imported_File imported_file = {
-        .path = atom_get("test.no"),
+        .name = atom_get("test.no"),
         .ast = nullptr,
         .newline_offsets = {},
     };

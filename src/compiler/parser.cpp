@@ -92,6 +92,27 @@ AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_
 
                     darray_append(&nodes, ast_node(run_stmt));
 
+                } else if (match_name(&parser, "insert")) {
+
+                    AST_Expression_Flags old_flags = parser.new_expr_flags;
+                    parser.new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+
+                    AST_Expression* expr = parse_expression(&parser);
+                    expect_token(&parser, ';');
+
+                    parser.new_expr_flags = old_flags;
+
+                    if (expr->kind != AST_Expression_Kind::CALL) {
+                        instance_fatal_error(parser.instance, source_pos(parser.instance, expr), "Expected call expression after #insert");
+                    }
+
+                    AST_Statement* insert_stmt = ast_insert_statement(parser.instance, expr);
+
+                    Source_Pos pos = source_pos(source_pos(&parser, ct), source_pos(parser.instance, expr));
+                    save_source_pos(parser.instance, insert_stmt, pos);
+
+                    darray_append(&nodes, ast_node(insert_stmt));
+
                 } else {
                     assert(false && "Unhandled directive");
                 }

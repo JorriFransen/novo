@@ -156,7 +156,7 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
 
             bool imported = false;
             for (s64 i = 0; i < inst->imported_files.count; i++) {
-                if (inst->imported_files[i].path == path_atom) {
+                if (inst->imported_files[i].name == path_atom) {
                     imported = true;
                     break;
                 }
@@ -312,7 +312,7 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             AST_Expression* run_expr = stmt->run.expression;
             assert(run_expr->kind == AST_Expression_Kind::CALL);
 
-            if (!resolve_expression(inst, task, stmt->run.expression, scope)) {
+            if (!resolve_expression(inst, task, run_expr, scope)) {
                 return false;
             }
 
@@ -324,6 +324,26 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
                 }
             }
 
+            break;
+        }
+
+        case AST_Statement_Kind::INSERT: {
+
+            AST_Expression* insert_expr = stmt->insert.expression;
+            assert(insert_expr->kind == AST_Expression_Kind::CALL);
+
+            if (!resolve_expression(inst, task, insert_expr, scope)) {
+                return false;
+            }
+
+            for (s64 i = 0; i < insert_expr->call.args.count; i++) {
+                AST_Expression* arg_expr = insert_expr->call.args[i];
+
+                if (!(arg_expr->flags & AST_EXPR_FLAG_CONST)) {
+                    instance_fatal_error(inst, source_pos(inst, arg_expr), "Argument expression inside #insert must be a constant.");
+                }
+
+            }
             break;
         }
 

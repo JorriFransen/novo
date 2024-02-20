@@ -65,7 +65,10 @@ NAPI void vm_free(VM* vm);
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program);
 NAPI VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index);
 
-NAPI AST_Expression* const_expr_from_vm_result(Instance* inst, VM_Result vm_res);
-NAPI AST_Expression* const_expr_from_memory(Instance* inst, Type* type, u8* mem);
+NAPI AST_Expression* vm_const_expr_from_result(Instance* inst, VM_Result vm_res);
+NAPI AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem);
+
+NAPI String vm_string_from_result(Instance* inst, Allocator* allocator, VM_Result vm_res);
+NAPI String vm_string_from_memory(Instance* inst, Allocator* allocator, u8* mem);
 
 }

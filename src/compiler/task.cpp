@@ -9,13 +9,20 @@
 
 namespace Novo {
 
-void add_parse_task(Instance* inst, Atom path)
+void add_parse_task(Instance* inst, Atom path_or_name)
+{
+    add_parse_task(inst, path_or_name, {});
+}
+
+void add_parse_task(Instance* inst, Atom path_or_name, String content)
 {
     s64 imported_file_index = inst->imported_files.count;
-    darray_append(&inst->imported_files, { path, nullptr });
+    darray_append(&inst->imported_files, { path_or_name, nullptr });
 
     Parse_Task task = {
-        .file_name = path,
+        .kind = content.length ? Parse_Task_Kind::INSERT : Parse_Task_Kind::FILE,
+        .name = path_or_name,
+        .content = content,
         .imported_file_index = imported_file_index,
     };
 
@@ -108,6 +115,7 @@ void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_De
         case AST_Statement_Kind::CONTINUE:
         case AST_Statement_Kind::BLOCK:
         case AST_Statement_Kind::RUN:
+        case AST_Statement_Kind::INSERT:
         case AST_Statement_Kind::ASSERT: {
 
             Resolve_Task task = resolve_task_create(inst, ast_node(stmt), scope, fn, bc_deps);
@@ -136,23 +144,33 @@ void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_de
     assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
     SSA_Task task = {
+        .kind = SSA_Task_Kind::FUNCTION,
         .node = ast_node(decl),
         .bytecode_deps = bc_deps,
-        .run_scope = nullptr,
-        .is_run = false,
+        .scope = nullptr,
     };
     darray_append(&inst->ssa_tasks, task);
 }
 
 void add_ssa_task(Instance* inst, AST_Statement* stmt, Scope* scope, DArray<AST_Node>* bc_deps)
 {
-    assert(stmt->kind == AST_Statement_Kind::RUN);
+    SSA_Task_Kind kind = SSA_Task_Kind::INVALID;
+
+    if (stmt->kind == AST_Statement_Kind::RUN) {
+        kind = SSA_Task_Kind::RUN;
+    } else {
+        assert(stmt->kind == AST_Statement_Kind::INSERT);
+        kind = SSA_Task_Kind::INSERT;
+    }
+
+    assert(kind != SSA_Task_Kind::INVALID);
 
     SSA_Task task = {
+        .kind = kind,
         .node = ast_node(stmt),
         .bytecode_deps = bc_deps,
-        .run_scope = scope,
-        .is_run = true,
+
+        .scope = scope,
     };
     darray_append(&inst->ssa_tasks, task);
 }
@@ -162,24 +180,38 @@ void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST
     assert(expr->kind == AST_Expression_Kind::RUN);
 
     SSA_Task task = {
+        .kind = SSA_Task_Kind::RUN,
         .node = ast_node(expr),
         .bytecode_deps = bc_deps,
-        .run_scope = scope,
-        .is_run = true,
+        .scope = scope,
     };
     darray_append(&inst->ssa_tasks, task);
 }
 
 void add_run_task(Instance* inst, AST_Node node, Scope* scope, s64 wrapper_index)
 {
+    Run_Task_Kind kind = Run_Task_Kind::INVALID;
+
     if (node.kind == AST_Node_Kind::EXPRESSION) {
         assert(node.expression->kind == AST_Expression_Kind::RUN);
+        kind = Run_Task_Kind::RUN;
     } else {
         assert(node.kind == AST_Node_Kind::STATEMENT);
-        assert(node.statement->kind == AST_Statement_Kind::RUN);
+
+        if (node.statement->kind == AST_Statement_Kind::RUN) {
+            kind = Run_Task_Kind::RUN;
+        } else {
+            assert(node.statement->kind == AST_Statement_Kind::INSERT);
+            kind = Run_Task_Kind::INSERT;
+        }
+
     }
 
+    assert(kind != Run_Task_Kind::INVALID);
+
+
     Run_Task task = {
+        .kind = kind,
         .node = node,
         .scope = scope,
         .wrapper_index = wrapper_index,

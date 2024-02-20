@@ -14,9 +14,18 @@ struct Type;
 
 template <typename Element_Type> struct DArray;
 
+enum class Parse_Task_Kind : u32
+{
+    INVALID,
+    FILE,
+    INSERT,
+};
+
 struct Parse_Task
 {
-    Atom file_name;
+    Parse_Task_Kind kind;
+    Atom name;
+    String content;
     s64 imported_file_index;
 };
 
@@ -45,24 +54,41 @@ struct Type_Task
     AST_Identifier* waiting_for;
 };
 
+enum class SSA_Task_Kind : u32
+{
+    INVALID,
+    FUNCTION,
+    RUN,
+    INSERT,
+};
+
 struct SSA_Task
 {
+    SSA_Task_Kind kind;
     AST_Node node;
 
     DArray<AST_Node> *bytecode_deps;
 
-    Scope* run_scope;
-    bool is_run;
+    Scope* scope;
+};
+
+enum class Run_Task_Kind : u32
+{
+    INVALID,
+    RUN,
+    INSERT,
 };
 
 struct Run_Task
 {
+    Run_Task_Kind kind;
     AST_Node node;
     Scope* scope;
     s64 wrapper_index;
 };
 
-NAPI void add_parse_task(Instance* inst, Atom path);
+NAPI void add_parse_task(Instance* inst, Atom path_or_name);
+NAPI void add_parse_task(Instance* inst, Atom path_or_name, String content);
 
 NAPI void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope);
 NAPI void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);

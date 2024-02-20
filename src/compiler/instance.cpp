@@ -238,10 +238,19 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         for (s64 i = 0; i < inst->parse_tasks.count; i++) {
             Parse_Task task = inst->parse_tasks[i];
 
-            AST_File* parsed_file = parse_file(inst, atom_string(task.file_name), task.imported_file_index);
+            AST_File* parsed_file = nullptr;
+
+            if (task.kind == Parse_Task_Kind::FILE) {
+                parsed_file = parse_file(inst, atom_string(task.name), task.imported_file_index);
+            } else {
+                assert(task.kind == Parse_Task_Kind::INSERT);
+                assert(false);
+            }
+
             if (parsed_file)
             {
                 inst->imported_files[task.imported_file_index].ast = parsed_file;
+
                 darray_remove_unordered(&inst->parse_tasks, i);
                 i--;
 
@@ -327,17 +336,17 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             bool success;
 
-            if (task.is_run) {
+            if (task.kind == SSA_Task_Kind::RUN || task.kind == SSA_Task_Kind::INSERT) {
 
-                s64 wrapper_index = ssa_emit_run_wrapper(inst, inst->ssa_program, task.node, task.run_scope);
+                s64 wrapper_index = ssa_emit_run_wrapper(inst, inst->ssa_program, task.node, task.scope);
                 success = wrapper_index >= 0;
 
                 if (success) {
-                    add_run_task(inst, task.node, task.run_scope, wrapper_index);
+                    add_run_task(inst, task.node, task.scope, wrapper_index);
                 }
 
             } else {
-
+                assert(task.kind == SSA_Task_Kind::FUNCTION);
                 assert(task.node.kind == AST_Node_Kind::DECLARATION);
                 assert(task.node.declaration->kind == AST_Declaration_Kind::FUNCTION);
                 success = ssa_emit_function(inst, inst->ssa_program, task.node.declaration);
@@ -362,9 +371,10 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             assert(!run_result.assert_fail);
 
             if (task->node.kind == AST_Node_Kind::EXPRESSION) {
+                assert(task->kind == Run_Task_Kind::RUN);
                 assert(!task->node.expression->run.generated_expression);
 
-                AST_Expression* gen_expr = const_expr_from_vm_result(inst, run_result);
+                AST_Expression* gen_expr = vm_const_expr_from_result(inst, run_result);
                 assert(gen_expr);
 
                 task->node.expression->run.generated_expression = gen_expr;
@@ -382,6 +392,21 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             } else {
                 assert(task->node.kind == AST_Node_Kind::STATEMENT);
+
+                if (task->kind == Run_Task_Kind::INSERT) {
+
+                    // TODO: Dynamic allocator
+                    String insert_string = vm_string_from_result(inst, c_allocator(), run_result);
+                    Source_Pos pos = source_pos(inst, task->node);
+                    Imported_File file = inst->imported_files[pos.file_index];
+                    Line_Info li = line_info(file.newline_offsets, pos.offset);
+
+                    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+                    Atom name = atom_get(string_format(&inst->temp_allocator, "%s:%u:%u: #insert", atom_string(file.name).data, li.line, li.offset));
+                    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+                    add_parse_task(inst, name, insert_string);
+                }
             }
 
             progress = true;
@@ -461,7 +486,7 @@ static void instance_error_va(Instance* inst, Source_Pos pos, const char* fmt, v
     inst->fatal_error = true;
 
     Imported_File file = inst->imported_files[pos.file_index];
-    String_Ref name = atom_string(file.path);
+    String_Ref name = atom_string(file.name);
 
     Line_Info li = line_info(file.newline_offsets, pos.offset);
 
@@ -475,7 +500,7 @@ static void instance_error_note_va(Instance* inst, Source_Pos pos, const char* f
     inst->fatal_error = true;
 
     Imported_File file = inst->imported_files[pos.file_index];
-    String_Ref name = atom_string(file.path);
+    String_Ref name = atom_string(file.name);
 
     Line_Info li = line_info(file.newline_offsets, pos.offset);
 

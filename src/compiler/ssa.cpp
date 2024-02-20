@@ -300,7 +300,8 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
         expr = node.expression->run.expression;
     } else {
         assert(node.kind == AST_Node_Kind::STATEMENT);
-        assert(node.statement->kind == AST_Statement_Kind::RUN);
+        assert(node.statement->kind == AST_Statement_Kind::RUN ||
+               node.statement->kind == AST_Statement_Kind::INSERT);
 
         expr = node.statement->run.expression;
     }
@@ -321,7 +322,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
 
     auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
 
-    String initial_name = string_format(&inst->temp_allocator, "run_wrapper.%s.%u.%u", atom_string(file.path).data, pos.offset, pos.length);
+    String initial_name = string_format(&inst->temp_allocator, "run_wrapper.%s.%u.%u", atom_string(file.name).data, pos.offset, pos.length);
     Atom name = ssa_unique_function_name(inst, program, initial_name);
     temp_allocator_reset(&inst->temp_allocator_data, mark);
 
@@ -729,6 +730,11 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
         }
 
         case AST_Statement_Kind::RUN: assert(false); break;
+
+        case AST_Statement_Kind::INSERT: {
+            assert(false);
+            break;
+        }
 
         case AST_Statement_Kind::BLOCK: {
             Scope* block_scope = stmt->block.scope;
