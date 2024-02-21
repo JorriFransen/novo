@@ -61,6 +61,8 @@ struct Instance
     Scope* global_scope;
 
     DArray<Imported_File> imported_files;
+    s64 insert_file_index;
+    String_Ref inserted_strings_path;
 
     DArray<Type*> function_types;
 
@@ -106,6 +108,8 @@ NAPI void instance_free(Instance* inst);
 
 NAPI bool instance_start(Instance* inst);
 NAPI bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_module = false);
+
+NAPI u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str);
 
 NAPI void instance_error(Instance* inst, Source_Pos pos, const char* fmt, ...);
 NAPI void instance_fatal_error(Instance* inst, Source_Pos pos, const char* fmt, ...);

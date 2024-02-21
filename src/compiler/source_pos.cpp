@@ -87,6 +87,8 @@ Source_Pos source_pos(Instance* inst, AST_Node &node)
 
 Line_Info line_info(Array_Ref<u32> newline_offsets, u32 offset)
 {
+    quicksort(newline_offsets);
+
     Line_Info result = { 0, offset + 1 };
 
     u32 line = 1;

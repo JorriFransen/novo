@@ -86,11 +86,11 @@ bool fs_open(const String_Ref path, File_Mode mode, File_Handle* out_handle)
     const char* mode_str;
 
     if (read && write) {
-        mode_str = "w+b";
+        mode_str = "a+b";
     } else if (read && !write) {
         mode_str = "rb";
     } else if (!read && write) {
-        mode_str = "wb";
+        mode_str = "ab";
     } else {
         log_error("Invalid mode passed to filesystem_open(): %s", path.data);
         return false;
@@ -102,10 +102,22 @@ bool fs_open(const String_Ref path, File_Mode mode, File_Handle* out_handle)
         return false;
     }
 
+    if (write) {
+        fseek(file, 0, SEEK_SET);
+    }
+
     out_handle->handle = file;
     out_handle->valid = true;
 
     return true;
+}
+
+void fs_close(File_Handle* handle)
+{
+    assert(handle->valid);
+    handle->valid = false;
+
+    fclose((FILE*)handle->handle);
 }
 
 bool fs_size(File_Handle* handle, u64* out_size)
@@ -140,6 +152,49 @@ bool fs_read(File_Handle* handle, u64 size, u8* out_bytes, u64* out_size)
     }
 
     return true;
+}
+
+bool fs_write(File_Handle* handle, u64 size, u8* bytes, u64* out_written)
+{
+    assert(handle && handle->valid && handle->handle);
+    assert(size && out_written && bytes);
+
+    size_t written = fwrite(bytes, size, 1, (FILE*)handle->handle);
+
+    if (written != 1) {
+        *out_written = 0;
+        return false;
+    }
+
+    *out_written = size;
+    return true;
+}
+
+bool fs_append(File_Handle* handle, u64 size, u8* bytes, u64* out_written)
+{
+    assert(handle && handle->valid && handle->handle);
+    assert(size && out_written && bytes);
+
+    int seek_res = fseek((FILE*)handle->handle, 0, SEEK_END);
+    assert(seek_res == 0);
+
+    return fs_write(handle, size, bytes, out_written);
+}
+
+bool fs_append(File_Handle* handle, const String_Ref str)
+{
+    u64 written;
+    bool result = fs_append(handle, str.length, (u8*)str.data, &written);
+    assert(written == str.length);
+
+    return result;
+}
+
+bool fs_remove(const String_Ref path)
+{
+    NSTRING_ASSERT_ZERO_TERMINATION(path);
+    int res = remove(path.data);
+    return res == 0;
 }
 
 void fs_chdir(const String_Ref path)

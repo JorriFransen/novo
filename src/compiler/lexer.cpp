@@ -29,11 +29,16 @@ void lexer_create(Instance* instance, Lexer* out_lexer)
     out_lexer->token = {};
 }
 
-void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref stream_name, s64 import_index)
+void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref stream_name, s64 import_index, u32 offset)
 {
     lexer->stream_name = stream_name;
     lexer->import_index = import_index;
-    darray_init(&lexer->instance->ast_allocator, &lexer->instance->imported_files[import_index].newline_offsets);
+    lexer->offset = offset;
+
+    DArray<u32>* newline_offsets = &lexer->instance->imported_files[import_index].newline_offsets;
+    if (!newline_offsets->data) {
+        darray_init(&lexer->instance->ast_allocator, newline_offsets);
+    }
 
     lexer->stream_start = stream.data;
     lexer->stream = stream.data;
@@ -65,7 +70,7 @@ bool next_token(Lexer* lex)
 
 next_token__start_lexing_token:
     lex->token.kind = TOK_INVALID;
-    lex->token.offset = lex->stream - lex->stream_start;
+    lex->token.offset = (lex->stream - lex->stream_start) + lex->offset;
     lex->token.flags = TOK_FLAG_NONE;
     auto start = lex->stream;
 
@@ -92,7 +97,7 @@ case (first_char): {                                                \
             while (isspace(*lex->stream)) {
                 if (*lex->stream == '\n') {
                     lex->line_start = lex->stream + 1;
-                    darray_append(newline_offsets, (u32)(lex->stream - lex->stream_start));
+                    darray_append(newline_offsets, (u32)(lex->stream - lex->stream_start) + lex->offset);
                 }
                 lex->stream += 1;
             }

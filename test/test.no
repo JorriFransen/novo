@@ -35,10 +35,15 @@ printf :: (format: *u8, ..) -> s32 #foreign;
 
 
 #insert main_str();
+#insert ret_42_str();
 
 main_str :: () -> string {
 
-    return "main :: () -> int { printf(\"Hello!\n\".data); return 42; }";
+    return "main :: () -> int {\n    printf(\"Hello!\".data);\n    return 0;\n    abc();\n}";
+}
+
+ret_42_str :: () -> string {
+    return "ret_42 :: () -> int { return 42; }";
 }
 
 #run main();
