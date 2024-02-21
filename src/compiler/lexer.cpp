@@ -141,7 +141,7 @@ case (first_char): {                                                \
 
                 lex->stream += 1;
 
-                lex->token.character = g_special_characters[special_index];
+                lex->token.character = get_special_char(special_index);
             }
 
             if (*lex->stream != '\'') {
