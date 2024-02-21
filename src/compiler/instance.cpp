@@ -239,17 +239,18 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             Parse_Task task = inst->parse_tasks[i];
 
             AST_File* parsed_file = nullptr;
+            DArray<AST_Node> nodes = {};
 
             if (task.kind == Parse_Task_Kind::FILE) {
                 parsed_file = parse_file(inst, atom_string(task.name), task.imported_file_index);
             } else {
                 assert(task.kind == Parse_Task_Kind::INSERT);
-                assert(false);
+                nodes = parse_string(inst, atom_string(task.name), task.content, task.imported_file_index);
             }
 
-            if (parsed_file)
+            if (parsed_file || nodes.count)
             {
-                inst->imported_files[task.imported_file_index].ast = parsed_file;
+                if (parsed_file) inst->imported_files[task.imported_file_index].ast = parsed_file;
 
                 darray_remove_unordered(&inst->parse_tasks, i);
                 i--;
@@ -260,7 +261,12 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             progress = true;
 
-            add_resolve_tasks(inst, parsed_file, inst->global_scope);
+            if (parsed_file) {
+                add_resolve_tasks(inst, parsed_file, inst->global_scope);
+            } else {
+                assert(task.insert_scope);
+                add_resolve_tasks(inst, nodes, task.insert_scope);
+            }
         }
 
         for (s64 i = 0; i < inst->resolve_tasks.count; i++) {
@@ -397,15 +403,17 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                     // TODO: Dynamic allocator
                     String insert_string = vm_string_from_result(inst, c_allocator(), run_result);
-                    Source_Pos pos = source_pos(inst, task->node);
-                    Imported_File file = inst->imported_files[pos.file_index];
-                    Line_Info li = line_info(file.newline_offsets, pos.offset);
+                    Source_Pos insert_pos = source_pos(inst, task->node);
+                    Imported_File file = inst->imported_files[insert_pos.file_index];
+                    Line_Info li = line_info(file.newline_offsets, insert_pos.offset);
+
+                    // log_info("%.*s, ")
 
                     auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
                     Atom name = atom_get(string_format(&inst->temp_allocator, "%s:%u:%u: #insert", atom_string(file.name).data, li.line, li.offset));
                     temp_allocator_reset(&inst->temp_allocator_data, mark);
 
-                    add_parse_task(inst, name, insert_string);
+                    add_parse_task(inst, name, insert_string, task->scope, insert_pos.file_index);
                 }
             }
 

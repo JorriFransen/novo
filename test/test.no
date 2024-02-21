@@ -1,4 +1,5 @@
 // TODO:
+//  - Emit file with inserted strings and their origin position
 //  - sizeof(), alignof(), offsetof()
 //  - #insert
 //  - #insert in local scopes? (This probably requires flattening all statements...)
@@ -36,8 +37,8 @@ printf :: (format: *u8, ..) -> s32 #foreign;
 #insert main_str();
 
 main_str :: () -> string {
-    
-    return "main :: () -> int { return 42; }";
+
+    return "main :: () -> int { printf(\"Hello!\n\".data); return 42; }";
 }
 
-// #run main();
+#run main();

@@ -5,6 +5,7 @@
 
 #include "ast.h"
 #include "atom.h"
+#include "lexer.h"
 
 namespace Novo {
 
@@ -17,7 +18,10 @@ struct Lexer;
 struct Parser
 {
     Instance* instance;
-    Lexer* lexer;
+    Lexer lexer;
+
+    Temp_Allocator_Mark file_read_mark;
+    String_Ref cwd;
 
     s64 next_index_in_function;
     bool parsing_function_body;
@@ -28,7 +32,12 @@ struct Parser
     AST_Expression_Flags new_expr_flags;
 };
 
+NAPI Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_index);
+NAPI Parser parser_create(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index);
+
 NAPI AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index);
+NAPI DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index);
+NAPI DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser);
 
 NAPI AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi);
 NAPI AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi);

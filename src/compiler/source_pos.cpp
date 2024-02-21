@@ -19,7 +19,7 @@ Source_Pos source_pos(const Lexer* lexer)
 
 Source_Pos source_pos(const Parser* parser, const Token& tok)
 {
-    return { (u32)parser->lexer->import_index, tok.offset, tok.length };
+    return { (u32)parser->lexer.import_index, tok.offset, tok.length };
 }
 
 Source_Pos source_pos(const Source_Pos& start, const Source_Pos& end)
