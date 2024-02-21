@@ -2,6 +2,7 @@
 .vs/
 
 build*/
+inserted_strings.no
 
 .nvim.lua
 .luarc.json

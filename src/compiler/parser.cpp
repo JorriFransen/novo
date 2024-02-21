@@ -33,7 +33,7 @@ Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_inde
     parser.instance = inst;
 
     lexer_create(inst, &parser.lexer);
-    lexer_init_stream(&parser.lexer, file_content, file_path, import_index);
+    lexer_init_stream(&parser.lexer, file_content, file_path, import_index, 0);
 
     parser.file_read_mark = mark;
     parser.cwd = fs_dirname(&inst->temp_allocator, file_path);
@@ -48,13 +48,13 @@ Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_inde
     return parser;
 }
 
-Parser parser_create(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index)
+Parser parser_create(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index, u32 offset)
 {
     Parser parser;
     parser.instance = inst;
 
     lexer_create(inst, &parser.lexer);
-    lexer_init_stream(&parser.lexer, content, name, import_index);
+    lexer_init_stream(&parser.lexer, content, name, import_index, offset);
 
     parser.file_read_mark = 0;
 
@@ -84,11 +84,13 @@ AST_File* parse_file(Instance* inst, const String_Ref file_path, s64 import_inde
     return result;
 }
 
-DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index)
+DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index, u32 offset)
 {
-    Parser parser = parser_create(inst, name, content, import_index);
+    Parser parser = parser_create(inst, name, content, import_index, offset);
 
-    return parse_nodes(inst, &parser);
+    auto result = parse_nodes(inst, &parser);
+
+    return result;
 }
 
 DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser)

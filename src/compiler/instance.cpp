@@ -54,6 +54,12 @@ void instance_init(Instance* inst, Options options)
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
     darray_init(&inst->ast_allocator, &inst->imported_files);
+    inst->insert_file_index = -1;
+    inst->inserted_strings_path = "inserted_strings.no";
+
+    if (fs_is_file(inst->inserted_strings_path)) {
+        fs_remove(inst->inserted_strings_path);
+    }
 
     darray_init(&inst->ast_allocator, &inst->function_types);
 
@@ -245,7 +251,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 parsed_file = parse_file(inst, atom_string(task.name), task.imported_file_index);
             } else {
                 assert(task.kind == Parse_Task_Kind::INSERT);
-                nodes = parse_string(inst, atom_string(task.name), task.content, task.imported_file_index);
+                nodes = parse_string(inst, atom_string(task.name), task.content, task.imported_file_index, task.offset);
             }
 
             if (parsed_file || nodes.count)
@@ -403,17 +409,12 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                     // TODO: Dynamic allocator
                     String insert_string = vm_string_from_result(inst, c_allocator(), run_result);
-                    Source_Pos insert_pos = source_pos(inst, task->node);
-                    Imported_File file = inst->imported_files[insert_pos.file_index];
-                    Line_Info li = line_info(file.newline_offsets, insert_pos.offset);
+                    Source_Pos pos = source_pos(inst, task->node);
 
-                    // log_info("%.*s, ")
+                    u32 offset = add_insert_string(inst, pos, insert_string);
+                    assert(offset >= 0);
 
-                    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-                    Atom name = atom_get(string_format(&inst->temp_allocator, "%s:%u:%u: #insert", atom_string(file.name).data, li.line, li.offset));
-                    temp_allocator_reset(&inst->temp_allocator_data, mark);
-
-                    add_parse_task(inst, name, insert_string, task->scope, insert_pos.file_index);
+                    add_parse_task(inst, atom_get(inst->inserted_strings_path), insert_string, task->scope, inst->insert_file_index, offset);
                 }
             }
 
@@ -487,6 +488,61 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     }
 
     return true;
+}
+
+u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)
+{
+    if (inst->insert_file_index == -1) {
+        s64 index = inst->imported_files.count;
+
+        Imported_File insert_file = {
+            .name = atom_get(inst->inserted_strings_path),
+            .ast = nullptr,
+        };
+
+        // TODO: Dynamic allocator
+        darray_init(c_allocator(), &insert_file.newline_offsets);
+
+        darray_append(&inst->imported_files, insert_file);
+        inst->insert_file_index = index;
+    }
+
+    File_Handle fhandle;
+    fs_open(inst->inserted_strings_path, FILE_MODE_WRITE, &fhandle);
+
+    u64 offset_offset;
+    fs_size(&fhandle, &offset_offset);
+
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+
+    Imported_File inserted_from_file = inst->imported_files[insert_pos.file_index];
+    Line_Info insert_li = line_info(inserted_from_file.newline_offsets, insert_pos.offset);
+
+    String comment_string = string_format(&inst->temp_allocator, "// Inserted from: %s:%u:%u\n",
+                                          atom_string(inserted_from_file.name).data, insert_li.line, insert_li.offset);
+
+
+    Imported_File* insert_file = &inst->imported_files[inst->insert_file_index];
+
+    fs_append(&fhandle, comment_string);
+    offset_offset += comment_string.length;
+
+    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+    u32 result = offset_offset;
+
+    darray_append(&insert_file->newline_offsets, result - 1);
+
+    fs_append(&fhandle, str);
+    offset_offset += str.length;
+
+    fs_append(&fhandle, "\n\n");
+    darray_append(&insert_file->newline_offsets, (u32)offset_offset);
+    darray_append(&insert_file->newline_offsets, (u32)offset_offset + 1);
+
+    fs_close(&fhandle);
+
+    return result;
 }
 
 static void instance_error_va(Instance* inst, Source_Pos pos, const char* fmt, va_list args)

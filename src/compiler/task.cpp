@@ -14,10 +14,10 @@ void add_parse_task(Instance* inst, Atom path_or_name)
     s64 imported_file_index = inst->imported_files.count;
     darray_append(&inst->imported_files, { path_or_name, nullptr });
 
-    return add_parse_task(inst, path_or_name, {}, nullptr, imported_file_index);
+    return add_parse_task(inst, path_or_name, {}, nullptr, imported_file_index, 0);
 }
 
-void add_parse_task(Instance* inst, Atom path_or_name, String content, Scope* insert_scope, s64 imported_file_index)
+void add_parse_task(Instance* inst, Atom path_or_name, String content, Scope* insert_scope, s64 imported_file_index, u32 offset)
 {
 
     Parse_Task task = {
@@ -26,6 +26,7 @@ void add_parse_task(Instance* inst, Atom path_or_name, String content, Scope* in
         .content = content,
         .imported_file_index = imported_file_index,
         .insert_scope = insert_scope,
+        .offset = offset,
     };
 
     darray_append(&inst->parse_tasks, task);
