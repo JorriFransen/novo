@@ -11,19 +11,21 @@ namespace Novo {
 
 void add_parse_task(Instance* inst, Atom path_or_name)
 {
-    add_parse_task(inst, path_or_name, {});
-}
-
-void add_parse_task(Instance* inst, Atom path_or_name, String content)
-{
     s64 imported_file_index = inst->imported_files.count;
     darray_append(&inst->imported_files, { path_or_name, nullptr });
+
+    return add_parse_task(inst, path_or_name, {}, nullptr, imported_file_index);
+}
+
+void add_parse_task(Instance* inst, Atom path_or_name, String content, Scope* insert_scope, s64 imported_file_index)
+{
 
     Parse_Task task = {
         .kind = content.length ? Parse_Task_Kind::INSERT : Parse_Task_Kind::FILE,
         .name = path_or_name,
         .content = content,
         .imported_file_index = imported_file_index,
+        .insert_scope = insert_scope,
     };
 
     darray_append(&inst->parse_tasks, task);
@@ -49,6 +51,26 @@ void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)
                 break;
             }
 
+            case AST_Node_Kind::EXPRESSION: assert(false); break;
+            case AST_Node_Kind::TYPE_SPEC: assert(false); break;
+        }
+    }
+}
+
+void add_resolve_tasks(Instance* inst, DArray<AST_Node> nodes, Scope* scope)
+{
+    for (s64 i = 0; i < nodes.count; i++) {
+        auto node = nodes[i];
+
+        switch (node.kind) {
+            case AST_Node_Kind::INVALID: assert(false); break;
+
+            case AST_Node_Kind::DECLARATION: {
+                add_resolve_tasks(inst, node.declaration, scope, nullptr, nullptr);
+                break;
+            }
+
+            case AST_Node_Kind::STATEMENT: assert(false); break;
             case AST_Node_Kind::EXPRESSION: assert(false); break;
             case AST_Node_Kind::TYPE_SPEC: assert(false); break;
         }

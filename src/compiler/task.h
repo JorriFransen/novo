@@ -27,6 +27,8 @@ struct Parse_Task
     Atom name;
     String content;
     s64 imported_file_index;
+
+    Scope* insert_scope;
 };
 
 struct Resolve_Task
@@ -88,9 +90,10 @@ struct Run_Task
 };
 
 NAPI void add_parse_task(Instance* inst, Atom path_or_name);
-NAPI void add_parse_task(Instance* inst, Atom path_or_name, String content);
+NAPI void add_parse_task(Instance* inst, Atom path_or_name, String content, Scope* insert_scope, s64 import_index);
 
 NAPI void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope);
+NAPI void add_resolve_tasks(Instance* inst, DArray<AST_Node> nodes, Scope* scope);
 NAPI void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);
 NAPI void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);
 NAPI void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope);

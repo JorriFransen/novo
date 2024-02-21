@@ -10,7 +10,6 @@
 #include "filesystem.h"
 #include "instance.h"
 #include "keywords.h"
-#include "lexer.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "token.h"
@@ -21,95 +20,143 @@ namespace Novo {
 
 #define expect_token(p, k) if (!expect_token_internal((p), (k))) return {};
 
-AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index)
+Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_index)
 {
-    Lexer lexer;
-    lexer_create(instance, &lexer);
-
     String file_content;
 
-    auto mark = temp_allocator_get_mark(&instance->temp_allocator_data);
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
 
-    bool read_ok = fs_read_entire_file(&instance->temp_allocator, file_path, &file_content);
+    bool read_ok = fs_read_entire_file(&inst->temp_allocator, file_path, &file_content);
     assert(read_ok);
 
-    lexer_init_stream(&lexer, file_content, file_path, import_index);
-
     Parser parser;
-    parser.instance = instance;
-    parser.lexer = &lexer;
+    parser.instance = inst;
+
+    lexer_create(inst, &parser.lexer);
+    lexer_init_stream(&parser.lexer, file_content, file_path, import_index);
+
+    parser.file_read_mark = mark;
+    parser.cwd = fs_dirname(&inst->temp_allocator, file_path);
+    if (!string_ends_with(parser.cwd, NPLATFORM_PATH_SEPARATOR)) {
+        parser.cwd = string_append(&inst->temp_allocator, parser.cwd, NPLATFORM_PATH_SEPARATOR);
+    }
+
     parser.next_index_in_function = 0;
     parser.parsing_function_body = false;
     parser.new_expr_flags = AST_EXPR_FLAG_NONE;
 
-    auto nodes = temp_array_create<AST_Node>(&instance->temp_allocator, 4);
+    return parser;
+}
 
-    while (!is_token(&lexer, TOK_EOF) && !is_token(&lexer, TOK_ERROR)) {
+Parser parser_create(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index)
+{
+    Parser parser;
+    parser.instance = inst;
 
-        Token ct = parser.lexer->token;
+    lexer_create(inst, &parser.lexer);
+    lexer_init_stream(&parser.lexer, content, name, import_index);
+
+    parser.file_read_mark = 0;
+
+    String_Ref file_path = atom_string(inst->imported_files[import_index].name);
+    parser.cwd = fs_dirname(&inst->temp_allocator, file_path);
+    if (!string_ends_with(parser.cwd, NPLATFORM_PATH_SEPARATOR)) {
+        parser.cwd = string_append(&inst->temp_allocator, parser.cwd, NPLATFORM_PATH_SEPARATOR);
+    }
+
+    parser.next_index_in_function = 0;
+    parser.parsing_function_body = false;
+    parser.new_expr_flags = AST_EXPR_FLAG_NONE;
+
+    return parser;
+}
+
+AST_File* parse_file(Instance* inst, const String_Ref file_path, s64 import_index)
+{
+    Parser parser = parser_create(inst, file_path, import_index);
+
+    DArray<AST_Node> nodes = parse_nodes(inst, &parser);
+
+    AST_File* result = ast_file(inst, nodes);
+
+    temp_allocator_reset(&inst->temp_allocator_data, parser.file_read_mark);
+
+    return result;
+}
+
+DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index)
+{
+    Parser parser = parser_create(inst, name, content, import_index);
+
+    return parse_nodes(inst, &parser);
+}
+
+DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser)
+{
+    Lexer* lexer = &parser->lexer;
+
+    auto nodes = temp_array_create<AST_Node>(&inst->temp_allocator, 4);
+
+    while (!is_token(lexer, TOK_EOF) && !is_token(lexer, TOK_ERROR)) {
+
+        Token ct = parser->lexer.token;
         switch (ct.kind) {
 
             case '#': {
-                next_token(parser.lexer);
+                next_token(&parser->lexer);
 
-                if (match_name(&parser, "import")) {
-                    auto str_tok = parser.lexer->token;
-                    expect_token(&parser, TOK_STRING);
+                if (match_name(parser, "import")) {
+                    auto str_tok = parser->lexer.token;
+                    expect_token(parser, TOK_STRING);
 
                     String str_lit = atom_string(str_tok.atom);
 
-                    String current_file_dir = fs_dirname(&instance->temp_allocator, file_path);
-
-                    if (!string_ends_with(current_file_dir, NPLATFORM_PATH_SEPARATOR)) {
-                        current_file_dir = string_append(&instance->temp_allocator, current_file_dir, NPLATFORM_PATH_SEPARATOR);
-                    }
-
-                    String import_path = string_append(&instance->ast_allocator, current_file_dir, String_Ref(str_lit.data + 1, str_lit.length - 2));
+                    String import_path = string_append(&inst->ast_allocator, parser->cwd, String_Ref(str_lit.data + 1, str_lit.length - 2));
                     assert(fs_is_file(import_path));
 
-                    AST_Statement* stmt = ast_import_statement(instance, import_path);
-                    if (!stmt) return nullptr;
+                    AST_Statement* stmt = ast_import_statement(inst, import_path);
+                    if (!stmt) return {};
                     darray_append(&nodes, ast_node(stmt));
 
-                } else if (match_name(&parser, "run")) {
+                } else if (match_name(parser, "run")) {
 
-                    AST_Expression_Flags old_flags = parser.new_expr_flags;
-                    parser.new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+                    AST_Expression_Flags old_flags = parser->new_expr_flags;
+                    parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
 
-                    AST_Expression* expr = parse_expression(&parser);
-                    expect_token(&parser, ';');
+                    AST_Expression* expr = parse_expression(parser);
+                    expect_token(parser, ';');
 
-                    parser.new_expr_flags = old_flags;
+                    parser->new_expr_flags = old_flags;
 
                     if (expr->kind != AST_Expression_Kind::CALL) {
-                        instance_fatal_error(parser.instance, source_pos(parser.instance, expr), "Expected call expression after #run");
+                        instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #run");
                     }
 
-                    AST_Statement* run_stmt = ast_run_statement(parser.instance, expr);
+                    AST_Statement* run_stmt = ast_run_statement(parser->instance, expr);
 
-                    Source_Pos pos = source_pos(source_pos(&parser, ct), source_pos(parser.instance, expr));
-                    save_source_pos(parser.instance, run_stmt, pos);
+                    Source_Pos pos = source_pos(source_pos(parser, ct), source_pos(parser->instance, expr));
+                    save_source_pos(parser->instance, run_stmt, pos);
 
                     darray_append(&nodes, ast_node(run_stmt));
 
-                } else if (match_name(&parser, "insert")) {
+                } else if (match_name(parser, "insert")) {
 
-                    AST_Expression_Flags old_flags = parser.new_expr_flags;
-                    parser.new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+                    AST_Expression_Flags old_flags = parser->new_expr_flags;
+                    parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
 
-                    AST_Expression* expr = parse_expression(&parser);
-                    expect_token(&parser, ';');
+                    AST_Expression* expr = parse_expression(parser);
+                    expect_token(parser, ';');
 
-                    parser.new_expr_flags = old_flags;
+                    parser->new_expr_flags = old_flags;
 
                     if (expr->kind != AST_Expression_Kind::CALL) {
-                        instance_fatal_error(parser.instance, source_pos(parser.instance, expr), "Expected call expression after #insert");
+                        instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #insert");
                     }
 
-                    AST_Statement* insert_stmt = ast_insert_statement(parser.instance, expr);
+                    AST_Statement* insert_stmt = ast_insert_statement(parser->instance, expr);
 
-                    Source_Pos pos = source_pos(source_pos(&parser, ct), source_pos(parser.instance, expr));
-                    save_source_pos(parser.instance, insert_stmt, pos);
+                    Source_Pos pos = source_pos(source_pos(parser, ct), source_pos(parser->instance, expr));
+                    save_source_pos(parser->instance, insert_stmt, pos);
 
                     darray_append(&nodes, ast_node(insert_stmt));
 
@@ -122,8 +169,8 @@ AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_
 
             default: {
 
-                AST_Declaration* decl = parse_declaration(&parser, instance->global_scope, true);
-                if (!decl) return nullptr;
+                AST_Declaration* decl = parse_declaration(parser, inst->global_scope, true);
+                if (!decl) return {};
                 darray_append(&nodes, ast_node(decl));
 
                 break;
@@ -131,9 +178,7 @@ AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_
         }
     }
 
-    auto result = ast_file(instance, temp_array_finalize(&instance->ast_allocator, &nodes));
-
-    temp_allocator_reset(&instance->temp_allocator_data, mark);
+    DArray<AST_Node> result = temp_array_finalize(&inst->ast_allocator, &nodes);
 
     return result;
 }
@@ -236,7 +281,7 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
 
     while (!is_token(parser, '}')) {
 
-        Source_Pos field_pos = source_pos(parser->lexer);
+        Source_Pos field_pos = source_pos(&parser->lexer);
 
         AST_Identifier* name = parse_identifier(parser);
         expect_token(parser, ':');
@@ -274,7 +319,7 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
         darray_append(&fields, mem_decl);
     }
 
-    pos = source_pos(pos, source_pos(parser->lexer));
+    pos = source_pos(pos, source_pos(&parser->lexer));
     expect_token(parser, '}');
 
     auto fields_array = temp_array_finalize(&parser->instance->ast_allocator, &fields);
@@ -323,7 +368,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
     if (c_vararg) {
         if (!match_token(parser, ')')) {
-            instance_fatal_error(parser->instance, source_pos(parser->lexer), "Expected ')' after '..' while parsing foreign vararg function");
+            instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected ')' after '..' while parsing foreign vararg function");
         }
 
         flags |= AST_DECL_FLAG_FOREIGN_VARARG;
@@ -335,7 +380,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
     AST_Type_Spec* return_ts = nullptr;
 
-    Token ct = parser->lexer->token;
+    Token ct = parser->lexer.token;
     if (ct.kind != '#' && ct.kind != '{' && ct.kind != ';') {
         expect_token(parser, TOK_RIGHT_ARROW);
         return_ts = parse_type_spec(parser);
@@ -343,11 +388,11 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
     DArray<AST_Statement*> body_array = {};
 
-    Source_Pos body_pos = source_pos(parser->lexer);
+    Source_Pos body_pos = source_pos(&parser->lexer);
     if (is_token(parser, '{')) {
 
         if (c_vararg) {
-            Source_Pos pos = source_pos(parser->lexer);
+            Source_Pos pos = source_pos(&parser->lexer);
             instance_fatal_error(parser->instance, pos, "Expected '#foreign' while parsing foreign vararg function, got '}'");
         }
 
@@ -367,7 +412,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
             darray_append(&stmts, stmt);
         }
 
-        Source_Pos current_pos = source_pos(parser->lexer);
+        Source_Pos current_pos = source_pos(&parser->lexer);
         pos = source_pos(pos, current_pos);
         body_pos = source_pos(body_pos, current_pos);
         expect_token(parser, '}');
@@ -382,18 +427,18 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
         expect_token(parser, '#');
 
-        auto directive_name = parser->lexer->token;
+        auto directive_name = parser->lexer.token;
         expect_token(parser, TOK_NAME);
         assert(directive_name.atom == atom_get("foreign"));
 
-        pos = source_pos(pos, source_pos(parser->lexer));
+        pos = source_pos(pos, source_pos(&parser->lexer));
         expect_token(parser, ';');
 
         flags |= AST_DECL_FLAG_FOREIGN;
     }
 
     if (c_vararg && ! (flags & AST_DECL_FLAG_FOREIGN)) {
-        instance_fatal_error(parser->instance, source_pos(parser->lexer), "Expected directive '#foreign' while parsing foreign varargs function");
+        instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected directive '#foreign' while parsing foreign varargs function");
     }
 
     AST_Declaration* result = ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope);
@@ -405,8 +450,8 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
 AST_Expression* parse_leaf_expression(Parser* parser)
 {
-    Source_Pos pos = source_pos(parser->lexer);
-    auto ct = parser->lexer->token;
+    Source_Pos pos = source_pos(&parser->lexer);
+    auto ct = parser->lexer.token;
 
     if (ct.kind == TOK_ERROR) {
         return nullptr;
@@ -417,7 +462,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
     switch ((u32)ct.kind) {
 
         case '-': {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
             AST_Expression* operand = parse_leaf_expression(parser);
 
             result = ast_unary_expression(parser->instance, '-', operand);
@@ -425,7 +470,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case TOK_INT: {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
 
             bool hex = ct.flags & TOK_FLAG_HEX;
             bool binary = ct.flags & TOK_FLAG_BINARY;
@@ -443,13 +488,13 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case TOK_REAL: {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
             result = ast_real_literal_expression(parser->instance, ct.real);
             break;
         }
 
         case TOK_CHAR: {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
             result = ast_char_literal_expression(parser->instance, ct.character);
             break;
         }
@@ -460,7 +505,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case TOK_STRING: {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
 
             String_Ref stripped = atom_string(ct.atom);
             stripped.length -= 2;
@@ -485,7 +530,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
                 expect_token(parser, ',');
                 AST_Expression* operand = parse_expression(parser);
 
-                pos = source_pos(pos, source_pos(parser->lexer));
+                pos = source_pos(pos, source_pos(&parser->lexer));
                 expect_token(parser, ')');
 
                 result = ast_cast_expression(parser->instance, ts, operand);
@@ -499,7 +544,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case '*': {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
 
             AST_Expression *operand = parse_leaf_expression(parser);
             result = ast_address_of_expression(parser->instance, operand);
@@ -509,7 +554,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case '<': {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
 
             AST_Expression *operand = parse_leaf_expression(parser);
             result = ast_deref_expression(parser->instance, operand);
@@ -519,7 +564,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case '{': {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
 
             auto exprs = temp_array_create<AST_Expression*>(&parser->instance->temp_allocator, 4);
 
@@ -533,7 +578,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
                 darray_append(&exprs, expr);
             }
 
-            pos = source_pos(pos, source_pos(parser->lexer));
+            pos = source_pos(pos, source_pos(&parser->lexer));
             expect_token(parser, '}');
 
             DArray<AST_Expression*> expr_array = temp_array_finalize(&parser->instance->ast_allocator, &exprs);
@@ -544,15 +589,15 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case '(': {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
             result = parse_expression(parser);
-            pos = source_pos(pos, source_pos(parser->lexer));
+            pos = source_pos(pos, source_pos(&parser->lexer));
             expect_token(parser, ')');
             break;
         }
 
         case '#': {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
 
             if (match_name(parser, "run")) {
 
@@ -570,10 +615,10 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
 
                 result = ast_run_expression(parser->instance, expr);
-                pos = source_pos(pos, source_pos(parser->lexer));
+                pos = source_pos(pos, source_pos(&parser->lexer));
 
             } else {
-                instance_fatal_error(parser->instance, source_pos(parser->lexer), "Invalid directive at expression level. Expected 'run' after '#', got: '%s'", tmp_token_str(parser->lexer->token).data);
+                instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Invalid directive at expression level. Expected 'run' after '#', got: '%s'", tmp_token_str(parser->lexer.token).data);
             }
             break;
 
@@ -595,9 +640,9 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
     while (is_token(parser, '(') || is_token(parser, '.')) {
 
-        switch ((u32)parser->lexer->token.kind) {
+        switch ((u32)parser->lexer.token.kind) {
             case '(': {
-                next_token(parser->lexer);
+                next_token(&parser->lexer);
 
                 auto args_temp = temp_array_create<AST_Expression*>(&parser->instance->temp_allocator);
 
@@ -611,8 +656,8 @@ AST_Expression* parse_leaf_expression(Parser* parser)
                     darray_append(&args_temp, arg_expr);
                 }
 
-                pos = source_pos(pos, source_pos(parser->lexer));
-                next_token(parser->lexer);
+                pos = source_pos(pos, source_pos(&parser->lexer));
+                next_token(&parser->lexer);
 
                 auto args = temp_array_finalize(&parser->instance->ast_allocator, &args_temp);
 
@@ -623,9 +668,9 @@ AST_Expression* parse_leaf_expression(Parser* parser)
             }
 
             case '.': {
-                next_token(parser->lexer);
+                next_token(&parser->lexer);
 
-                pos = source_pos(pos, source_pos(parser->lexer));
+                pos = source_pos(pos, source_pos(&parser->lexer));
                 AST_Identifier* member_name = parse_identifier(parser);
 
                 result = ast_member_expression(parser->instance, result, member_name);
@@ -649,7 +694,7 @@ static AST_Expression* parse_increasing_precedence(Parser* parser, AST_Expressio
 {
     Source_Pos pos = source_pos(parser->instance, left);
 
-    auto op_token = parser->lexer->token;
+    auto op_token = parser->lexer.token;
 
     if (!is_binary_op(op_token.kind)) return left;
 
@@ -658,7 +703,7 @@ static AST_Expression* parse_increasing_precedence(Parser* parser, AST_Expressio
     if (new_prec <= min_prec) {
         return left;
     } else {
-        next_token(parser->lexer);
+        next_token(&parser->lexer);
         auto right = parse_expression(parser, new_prec);
 
         AST_Expression* result = ast_binary_expression(parser->instance, op_token.kind, left, right);
@@ -681,9 +726,9 @@ AST_Expression* parse_expression(Parser* parser, u64 min_prec/*=0*/)
 
 AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 {
-    if (parser->lexer->token.kind == TOK_ERROR) return nullptr;
+    if (parser->lexer.token.kind == TOK_ERROR) return nullptr;
 
-    Source_Pos pos = source_pos(parser->lexer);
+    Source_Pos pos = source_pos(&parser->lexer);
 
     if (match_token(parser, '{')) {
 
@@ -695,7 +740,7 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
             darray_append(&stmts, stmt);
         }
 
-        pos = source_pos(pos, source_pos(parser->lexer));
+        pos = source_pos(pos, source_pos(&parser->lexer));
         expect_token(parser, '}');
 
         auto stmt_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
@@ -733,10 +778,10 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
         result = ast_assignment_statement(parser->instance, expr, value);
 
-    } else if (is_binary_arithmetic_op(parser->lexer->token.kind)) {
+    } else if (is_binary_arithmetic_op(parser->lexer.token.kind)) {
 
-        u32 op = parser->lexer->token.kind;
-        next_token(parser->lexer);
+        u32 op = parser->lexer.token.kind;
+        next_token(&parser->lexer);
         expect_token(parser, '=');
 
         AST_Expression* rhs = parse_expression(parser);
@@ -763,8 +808,8 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
 AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
 {
-    Source_Pos pos = source_pos(parser->lexer);
-    auto ct = parser->lexer->token;
+    Source_Pos pos = source_pos(&parser->lexer);
+    auto ct = parser->lexer.token;
     AST_Statement* result = nullptr;
 
     if (match_keyword(parser, g_keyword_if)) {
@@ -883,7 +928,7 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
         }
 
         expect_token(parser, ')');
-        pos = source_pos(pos, source_pos(parser->lexer));
+        pos = source_pos(pos, source_pos(&parser->lexer));
         expect_token(parser, ';');
 
         result = ast_assert_statement(parser->instance, cond, message);
@@ -902,7 +947,7 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
 
 AST_Identifier* parse_identifier(Parser* parser)
 {
-    auto ident_tok = parser->lexer->token;
+    auto ident_tok = parser->lexer.token;
 
     expect_token(parser, TOK_NAME);
 
@@ -919,11 +964,11 @@ AST_Identifier* parse_identifier(Parser* parser)
 
 AST_Type_Spec* parse_type_spec(Parser* parser)
 {
-    auto ct = parser->lexer->token;
+    auto ct = parser->lexer.token;
 
     AST_Type_Spec *result = nullptr;
 
-    Source_Pos pos = source_pos(parser->lexer);
+    Source_Pos pos = source_pos(&parser->lexer);
 
     switch (ct.kind) {
         case TOK_NAME: {
@@ -933,7 +978,7 @@ AST_Type_Spec* parse_type_spec(Parser* parser)
         }
 
         case '*': {
-            next_token(parser->lexer);
+            next_token(&parser->lexer);
             AST_Type_Spec* base = parse_type_spec(parser);
             result = ast_pointer_type_spec(parser->instance, base);
 
@@ -956,14 +1001,14 @@ AST_Type_Spec* parse_type_spec(Parser* parser)
 
 bool expect_token_internal(Parser* parser, Token_Kind kind)
 {
-    auto ct = parser->lexer->token;
+    auto ct = parser->lexer.token;
     if (ct.kind != kind) {
         auto tok_str = atom_string(ct.atom);
         instance_fatal_error(parser->instance, source_pos(parser, ct), "Expected token '%s', got '%s'", tmp_token_kind_str(kind).data, tok_str.data);
         return false;
     }
 
-    next_token(parser->lexer);
+    next_token(&parser->lexer);
 
     return true;
 }
@@ -974,8 +1019,8 @@ bool expect_token_internal(Parser* parser, char c) {
 
 bool match_token(Parser* parser, Token_Kind kind)
 {
-    if (parser->lexer->token.kind == kind) {
-        next_token(parser->lexer);
+    if (parser->lexer.token.kind == kind) {
+        next_token(&parser->lexer);
         return true;
     }
 
@@ -989,8 +1034,8 @@ bool match_token(Parser* parser, char c)
 
 bool match_name(Parser* parser, const char* name)
 {
-    if (parser->lexer->token.kind == TOK_NAME && parser->lexer->token.atom == atom_get(name)) {
-        next_token(parser->lexer);
+    if (parser->lexer.token.kind == TOK_NAME && parser->lexer.token.atom == atom_get(name)) {
+        next_token(&parser->lexer);
         return true;
     }
 
@@ -999,8 +1044,8 @@ bool match_name(Parser* parser, const char* name)
 
 bool match_keyword(Parser* parser, Atom kw_atom)
 {
-    if (parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom) {
-        next_token(parser->lexer);
+    if (parser->lexer.token.kind == TOK_KEYWORD && parser->lexer.token.atom == kw_atom) {
+        next_token(&parser->lexer);
         return true;
     }
 
@@ -1009,17 +1054,17 @@ bool match_keyword(Parser* parser, Atom kw_atom)
 
 bool is_token(Parser* parser, Token_Kind kind)
 {
-    return is_token(parser->lexer, kind);
+    return is_token(&parser->lexer, kind);
 }
 
 bool is_token(Parser* parser, char c)
 {
-    return is_token(parser->lexer, c);
+    return is_token(&parser->lexer, c);
 }
 
 bool is_keyword(Parser* parser, Atom kw_atom)
 {
-    return parser->lexer->token.kind == TOK_KEYWORD && parser->lexer->token.atom == kw_atom;
+    return parser->lexer.token.kind == TOK_KEYWORD && parser->lexer.token.atom == kw_atom;
 }
 
 u64 get_precedence(Token_Kind op)
