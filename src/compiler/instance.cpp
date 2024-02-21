@@ -153,7 +153,7 @@ void instance_init(Instance* inst, Options options)
 
     inst->builtin_module_path = string_format(inst->default_allocator, "%s" NPLATFORM_PATH_SEPARATOR "%s", inst->module_dir.data, "builtin.no");
     assert(fs_is_file(inst->builtin_module_path));
-    log_trace("Builtin module path: '%s'", inst->builtin_module_path);
+    log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
 
     inst->builtin_module_loaded = false;
     inst->type_string = nullptr;

@@ -28,11 +28,6 @@ struct String_Ref {
     NAPI const char &operator[](s64 index) const;
 };
 
-// TODO: Emit these arrays with a macro
-extern char g_special_characters[];
-extern char g_escape_characters[];
-
-
 NAPI String string(char* data, s64 length);
 
 NAPI bool string_equal(String &a, String &b);
@@ -76,6 +71,9 @@ NAPI s32 string_format(char* dest, const String_Ref fmt, va_list args);
 
 NAPI s64 is_special_character(char c);
 NAPI s64 is_escape_character(char c);
+
+NAPI char get_special_char(s64 index);
+NAPI char get_escape_char(s64 index);
 
 NAPI String convert_special_characters_to_escape_characters(Allocator* allocator, const String_Ref str);
 NAPI String convert_escape_characters_to_special_characters(Allocator* allocator, const String_Ref str, const char **err_char = nullptr);

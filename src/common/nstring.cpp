@@ -10,17 +10,18 @@
 namespace Novo {
 
 // TODO: Emit these arrays with a macro
-char g_special_characters[] = {
+static char  g_special_characters_array[] = {
     '\n',
     '\t',
     '\"',
 };
 
-char g_escape_characters[] = {
+static char g_escape_characters_array[] = {
     'n',
     't',
     '"',
 };
+
 
 char &String::operator[](s64 index)
 {
@@ -181,8 +182,8 @@ s32 string_format(char* dest, const String_Ref fmt, va_list args)
 
 s64 is_special_character(char c)
 {
-    for (s64 i = 0; i < (s64)(sizeof(g_special_characters) / sizeof(g_special_characters[0])); i++) {
-        if (c  == g_special_characters[i]) return i;
+    for (s64 i = 0; i < (s64)(sizeof(g_special_characters_array) / sizeof(g_special_characters_array[0])); i++) {
+        if (c  == g_special_characters_array[i]) return i;
     }
 
     return -1;
@@ -190,11 +191,21 @@ s64 is_special_character(char c)
 
 s64 is_escape_character(char c)
 {
-    for (s64 i = 0; i < (s64)(sizeof(g_escape_characters) / sizeof(g_escape_characters[0])); i++) {
-        if (c == g_escape_characters[i]) return i;
+    for (s64 i = 0; i < (s64)(sizeof(g_escape_characters_array) / sizeof(g_escape_characters_array[0])); i++) {
+        if (c == g_escape_characters_array[i]) return i;
     }
 
     return -1;
+}
+
+char get_special_char(s64 index)
+{
+    return g_special_characters_array[index];
+}
+
+char get_escape_char(s64 index)
+{
+    return g_escape_characters_array[index];
 }
 
 String convert_special_characters_to_escape_characters(Allocator* allocator, const String_Ref str)
@@ -227,7 +238,7 @@ String convert_special_characters_to_escape_characters(Allocator* allocator, con
         auto special_index = is_special_character(str[i]);
         if (special_index != -1) {
             data[ni++] = '\\';
-            data[ni++] = g_escape_characters[special_index];
+            data[ni++] = g_escape_characters_array[special_index];
         } else {
             data[ni++] = str[i];
         }
@@ -274,7 +285,7 @@ String convert_escape_characters_to_special_characters(Allocator* allocator, con
             assert(i + 1 < str.length);
             i += 1;
             auto escape_index = is_escape_character(str[i]);
-            data[ni++] = g_special_characters[escape_index];
+            data[ni++] = g_special_characters_array[escape_index];
         } else {
             data[ni++] = str[i];
         }

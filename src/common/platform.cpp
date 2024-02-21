@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #elif NPLATFORM_WINDOWS
+#include <windows.h>
 #include <cstring>
 #include <stdlib.h>
 #else // NPLATFORM_LINUX
@@ -50,33 +51,48 @@ String platform_exe_path(Allocator* allocator, const char* argv_0)
 
 #elif NPLATFORM_WINDOWS
 
-String platform_dirname(Allocator* allocator, const String_Ref path)
+String platform_dirname(Allocator* allocator, String_Ref path)
 {
-    char drive[_MAX_DRIVE];
-    char dir[_MAX_DIR];
+    s64 last_index = path.length;
 
-    errno_t err = _splitpath_s(path.data, drive, _MAX_DRIVE, dir, _MAX_DIR, nullptr, 0, nullptr, 0);
-    assert(err == 0);
+    for (s64 i = path.length - 1; i >= 0; i--) {
+        if (path[i] == '/' || path[i] == '\\') {
+            last_index = i;
+            break;
+        }
+    }
 
-    auto drive_length = strlen(drive);
-    auto dir_length = strlen(dir);
-    s64 result_length = drive_length + dir_length;
+    if (last_index == 0) {
+        return {};
+    } else if (last_index < path.length) {
+        return string_copy(allocator, path.data, last_index);
+    }
 
-    String result = {
-        .data = allocate_array<char>(allocator, result_length + 1),
-        .length = result_length,
-    };
-
-    memcpy(result.data, drive, drive_length);
-    memcpy(result.data + drive_length, dir, dir_length);
-    result.data[result_length] = '\0';
-
-    return result;
+    assert(last_index == path.length);
+    return string_copy(allocator, path);
 }
 
 String platform_exe_path(Allocator* allocator, const char* argv_0)
 {
+    const size_t buf_length = 2048;
+    char buf[buf_length];
+
+    DWORD result = GetModuleFileNameA(nullptr, buf, buf_length);
+
+    if (result >= 0 && result < buf_length) {
+        return string_copy(allocator, buf, result);
+    } else {
+        DWORD err = GetLastError();
+        if (err == ERROR_INSUFFICIENT_BUFFER) {
+            assert(false && "[platform_exe_path] ERROR_INSUFFICIENT_BUFFER");
+        } else {
+
+            assert(false && "[platform_exe_path] Unknown error");
+        }
+    }
+
     assert(false);
+    return {};
 }
 
 #else // NPLATFORM_LINUX
