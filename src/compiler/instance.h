@@ -110,6 +110,7 @@ NAPI bool instance_start(Instance* inst);
 NAPI bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_module = false);
 
 NAPI u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str);
+NAPI String fix_special_characters_in_insert_string(Instance* inst, Allocator* allocator, String_Ref str);
 
 NAPI void instance_error(Instance* inst, Source_Pos pos, const char* fmt, ...);
 NAPI void instance_fatal_error(Instance* inst, Source_Pos pos, const char* fmt, ...);

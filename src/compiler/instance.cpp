@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 namespace Novo {
+
 void instance_init(Instance* inst, Options options)
 {
     inst->options = options;
@@ -407,8 +408,13 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                 if (task->kind == Run_Task_Kind::INSERT) {
 
-                    // TODO: Dynamic allocator
-                    String insert_string = vm_string_from_result(inst, c_allocator(), run_result);
+                    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+                    String insert_string = vm_string_from_result(inst, &inst->temp_allocator, run_result);
+
+                    // TODO: dynamic allocator
+                    insert_string = fix_special_characters_in_insert_string(inst, c_allocator(), insert_string);
+                    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
                     Source_Pos pos = source_pos(inst, task->node);
 
                     u32 offset = add_insert_string(inst, pos, insert_string);
@@ -572,6 +578,56 @@ static void instance_error_note_va(Instance* inst, Source_Pos pos, const char* f
     fprintf(stderr, "note: ");
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
+}
+
+String fix_special_characters_in_insert_string(Instance* inst, Allocator* allocator, String_Ref str)
+{
+
+    int escape_count = 0;
+    bool in_string_literal = false;
+
+    for (s64 i = 0; i < str.length; i++) {
+
+        if (str[i] == '"') {
+            in_string_literal = !in_string_literal;
+
+        } else if (in_string_literal && is_special_character(str[i]) != -1) {
+            escape_count += 1;
+        }
+    }
+
+    assert(!in_string_literal);
+
+    if (!escape_count) return string_copy(allocator, str);
+
+    s64 new_length = str.length + escape_count;
+    String result {
+        .data = allocate_array<char>(allocator, new_length + 1),
+        .length = new_length,
+    };
+
+    s64 insert_idx = 0;
+    for (s64 i = 0; i < str.length; i++) {
+
+        char c = str[i];
+
+        if (c == '"') {
+            in_string_literal = !in_string_literal;
+
+        } else if (in_string_literal) {
+            s64 special_index = is_special_character(c);
+
+            if (special_index != -1) {
+                result.data[insert_idx++] = '\\';
+                c = get_escape_char(special_index);
+            }
+        }
+
+        result.data[insert_idx++] = c;
+    }
+
+    result.data[result.length] = '\0';
+    return result;
 }
 
 void instance_error(Instance* inst, Source_Pos pos, const char* fmt, ...)

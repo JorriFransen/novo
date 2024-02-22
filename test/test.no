@@ -1,7 +1,6 @@
 // TODO:
-//  - Emit file with inserted strings and their origin position
+//  - Fix escape/special characters in inserts (only replace them when inside string literals.).
 //  - sizeof(), alignof(), offsetof()
-//  - #insert
 //  - #insert in local scopes? (This probably requires flattening all statements...)
 //  - builtin atoms for foreign, run import etc.
 
@@ -39,7 +38,7 @@ printf :: (format: *u8, ..) -> s32 #foreign;
 
 main_str :: () -> string {
 
-    return "main :: () -> int {\n    printf(\"Hello!\".data);\n    return 0;\n    //abc();\n}";
+    return "main :: () -> int {\n    printf(\"Hello!\n\".data);\n    return 0;\n    //abc();\n}";
 }
 
 ret_42_str :: () -> string {
