@@ -32,12 +32,22 @@ struct Parser
     AST_Expression_Flags new_expr_flags;
 };
 
+enum class Parse_Context : u32
+{
+    INVALID,
+
+    FILE_SCOPE,
+    LOCAL_STATEMENT_SCOPE,
+};
+
 NAPI Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_index);
 NAPI Parser parser_create(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index, u32 offset);
 
 NAPI AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index);
-NAPI DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index, u32 offset);
-NAPI DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser);
+NAPI DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, Scope* scope, Parse_Context context, s64 import_index, u32 offset);
+NAPI DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser, Scope* scope, Parse_Context context);
+NAPI DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope);
+NAPI DArray<AST_Node> parse_statement_nodes(Instance* inst, Parser* parser, Scope* scope);
 
 NAPI AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi);
 NAPI AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi);

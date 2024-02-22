@@ -344,6 +344,8 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
                 }
 
             }
+
+            stmt->insert.fn_decl = task->fn_decl;
             break;
         }
 

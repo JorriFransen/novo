@@ -232,6 +232,8 @@ AST_Statement* ast_insert_statement(Instance* inst, AST_Expression* expr)
 {
     auto result = ast_statement(inst, AST_Statement_Kind::INSERT);
     result->insert.expression = expr;
+    result->insert.nodes_to_insert = {};
+    result->insert.fn_decl = nullptr;
     return result;
 }
 

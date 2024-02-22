@@ -252,7 +252,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 parsed_file = parse_file(inst, atom_string(task.name), task.imported_file_index);
             } else {
                 assert(task.kind == Parse_Task_Kind::INSERT);
-                nodes = parse_string(inst, atom_string(task.name), task.content, task.imported_file_index, task.offset);
+                nodes = parse_string(inst, atom_string(task.name), task.content, task.insert.scope, task.context, task.imported_file_index, task.offset);
             }
 
             if (parsed_file || nodes.count)
@@ -269,10 +269,11 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             progress = true;
 
             if (parsed_file) {
-                add_resolve_tasks(inst, parsed_file, inst->global_scope);
+                add_resolve_tasks(inst, parsed_file, inst->global_scope, nullptr);
             } else {
-                assert(task.insert_scope);
-                add_resolve_tasks(inst, nodes, task.insert_scope);
+                assert(task.insert.scope);
+                add_resolve_tasks(inst, nodes, task.insert.scope, task.insert.fn_decl, task.insert.bc_deps);
+                task.insert.stmt->insert.nodes_to_insert = nodes;
             }
         }
 
@@ -306,7 +307,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 if (task->node.kind == AST_Node_Kind::DECLARATION &&
                     task->node.declaration->kind == AST_Declaration_Kind::FUNCTION) {
 
-                    add_ssa_task(inst, task->node.declaration, task->bytecode_deps);
+                    add_ssa_task(inst, task->node.declaration, task->bytecode_deps, nullptr);
 
                 }
 
@@ -334,11 +335,18 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                         darray_remove_ordered(wait_for, i);
                         i--;
                     }
-                } else {
-                    assert(wait_node.kind == AST_Node_Kind::EXPRESSION);
+                } else if (wait_node.kind == AST_Node_Kind::EXPRESSION) {
                     assert(wait_node.expression->kind == AST_Expression_Kind::RUN);
 
                     if (wait_node.expression->run.generated_expression) {
+                        darray_remove_ordered(wait_for, i);
+                        i--;
+                    }
+                } else {
+                    assert(wait_node.kind == AST_Node_Kind::STATEMENT);
+                    assert(wait_node.statement->kind == AST_Statement_Kind::INSERT);
+
+                    if (wait_node.statement->insert.nodes_to_insert.count) {
                         darray_remove_ordered(wait_for, i);
                         i--;
                     }
@@ -355,7 +363,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 success = wrapper_index >= 0;
 
                 if (success) {
-                    add_run_task(inst, task.node, task.scope, wrapper_index);
+                    add_run_task(inst, task.node, task.scope, task.insert_bc_deps, wrapper_index);
                 }
 
             } else {
@@ -420,7 +428,10 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                     u32 offset = add_insert_string(inst, pos, insert_string);
                     assert(offset >= 0);
 
-                    add_parse_task(inst, atom_get(inst->inserted_strings_path), insert_string, task->scope, inst->insert_file_index, offset);
+                    assert(task->node.statement->kind == AST_Statement_Kind::INSERT);
+                    AST_Declaration* fn_decl = task->node.statement->insert.fn_decl;
+
+                    add_parse_task(inst, atom_get(inst->inserted_strings_path), insert_string, task->scope, fn_decl, task->insert_bc_deps, task->node.statement,  inst->insert_file_index, offset);
                 }
             }
 

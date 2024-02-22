@@ -4,6 +4,8 @@
 #include <memory/allocator.h>
 
 #include "instance.h"
+#include "parser.h"
+#include "scope.h"
 
 #include <assert.h>
 
@@ -14,25 +16,39 @@ void add_parse_task(Instance* inst, Atom path_or_name)
     s64 imported_file_index = inst->imported_files.count;
     darray_append(&inst->imported_files, { path_or_name, nullptr });
 
-    return add_parse_task(inst, path_or_name, {}, nullptr, imported_file_index, 0);
+    return add_parse_task(inst, path_or_name, {}, inst->global_scope, nullptr, nullptr, nullptr, imported_file_index, 0);
 }
 
-void add_parse_task(Instance* inst, Atom path_or_name, String content, Scope* insert_scope, s64 imported_file_index, u32 offset)
+void add_parse_task(Instance* inst, Atom path_or_name, String content, Scope* insert_scope, AST_Declaration* fn_decl, DArray<AST_Node>* insert_bc_deps, AST_Statement* insert_stmt, s64 imported_file_index, u32 offset)
 {
+    Parse_Context context = Parse_Context::INVALID;
+    if (insert_scope->kind == Scope_Kind::GLOBAL) {
+        context = Parse_Context::FILE_SCOPE;
+    } else {
+        assert(insert_scope->kind == Scope_Kind::FUNCTION_LOCAL);
+        context = Parse_Context::LOCAL_STATEMENT_SCOPE;
+    }
+    assert(context != Parse_Context::INVALID);
 
     Parse_Task task = {
         .kind = content.length ? Parse_Task_Kind::INSERT : Parse_Task_Kind::FILE,
+        .context = context,
         .name = path_or_name,
         .content = content,
         .imported_file_index = imported_file_index,
-        .insert_scope = insert_scope,
+        .insert = {
+            .scope = insert_scope,
+            .bc_deps = insert_bc_deps,
+            .fn_decl = fn_decl,
+            .stmt = insert_stmt,
+        },
         .offset = offset,
     };
 
     darray_append(&inst->parse_tasks, task);
 }
 
-void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)
+void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope, AST_Declaration* fn_decl)
 {
     for (s64 i = 0; i < file->nodes.count; i++) {
 
@@ -43,12 +59,12 @@ void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)
             case AST_Node_Kind::INVALID: assert(false); break;
 
             case AST_Node_Kind::DECLARATION: {
-                add_resolve_tasks(inst, node.declaration, scope, nullptr, nullptr);
+                add_resolve_tasks(inst, node.declaration, scope, fn_decl, nullptr);
                 break;
             }
 
             case AST_Node_Kind::STATEMENT: {
-                add_resolve_tasks(inst, node.statement, scope, nullptr, nullptr);
+                add_resolve_tasks(inst, node.statement, scope, fn_decl, nullptr);
                 break;
             }
 
@@ -58,7 +74,7 @@ void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope)
     }
 }
 
-void add_resolve_tasks(Instance* inst, DArray<AST_Node> nodes, Scope* scope)
+void add_resolve_tasks(Instance* inst, DArray<AST_Node> nodes, Scope* scope, AST_Declaration *fn_decl, DArray<AST_Node>* bc_deps)
 {
     for (s64 i = 0; i < nodes.count; i++) {
         auto node = nodes[i];
@@ -67,11 +83,15 @@ void add_resolve_tasks(Instance* inst, DArray<AST_Node> nodes, Scope* scope)
             case AST_Node_Kind::INVALID: assert(false); break;
 
             case AST_Node_Kind::DECLARATION: {
-                add_resolve_tasks(inst, node.declaration, scope, nullptr, nullptr);
+                add_resolve_tasks(inst, node.declaration, scope, fn_decl, bc_deps);
                 break;
             }
 
-            case AST_Node_Kind::STATEMENT: assert(false); break;
+            case AST_Node_Kind::STATEMENT: {
+                add_resolve_tasks(inst, node.statement, scope, fn_decl, bc_deps);
+                break;
+            }
+
             case AST_Node_Kind::EXPRESSION: assert(false); break;
             case AST_Node_Kind::TYPE_SPEC: assert(false); break;
         }
@@ -162,7 +182,7 @@ void add_type_task(Instance* inst, AST_Node node, Type* suggested_type, Scope* s
     darray_append(&inst->type_tasks, task);
 }
 
-void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_deps)
+void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_deps, DArray<AST_Node>* insert_bc_deps)
 {
     assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
@@ -170,12 +190,13 @@ void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_de
         .kind = SSA_Task_Kind::FUNCTION,
         .node = ast_node(decl),
         .bytecode_deps = bc_deps,
+        .insert_bc_deps = insert_bc_deps,
         .scope = nullptr,
     };
     darray_append(&inst->ssa_tasks, task);
 }
 
-void add_ssa_task(Instance* inst, AST_Statement* stmt, Scope* scope, DArray<AST_Node>* bc_deps)
+void add_ssa_task(Instance* inst, AST_Statement* stmt, Scope* scope, DArray<AST_Node>* bc_deps, DArray<AST_Node>* insert_bc_deps)
 {
     SSA_Task_Kind kind = SSA_Task_Kind::INVALID;
 
@@ -192,13 +213,14 @@ void add_ssa_task(Instance* inst, AST_Statement* stmt, Scope* scope, DArray<AST_
         .kind = kind,
         .node = ast_node(stmt),
         .bytecode_deps = bc_deps,
+        .insert_bc_deps = insert_bc_deps,
 
         .scope = scope,
     };
     darray_append(&inst->ssa_tasks, task);
 }
 
-void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST_Node> *bc_deps)
+void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST_Node> *bc_deps, DArray<AST_Node>* insert_bc_deps)
 {
     assert(expr->kind == AST_Expression_Kind::RUN);
 
@@ -206,12 +228,13 @@ void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArray<AST
         .kind = SSA_Task_Kind::RUN,
         .node = ast_node(expr),
         .bytecode_deps = bc_deps,
+        .insert_bc_deps = insert_bc_deps,
         .scope = scope,
     };
     darray_append(&inst->ssa_tasks, task);
 }
 
-void add_run_task(Instance* inst, AST_Node node, Scope* scope, s64 wrapper_index)
+void add_run_task(Instance* inst, AST_Node node, Scope* scope, DArray<AST_Node>* insert_bc_deps, s64 wrapper_index)
 {
     Run_Task_Kind kind = Run_Task_Kind::INVALID;
 
@@ -238,6 +261,7 @@ void add_run_task(Instance* inst, AST_Node node, Scope* scope, s64 wrapper_index
         .node = node,
         .scope = scope,
         .wrapper_index = wrapper_index,
+        .insert_bc_deps = insert_bc_deps,
     };
     darray_append(&inst->run_tasks, task);
 }

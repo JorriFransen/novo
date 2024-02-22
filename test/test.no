@@ -1,4 +1,5 @@
 // TODO:
+//  - Allow main to return void
 //  - sizeof(), alignof(), offsetof()
 //  - #insert in local scopes? (This probably requires flattening all statements...)
 //  - builtin atoms for foreign, run import etc.
@@ -32,16 +33,21 @@ printf :: (format: *u8, ..) -> s32 #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
 
-#insert main_str();
-#insert ret_42_str();
+main :: () -> int {
 
-main_str :: () -> string {
+    for i := 0; i < 10; i += 1; {
+        #insert insert_print();
+    }
 
-    return "main :: () -> int {\n   // printf(\"Hello!\n\".data);\n    return ret_42();\n    //abc();\n}";
+    return 0;
 }
 
-ret_42_str :: () -> string {
-    return "ret_42 :: () -> int { return 42; }";
-}
+// #insert insert_run_main();
 
-#run main();
+// insert_run_main :: () -> string {
+//     return "#run main();";
+// }
+
+insert_print :: () -> string {
+    return "printf(\"Hello!\n\".data);";
+}
