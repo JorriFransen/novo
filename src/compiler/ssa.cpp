@@ -732,7 +732,14 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
         case AST_Statement_Kind::RUN: assert(false); break;
 
         case AST_Statement_Kind::INSERT: {
-            assert(false);
+
+            for (s64 i = 0; i < stmt->insert.nodes_to_insert.count; i++) {
+
+                AST_Node node = stmt->insert.nodes_to_insert[i];
+                assert(node.kind == AST_Node_Kind::STATEMENT);
+
+                ssa_emit_statement(builder, node.statement, scope);
+            }
             break;
         }
 

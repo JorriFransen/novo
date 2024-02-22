@@ -197,7 +197,13 @@ struct AST_Statement
 
         struct {
             AST_Expression* expression;
-        } run, insert;
+        } run;
+
+        struct {
+            AST_Expression* expression;
+            DArray<AST_Node> nodes_to_insert;
+            AST_Declaration *fn_decl;
+        } insert;
 
         struct {
             AST_Expression* cond;

@@ -386,7 +386,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 instance_fatal_error(inst, source_pos(inst, run_expr), "Type of #run cannot be or contain pointer types, got '%s'", temp_type_string(inst, run_expr->resolved_type).data);
             }
 
-            add_ssa_task(inst, stmt, scope, task->bytecode_deps);
+            add_ssa_task(inst, stmt, scope, task->bytecode_deps, nullptr);
 
             task->bytecode_deps = old_bc_deps;
 
@@ -418,7 +418,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 instance_fatal_error(inst, source_pos(inst, insert_expr), "Type of #insert must be string, got '%s'", temp_type_string(inst, insert_expr->resolved_type).data);
             }
 
-            add_ssa_task(inst, stmt, scope, task->bytecode_deps);
+            add_ssa_task(inst, stmt, scope, task->bytecode_deps, old_bc_deps);
 
             task->bytecode_deps = old_bc_deps;
 
@@ -807,7 +807,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             expr->resolved_type = run_expr->resolved_type;
 
-            add_ssa_task(inst, expr, scope, task->bytecode_deps);
+            add_ssa_task(inst, expr, scope, task->bytecode_deps, nullptr);
 
             task->bytecode_deps = old_bc_deps;
 

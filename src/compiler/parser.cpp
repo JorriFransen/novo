@@ -75,7 +75,7 @@ AST_File* parse_file(Instance* inst, const String_Ref file_path, s64 import_inde
 {
     Parser parser = parser_create(inst, file_path, import_index);
 
-    DArray<AST_Node> nodes = parse_nodes(inst, &parser);
+    DArray<AST_Node> nodes = parse_nodes(inst, &parser, inst->global_scope, Parse_Context::FILE_SCOPE);
 
     AST_File* result = ast_file(inst, nodes);
 
@@ -84,16 +84,26 @@ AST_File* parse_file(Instance* inst, const String_Ref file_path, s64 import_inde
     return result;
 }
 
-DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index, u32 offset)
+DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, Scope* scope, Parse_Context context, s64 import_index, u32 offset)
 {
     Parser parser = parser_create(inst, name, content, import_index, offset);
 
-    auto result = parse_nodes(inst, &parser);
+    auto result = parse_nodes(inst, &parser, scope, context);
 
     return result;
 }
 
-DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser)
+DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser, Scope* scope, Parse_Context context)
+{
+    if (context == Parse_Context::FILE_SCOPE) {
+        return parse_file_nodes(inst, parser, scope);
+    } else {
+        assert(context == Parse_Context::LOCAL_STATEMENT_SCOPE);
+        return parse_statement_nodes(inst, parser, scope);
+    }
+}
+
+DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
 {
     Lexer* lexer = &parser->lexer;
 
@@ -171,13 +181,30 @@ DArray<AST_Node> parse_nodes(Instance* inst, Parser* parser)
 
             default: {
 
-                AST_Declaration* decl = parse_declaration(parser, inst->global_scope, true);
+                AST_Declaration* decl = parse_declaration(parser, scope, true);
                 if (!decl) return {};
                 darray_append(&nodes, ast_node(decl));
 
                 break;
             }
         }
+    }
+
+    DArray<AST_Node> result = temp_array_finalize(&inst->ast_allocator, &nodes);
+
+    return result;
+}
+
+DArray<AST_Node> parse_statement_nodes(Instance* inst, Parser* parser, Scope* scope)
+{
+    Lexer* lexer = &parser->lexer;
+
+    auto nodes = temp_array_create<AST_Node>(&inst->temp_allocator, 4);
+
+    while (!is_token(lexer, TOK_EOF) && !is_token(lexer, TOK_ERROR)) {
+
+        AST_Statement* stmt = parse_statement(parser, scope, true);
+        darray_append(&nodes, ast_node(stmt));
     }
 
     DArray<AST_Node> result = temp_array_finalize(&inst->ast_allocator, &nodes);
@@ -749,6 +776,33 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
         AST_Statement* result = ast_block_statement(parser->instance, stmt_array, block_scope);
         save_source_pos(parser->instance, result, pos);
         return result;
+
+    } else if (match_token(parser, '#')) {
+
+        if (match_name(parser, "insert")) {
+            AST_Expression_Flags old_flags = parser->new_expr_flags;
+            parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+
+            AST_Expression* expr = parse_expression(parser);
+            expect_token(parser, ';');
+
+            parser->new_expr_flags = old_flags;
+
+            if (expr->kind != AST_Expression_Kind::CALL) {
+                instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #insert");
+            }
+
+            AST_Statement* insert_stmt = ast_insert_statement(parser->instance, expr);
+
+            pos = source_pos(pos, source_pos(parser->instance, expr));
+            save_source_pos(parser->instance, insert_stmt, pos);
+
+            return insert_stmt;
+        } else {
+
+            instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Invalid directive at statement level: '%s'", tmp_token_str(parser->lexer.token).data);
+        }
+
 
     } else if (is_token(parser, TOK_KEYWORD)) {
         return parse_keyword_statement(parser, scope);
