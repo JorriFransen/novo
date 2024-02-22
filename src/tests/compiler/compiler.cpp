@@ -50,6 +50,10 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/024_run_expression_aggregate.no" },
     { .file_path = "tests/025_run_expression_aggregate_nested.no" },
     { .file_path = "tests/026_run_statement.no", .return_code = 2 },
+
+    { .file_path = "tests/027_insert_trivial.no", .return_code = 42 },
+    { .file_path = "tests/028_insert_trivial_2.no", .return_code = 42 },
+    { .file_path = "tests/029_insert_indirect.no", .return_code = 42 },
 };
 
 static bool run_test_case(Test_Case* tc)

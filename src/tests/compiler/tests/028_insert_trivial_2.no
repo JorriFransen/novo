@@ -1,0 +1,11 @@
+
+main :: () -> int {
+    return ret42();
+}
+
+ret42_str :: () -> string {
+    return "ret42 :: () -> int { return 42; }";
+}
+
+#insert ret42_str();
+

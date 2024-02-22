@@ -1,0 +1,6 @@
+
+main_str :: () -> string {
+    return "main :: () -> int { return 42; }";
+}
+
+#insert main_str();
