@@ -39,7 +39,9 @@ main :: () -> int {
         #insert insert_print();
     }
 
+
     return 0;
+    // #insert insert_print();
 }
 
 // #insert insert_run_main();
@@ -47,6 +49,10 @@ main :: () -> int {
 // insert_run_main :: () -> string {
 //     return "#run main();";
 // }
+
+insert_ret :: () -> string {
+    return "return 42;";
+}
 
 insert_print :: () -> string {
     return "printf(\"Hello!\n\".data);";
