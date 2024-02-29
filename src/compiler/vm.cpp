@@ -693,6 +693,8 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
             case SSA_OP_RET_VOID: {
 
 
+                SSA_Function* old_fn = &vm->current_program->functions[vm->fn_index];
+
                 vm->register_offset = stack_pop(&vm->register_stack);
                 vm->block_index = stack_pop(&vm->register_stack);
                 vm->fn_index = stack_pop(&vm->register_stack);
@@ -725,7 +727,9 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
 
                 if (old_bp == vm->bp) {
                     assert(vm->register_stack.sp == 0);
-                    assert(false); // Exit vm
+                    assert(old_fn->type->function.return_type == vm->instance->builtin_type_void);
+                    return { vm->instance->builtin_type_void, 0, false };
+
 
                 } else {
 
