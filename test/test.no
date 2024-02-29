@@ -1,5 +1,5 @@
 // TODO:
-//  - sizeof(), alignof(), offsetof()
+//  - alignof(), offsetof()
 //  - builtin atoms for foreign, run import etc.
 
 // Need this wrapper (for run) because "abc".data is not const, maybe it should be?
@@ -31,6 +31,22 @@ printf :: (format: *u8, ..) -> s32 #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
 
+Vec :: struct {
+    x: int; y: int;
+}
+
+AABB :: struct {
+    pos: Vec; size: Vec;
+}
+
 main :: () {
-    printf("Hello, World!\n".data);
+
+    printf("sizeof(int): %d\n".data, sizeof(int));
+    printf("sizeof(u8): %d\n".data, sizeof(u8));
+    printf("sizeof(:u8): %d\n".data, sizeof(:u8));
+    printf("sizeof(:*int): %d\n".data, sizeof(:*int));
+    
+    printf("sizeof(Vec): %d\n".data, sizeof(Vec));
+    printf("sizeof(AABB): %d\n".data, sizeof(AABB));
+    printf("sizeof(:*AABB): %d\n".data, sizeof(:*AABB));
 }

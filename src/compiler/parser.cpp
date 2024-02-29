@@ -564,6 +564,29 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
                 result = ast_cast_expression(parser->instance, ts, operand);
 
+            } else if (match_keyword(parser, g_keyword_sizeof)) {
+
+                AST_Expression* expr = nullptr;
+
+                expect_token(parser, '(');
+                if (match_token(parser, ':')) {
+                    AST_Type_Spec* ts = parse_type_spec(parser);
+                    expr = ast_type_expression(parser->instance, ts);
+
+                    save_source_pos(parser->instance, expr, source_pos(parser->instance, ts));
+                } else {
+                    if (!is_token(parser, TOK_NAME)) {
+                        instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected identifier or ':' to specify type in 'sizeof()'");
+                    }
+                    expr = parse_expression(parser);
+                }
+                expect_token(parser, ')');
+
+                assert(expr);
+
+                pos = source_pos(pos, source_pos(&parser->lexer));
+
+                result = ast_sizeof_expression(parser->instance, expr);
             } else {
                 assert(false && "Invalid keyword in expression");
             }

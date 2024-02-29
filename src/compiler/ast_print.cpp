@@ -480,7 +480,7 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
             ast_expr_to_string(inst, sb, expr->member.base, indent + 2);
 
             ast_print_pos(inst, sb, expr->member.member_name);
-            ast_print_indent(sb, indent);
+            ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "MEMBER_NAME: '%s'\n", atom_string(expr->member.member_name->atom).data);
             break;
         }
@@ -535,9 +535,21 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
             break;
         }
 
+        case AST_Expression_Kind::TYPE: {
+            string_builder_append(sb, "EXPR_TYPE:\n");
+            ast_ts_to_string(inst, sb, expr->type.type_spec, indent + 1);
+            break;
+        }
+
         case AST_Expression_Kind::RUN: {
             string_builder_append(sb, "EXPR_RUN:\n");
             ast_expr_to_string(inst, sb, expr->run.expression, indent + 1);
+            break;
+        }
+
+        case AST_Expression_Kind::SIZEOF: {
+            string_builder_append(sb, "EXPR_SIZEOF:\n");
+            ast_expr_to_string(inst, sb, expr->sizeof_expr.operand, indent + 1);
             break;
         }
 
@@ -568,6 +580,11 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
 
         case AST_Expression_Kind::STRING_LITERAL: {
             auto str = atom_string(expr->string_literal);
+
+            auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+            str = convert_special_characters_to_escape_characters(&inst->temp_allocator, str);
+            temp_allocator_reset(&inst->temp_allocator_data, mark);
+
             string_builder_append(sb, "EXPR_STR: \"%s\"\n", str.data);
             break;
         }
