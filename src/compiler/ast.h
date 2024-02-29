@@ -230,6 +230,10 @@ enum class AST_Expression_Kind : u32
     COMPOUND,
 
     RUN,
+
+    SIZEOF,
+    TYPE,
+
     INTEGER_LITERAL,
     REAL_LITERAL,
     CHAR_LITERAL,
@@ -302,6 +306,14 @@ struct AST_Expression
             AST_Expression* expression;
             AST_Expression* generated_expression;
         } run;
+
+        struct {
+            AST_Expression* operand;
+        } sizeof_expr;
+
+        struct {
+            AST_Type_Spec* type_spec;
+        } type;
 
         u64 integer_literal;
         Real_Value real_literal;
@@ -393,6 +405,8 @@ NAPI AST_Expression* ast_deref_expression(Instance* instance, AST_Expression* op
 NAPI AST_Expression* ast_cast_expression(Instance* instance, AST_Type_Spec* ts, AST_Expression* operand);
 NAPI AST_Expression* ast_compound_expression(Instance* inst, DArray<AST_Expression*> expressions);
 NAPI AST_Expression* ast_run_expression(Instance* inst, AST_Expression* expr);
+NAPI AST_Expression* ast_sizeof_expression(Instance* inst, AST_Expression* operand);
+NAPI AST_Expression* ast_type_expression(Instance* inst, AST_Type_Spec* ts);
 NAPI AST_Expression* ast_integer_literal_expression(Instance* inst, u64 i);
 NAPI AST_Expression* ast_real_literal_expression(Instance* inst, Real_Value rv);
 NAPI AST_Expression* ast_char_literal_expression(Instance* inst, char c);

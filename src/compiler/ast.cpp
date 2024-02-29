@@ -332,6 +332,20 @@ AST_Expression* ast_run_expression(Instance* inst, AST_Expression* expr)
 }
 
 
+AST_Expression* ast_sizeof_expression(Instance* inst, AST_Expression* operand)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::SIZEOF);
+    result->sizeof_expr.operand = operand;
+    return result;
+}
+
+AST_Expression* ast_type_expression(Instance* inst, AST_Type_Spec* ts)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::TYPE);
+    result->type.type_spec = ts;
+    return result;
+}
+
 AST_Expression* ast_integer_literal_expression(Instance* inst, u64 i)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::INTEGER_LITERAL, AST_EXPR_FLAG_CONST);

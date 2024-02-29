@@ -900,12 +900,16 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             }
         }
 
+        case AST_Expression_Kind::TYPE: assert(false); break;
+
         case AST_Expression_Kind::RUN: {
             assert(lvalue_expr->run.generated_expression);
             assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
 
             return ssa_emit_lvalue(builder, lvalue_expr->run.generated_expression, scope);
         }
+
+        case AST_Expression_Kind::SIZEOF: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
@@ -1178,12 +1182,22 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             break;
         }
 
+        case AST_Expression_Kind::TYPE: assert(false); break;
+
         case AST_Expression_Kind::RUN: {
 
             assert(expr->run.generated_expression);
 
             result_reg = ssa_emit_expression(builder, expr->run.generated_expression, scope);
 
+            break;
+        }
+
+        case AST_Expression_Kind::SIZEOF: {
+            s64 size = expr->sizeof_expr.operand->resolved_type->bit_size;
+            assert(size % 8 == 0);
+            size /= 8;
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, size);
             break;
         }
 
@@ -1650,7 +1664,11 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
             break;
         }
 
+        case AST_Expression_Kind::TYPE: assert(false); break;
+
         case AST_Expression_Kind::RUN: assert(false); break;
+
+        case AST_Expression_Kind::SIZEOF: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
             Type *inttype = const_expr->resolved_type;

@@ -1,5 +1,6 @@
 .cache/
 .vs/
+.vscode/
 
 build*/
 inserted_strings.no
