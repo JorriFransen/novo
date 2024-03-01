@@ -910,6 +910,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         }
 
         case AST_Expression_Kind::SIZEOF: assert(false); break;
+        case AST_Expression_Kind::ALIGNOF: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
@@ -1198,6 +1199,12 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             assert(size % 8 == 0);
             size /= 8;
             result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, size);
+            break;
+        }
+
+        case AST_Expression_Kind::ALIGNOF: {
+            s64 alignment = expr->sizeof_expr.operand->resolved_type->alignment;
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, alignment);
             break;
         }
 
@@ -1669,6 +1676,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
         case AST_Expression_Kind::RUN: assert(false); break;
 
         case AST_Expression_Kind::SIZEOF: assert(false); break;
+        case AST_Expression_Kind::ALIGNOF: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
             Type *inttype = const_expr->resolved_type;

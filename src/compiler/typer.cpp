@@ -825,6 +825,15 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
+        case AST_Expression_Kind::ALIGNOF: {
+            if (!type_expression(inst, task, expr->alignof_expr.operand, scope, nullptr)) {
+                return false;
+            }
+
+            expr->resolved_type = inst->builtin_type_int;
+            break;
+        }
+
         case AST_Expression_Kind::TYPE: {
 
             if (!type_type_spec(inst, task, expr->type.type_spec, scope)) {
