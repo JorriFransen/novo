@@ -3,6 +3,7 @@
 #include <containers/darray.h>
 #include <containers/hash_table.h>
 #include <defines.h>
+#include <memory/temp_allocator.h>
 #include <nstring.h>
 #include <string_builder.h>
 
@@ -550,6 +551,11 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
         case AST_Expression_Kind::SIZEOF: {
             string_builder_append(sb, "EXPR_SIZEOF:\n");
             ast_expr_to_string(inst, sb, expr->sizeof_expr.operand, indent + 1);
+            break;
+        }
+        case AST_Expression_Kind::ALIGNOF: {
+            string_builder_append(sb, "EXPR_ALIGNOF:\n");
+            ast_expr_to_string(inst, sb, expr->alignof_expr.operand, indent + 1);
             break;
         }
 

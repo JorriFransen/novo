@@ -1,9 +1,9 @@
 #pragma once
 
-#include <defines.h>
-
 #include <containers/stack.h>
+#include <defines.h>
 #include <ffi.h>
+#include <nstring.h>
 
 #define NOVO_VM_DEFAULT_REG_COUNT 128
 #define NOVO_VM_DEFAULT_REG_STACK_SIZE 64

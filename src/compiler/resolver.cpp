@@ -577,6 +577,15 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             break;
         }
 
+        case AST_Expression_Kind::ALIGNOF: {
+
+            if (!resolve_expression(inst, task, expr->alignof_expr.operand, scope)) {
+                return false;
+            }
+
+            break;
+        }
+
         case AST_Expression_Kind::TYPE: {
 
             if (!resolve_ts(inst, task, expr->type.type_spec, scope)) {

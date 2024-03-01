@@ -2,6 +2,7 @@
 
 #include <containers/stack.h>
 #include <defines.h>
+#include <nstring.h>
 
 #include "ast.h"
 #include "atom.h"

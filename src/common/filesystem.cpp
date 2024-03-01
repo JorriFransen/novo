@@ -185,7 +185,7 @@ bool fs_append(File_Handle* handle, const String_Ref str)
 {
     u64 written;
     bool result = fs_append(handle, str.length, (u8*)str.data, &written);
-    assert(written == str.length);
+    assert(written == (u64)str.length);
 
     return result;
 }

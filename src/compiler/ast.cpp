@@ -339,6 +339,13 @@ AST_Expression* ast_sizeof_expression(Instance* inst, AST_Expression* operand)
     return result;
 }
 
+AST_Expression* ast_alignof_expression(Instance* inst, AST_Expression* operand)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::ALIGNOF);
+    result->alignof_expr.operand = operand;
+    return result;
+}
+
 AST_Expression* ast_type_expression(Instance* inst, AST_Type_Spec* ts)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::TYPE);

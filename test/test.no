@@ -1,5 +1,5 @@
 // TODO:
-//  - alignof(), offsetof()
+//  offsetof()
 //  - builtin atoms for foreign, run import etc.
 
 // Need this wrapper (for run) because "abc".data is not const, maybe it should be?
@@ -41,12 +41,17 @@ AABB :: struct {
 
 main :: () {
 
-    printf("sizeof(int): %d\n".data, sizeof(int));
-    printf("sizeof(u8): %d\n".data, sizeof(u8));
-    printf("sizeof(:u8): %d\n".data, sizeof(:u8));
-    printf("sizeof(:*int): %d\n".data, sizeof(:*int));
-    
-    printf("sizeof(Vec): %d\n".data, sizeof(Vec));
-    printf("sizeof(AABB): %d\n".data, sizeof(AABB));
-    printf("sizeof(:*AABB): %d\n".data, sizeof(:*AABB));
+    printf("alignof(:*int): %d\n".data, alignof(:*int));
+    printf("alignof(Vec): %d\n".data, alignof(Vec));
+    printf("alignof(AABB): %d\n".data, alignof(AABB));
+
+    printf("alignof(int): %d\n".data, alignof(int));
+    printf("alignof(s64): %d\n".data, alignof(s64));
+    printf("alignof(s32): %d\n".data, alignof(s32));
+    printf("alignof(s16): %d\n".data, alignof(s16));
+    printf("alignof(s8): %d\n".data, alignof(s8));
+    printf("alignof(u64): %d\n".data, alignof(u64));
+    printf("alignof(u32): %d\n".data, alignof(u32));
+    printf("alignof(u16): %d\n".data, alignof(u16));
+    printf("alignof(u8): %d\n".data, alignof(u8));
 }

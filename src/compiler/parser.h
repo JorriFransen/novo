@@ -1,6 +1,8 @@
 #pragma once
 
+#include <containers/darray.h>
 #include <defines.h>
+#include <memory/temp_allocator.h>
 #include <nstring.h>
 
 #include "ast.h"
@@ -13,7 +15,6 @@ enum Token_Kind : u32;
 
 struct Instance;
 struct Scope;
-struct Lexer;
 
 struct Parser
 {

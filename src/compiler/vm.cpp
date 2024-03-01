@@ -5,6 +5,7 @@
 #include <containers/darray.h>
 #include <containers/hash_table.h>
 #include <memory/allocator.h>
+#include <memory/temp_allocator.h>
 #include <nstring.h>
 
 #include "ast.h"
