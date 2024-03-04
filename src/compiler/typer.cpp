@@ -834,6 +834,26 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
+        case AST_Expression_Kind::OFFSETOF: {
+            if (!type_identifier(inst, task, expr->offsetof_expr.struct_ident, scope)) {
+                return false;
+            }
+
+            AST_Declaration* agg_decl = expr->offsetof_expr.struct_ident->decl;
+            assert(agg_decl->kind == AST_Declaration_Kind::STRUCT);
+            Scope* agg_scope = agg_decl->structure.scope;
+
+            if (!type_identifier(inst, task, expr->offsetof_expr.member_ident, agg_scope)) {
+                return false;
+            }
+
+            AST_Declaration* mem_decl = expr->offsetof_expr.member_ident->decl;
+            assert(mem_decl->kind == AST_Declaration_Kind::STRUCT_MEMBER);
+
+            expr->resolved_type = inst->builtin_type_int;
+            break;
+        }
+
         case AST_Expression_Kind::TYPE: {
 
             if (!type_type_spec(inst, task, expr->type.type_spec, scope)) {

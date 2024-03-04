@@ -911,6 +911,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
         case AST_Expression_Kind::SIZEOF: assert(false); break;
         case AST_Expression_Kind::ALIGNOF: assert(false); break;
+        case AST_Expression_Kind::OFFSETOF: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
         case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
@@ -1205,6 +1206,26 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
         case AST_Expression_Kind::ALIGNOF: {
             s64 alignment = expr->sizeof_expr.operand->resolved_type->alignment;
             result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, alignment);
+            break;
+        }
+
+        case AST_Expression_Kind::OFFSETOF: {
+            AST_Declaration* agg_decl = expr->offsetof_expr.struct_ident->decl;
+            assert(agg_decl->kind == AST_Declaration_Kind::STRUCT);
+
+            Type* agg_type = agg_decl->resolved_type;
+            assert(agg_type->kind == Type_Kind::STRUCT);
+
+            AST_Declaration* mem_decl = expr->offsetof_expr.member_ident->decl;
+            assert(mem_decl->kind == AST_Declaration_Kind::STRUCT_MEMBER);
+
+            s64 member_index = mem_decl->variable.index;
+
+            assert(member_index >= 0 && member_index < agg_type->structure.members.count);
+
+            s64 offset = agg_type->structure.members[member_index].offset;
+            assert(offset % 8 == 0);
+            result_reg = ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, offset / 8);
             break;
         }
 
@@ -1677,6 +1698,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
 
         case AST_Expression_Kind::SIZEOF: assert(false); break;
         case AST_Expression_Kind::ALIGNOF: assert(false); break;
+        case AST_Expression_Kind::OFFSETOF: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
             Type *inttype = const_expr->resolved_type;

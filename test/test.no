@@ -41,17 +41,10 @@ AABB :: struct {
 
 main :: () {
 
-    printf("alignof(:*int): %d\n".data, alignof(:*int));
-    printf("alignof(Vec): %d\n".data, alignof(Vec));
-    printf("alignof(AABB): %d\n".data, alignof(AABB));
+    printf("offsetof(Vec, x): %d\n".data, offsetof(Vec, x));
+    printf("offsetof(Vec, y): %d\n".data, offsetof(Vec, y));
 
-    printf("alignof(int): %d\n".data, alignof(int));
-    printf("alignof(s64): %d\n".data, alignof(s64));
-    printf("alignof(s32): %d\n".data, alignof(s32));
-    printf("alignof(s16): %d\n".data, alignof(s16));
-    printf("alignof(s8): %d\n".data, alignof(s8));
-    printf("alignof(u64): %d\n".data, alignof(u64));
-    printf("alignof(u32): %d\n".data, alignof(u32));
-    printf("alignof(u16): %d\n".data, alignof(u16));
-    printf("alignof(u8): %d\n".data, alignof(u8));
+    printf("offsetof(AABB, pos): %d\n".data, offsetof(AABB, pos));
+    printf("offsetof(AABB, size): %d\n".data, offsetof(AABB, size));
+
 }

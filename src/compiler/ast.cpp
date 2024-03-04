@@ -334,15 +334,23 @@ AST_Expression* ast_run_expression(Instance* inst, AST_Expression* expr)
 
 AST_Expression* ast_sizeof_expression(Instance* inst, AST_Expression* operand)
 {
-    auto result = ast_expression(inst, AST_Expression_Kind::SIZEOF);
+    auto result = ast_expression(inst, AST_Expression_Kind::SIZEOF, AST_EXPR_FLAG_CONST);
     result->sizeof_expr.operand = operand;
     return result;
 }
 
 AST_Expression* ast_alignof_expression(Instance* inst, AST_Expression* operand)
 {
-    auto result = ast_expression(inst, AST_Expression_Kind::ALIGNOF);
+    auto result = ast_expression(inst, AST_Expression_Kind::ALIGNOF, AST_EXPR_FLAG_CONST);
     result->alignof_expr.operand = operand;
+    return result;
+}
+
+AST_Expression* ast_offsetof_expression(Instance* inst, AST_Identifier* struct_ident, AST_Identifier* member_ident)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::OFFSETOF, AST_EXPR_FLAG_CONST);
+    result->offsetof_expr.struct_ident = struct_ident;
+    result->offsetof_expr.member_ident = member_ident;
     return result;
 }
 
