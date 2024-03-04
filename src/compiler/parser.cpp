@@ -611,6 +611,20 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
                 result = ast_alignof_expression(parser->instance, expr);
 
+            } else if (match_keyword(parser, g_keyword_offsetof)) {
+
+                expect_token(parser, '(');
+                AST_Identifier* struct_ident = parse_identifier(parser);
+                expect_token(parser, ',');
+                AST_Identifier* member_ident = parse_identifier(parser);
+                expect_token(parser, ')');
+
+                assert(struct_ident);
+                assert(member_ident);
+
+                result = ast_offsetof_expression(parser->instance, struct_ident, member_ident);
+                pos = source_pos(pos, source_pos(&parser->lexer));
+
             } else {
                 assert(false && "Invalid keyword in expression");
             }

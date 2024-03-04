@@ -553,9 +553,19 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
             ast_expr_to_string(inst, sb, expr->sizeof_expr.operand, indent + 1);
             break;
         }
+
         case AST_Expression_Kind::ALIGNOF: {
             string_builder_append(sb, "EXPR_ALIGNOF:\n");
             ast_expr_to_string(inst, sb, expr->alignof_expr.operand, indent + 1);
+            break;
+        }
+
+        case AST_Expression_Kind::OFFSETOF: {
+            string_builder_append(sb, "EXPR_OFFSETOF:\n");
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "AGGREGATE_IDENT: '%s'\n", atom_string(expr->offsetof_expr.struct_ident->atom).data);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "MEMBER_IDENT: '%s'\n", atom_string(expr->offsetof_expr.member_ident->atom).data);
             break;
         }
 

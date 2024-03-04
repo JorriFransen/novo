@@ -21,6 +21,7 @@ namespace Novo {
     NOVO_KEYWORD(continue)  \
     NOVO_KEYWORD(sizeof)    \
     NOVO_KEYWORD(alignof)   \
+    NOVO_KEYWORD(offsetof)  \
     NOVO_KEYWORD(struct)    \
     NOVO_KEYWORD(union)     \
     NOVO_KEYWORD(enum)      \

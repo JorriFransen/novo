@@ -586,6 +586,30 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             break;
         }
 
+        case AST_Expression_Kind::OFFSETOF: {
+            if (!resolve_identifier(inst, task, expr->offsetof_expr.struct_ident, scope)) {
+                return false;
+            }
+
+            assert(expr->offsetof_expr.struct_ident->decl);
+            AST_Declaration* agg_decl = expr->offsetof_expr.struct_ident->decl;
+            assert(agg_decl->kind == AST_Declaration_Kind::STRUCT);
+            Scope* agg_scope = agg_decl->structure.scope;
+
+            if (!resolve_identifier(inst, task, expr->offsetof_expr.member_ident, agg_scope)) {
+                String member_name = atom_string(expr->offsetof_expr.member_ident->atom);
+                String struct_name = atom_string(expr->offsetof_expr.struct_ident->atom);
+                instance_fatal_error(inst, source_pos(inst, expr->offsetof_expr.member_ident), "'%s' is not a member of aggregate '%s'",
+                        member_name.data, struct_name.data);
+                return false;
+            }
+
+            AST_Declaration* mem_decl = expr->offsetof_expr.member_ident->decl;
+            assert(mem_decl->kind == AST_Declaration_Kind::STRUCT_MEMBER);
+
+            break;
+        }
+
         case AST_Expression_Kind::TYPE: {
 
             if (!resolve_ts(inst, task, expr->type.type_spec, scope)) {
