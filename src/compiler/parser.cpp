@@ -545,88 +545,112 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         }
 
         case TOK_KEYWORD: {
-            if (match_keyword(parser, g_keyword_true)) {
-                result = ast_bool_literal_expression(parser->instance, true);
-            } else if (match_keyword(parser, g_keyword_false)) {
-                result = ast_bool_literal_expression(parser->instance, false);
-            } else if (match_keyword(parser, g_keyword_null)) {
-                result = ast_null_literal_expression(parser->instance);
 
-            } else if (match_keyword(parser, g_keyword_cast)) {
+            next_token(&parser->lexer);
 
-                expect_token(parser, '(');
-                AST_Type_Spec* ts = parse_type_spec(parser);
-                expect_token(parser, ',');
-                AST_Expression* operand = parse_expression(parser);
+            switch (ct.keyword) {
 
-                pos = source_pos(pos, source_pos(&parser->lexer));
-                expect_token(parser, ')');
+                default: assert(false && "Invalid keyword in expression"); break;
 
-                result = ast_cast_expression(parser->instance, ts, operand);
-
-            } else if (match_keyword(parser, g_keyword_sizeof)) {
-
-                AST_Expression* expr = nullptr;
-
-                expect_token(parser, '(');
-
-                if (match_token(parser, ':')) {
-                    AST_Type_Spec* ts = parse_type_spec(parser);
-                    expr = ast_type_expression(parser->instance, ts);
-                    save_source_pos(parser->instance, expr, source_pos(parser->instance, ts));
-
-                } else {
-                    if (!is_token(parser, TOK_NAME)) {
-                        instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected identifier or ':' to specify type in 'sizeof()'");
-                    }
-                    expr = parse_expression(parser);
-                }
-                expect_token(parser, ')');
-
-                assert(expr);
-
-                pos = source_pos(pos, source_pos(&parser->lexer));
-
-                result = ast_sizeof_expression(parser->instance, expr);
-
-            } else if (match_keyword(parser, g_keyword_alignof)) {
-
-                AST_Expression* expr = nullptr;
-
-                expect_token(parser, '(');
-
-                if (match_token(parser, ':')) {
-                    AST_Type_Spec* ts = parse_type_spec(parser);
-                    expr = ast_type_expression(parser->instance, ts);
-                    save_source_pos(parser->instance, expr, source_pos(parser->instance, ts));
-                } else {
-
-                    if (!is_token(parser, TOK_NAME)) {
-                        instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected identifier or ':' to specify type in 'sizeof()'");
-                    }
-                    expr = parse_expression(parser);
+                case Novo_Keyword::KW_true: {
+                    result = ast_bool_literal_expression(parser->instance, true);
+                    break;
                 }
 
-                expect_token(parser, ')');
+                case Novo_Keyword::KW_false: {
+                    result = ast_bool_literal_expression(parser->instance, false);
+                    break;
+                }
 
-                result = ast_alignof_expression(parser->instance, expr);
+                case Novo_Keyword::KW_null: {
+                    result = ast_null_literal_expression(parser->instance);
+                    break;
+                }
 
-            } else if (match_keyword(parser, g_keyword_offsetof)) {
+                case Novo_Keyword::KW_cast: {
 
-                expect_token(parser, '(');
-                AST_Identifier* struct_ident = parse_identifier(parser);
-                expect_token(parser, ',');
-                AST_Identifier* member_ident = parse_identifier(parser);
-                expect_token(parser, ')');
+                    expect_token(parser, '(');
+                    AST_Type_Spec* ts = parse_type_spec(parser);
+                    expect_token(parser, ',');
+                    AST_Expression* operand = parse_expression(parser);
 
-                assert(struct_ident);
-                assert(member_ident);
+                    pos = source_pos(pos, source_pos(&parser->lexer));
+                    expect_token(parser, ')');
 
-                result = ast_offsetof_expression(parser->instance, struct_ident, member_ident);
-                pos = source_pos(pos, source_pos(&parser->lexer));
+                    result = ast_cast_expression(parser->instance, ts, operand);
+                    break;
+                }
 
-            } else {
-                assert(false && "Invalid keyword in expression");
+                case Novo_Keyword::KW_sizeof: {
+
+                    AST_Expression* expr = nullptr;
+
+                    expect_token(parser, '(');
+
+                    if (match_token(parser, ':')) {
+                        AST_Type_Spec* ts = parse_type_spec(parser);
+                        expr = ast_type_expression(parser->instance, ts);
+                        save_source_pos(parser->instance, expr, source_pos(parser->instance, ts));
+
+                    } else {
+                        if (!is_token(parser, TOK_NAME)) {
+                            instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected identifier or ':' to specify type in 'sizeof()'");
+                        }
+                        expr = parse_expression(parser);
+                    }
+                    expect_token(parser, ')');
+
+                    assert(expr);
+
+                    pos = source_pos(pos, source_pos(&parser->lexer));
+
+                    result = ast_sizeof_expression(parser->instance, expr);
+
+                    break;
+                }
+
+                case Novo_Keyword::KW_alignof: {
+
+                    AST_Expression* expr = nullptr;
+
+                    expect_token(parser, '(');
+
+                    if (match_token(parser, ':')) {
+                        AST_Type_Spec* ts = parse_type_spec(parser);
+                        expr = ast_type_expression(parser->instance, ts);
+                        save_source_pos(parser->instance, expr, source_pos(parser->instance, ts));
+                    } else {
+
+                        if (!is_token(parser, TOK_NAME)) {
+                            instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected identifier or ':' to specify type in 'sizeof()'");
+                        }
+                        expr = parse_expression(parser);
+                    }
+
+                    expect_token(parser, ')');
+
+                    result = ast_alignof_expression(parser->instance, expr);
+
+                    break;
+                }
+
+                case Novo_Keyword::KW_offsetof: {
+
+                    expect_token(parser, '(');
+                    AST_Identifier* struct_ident = parse_identifier(parser);
+                    expect_token(parser, ',');
+                    AST_Identifier* member_ident = parse_identifier(parser);
+                    expect_token(parser, ')');
+
+                    assert(struct_ident);
+                    assert(member_ident);
+
+                    result = ast_offsetof_expression(parser->instance, struct_ident, member_ident);
+                    pos = source_pos(pos, source_pos(&parser->lexer));
+
+                    break;
+                }
+
             }
 
             assert(result);

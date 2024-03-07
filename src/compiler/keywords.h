@@ -59,13 +59,6 @@ struct KW_Info
     Atom atom;
 };
 
-static KW_Info g_keyword_info[] = {
-#define NOVO_KEYWORD(kw) { Novo_Keyword::KW_INVALID, 0 },
-    ALL_NOVO_KEYWORDS
-#undef NOVO_KEYWORD
-};
-
-
 // These are not 'reserved' names, but they are a lot like keywords
 #define NOVO_EXTRA_ATOMS    \
     NOVO_EXTRA_ATOM(run)    \
@@ -83,5 +76,7 @@ enum class Novo_Atom {
 };
 
 NAPI void initialize_keywords();
+NAPI Novo_Keyword get_keyword_kind(Atom atom);
+
 
 }

@@ -257,16 +257,7 @@ case (first_char): {                                                \
 
         if (lex->token.kind == TOK_NAME && (lex->token.atom >= g_first_keyword_atom && lex->token.atom <= g_last_keyword_atom)) {
             lex->token.kind = TOK_KEYWORD;
-
-            bool found = false;
-            for (s64 i = 0; i < sizeof(g_keyword_info) / sizeof(g_keyword_info[0]); i++) {
-                if (lex->token.atom == g_keyword_info[i].atom) {
-                    found = true;
-                    lex->token.keyword = g_keyword_info[i].kind;
-                    break;
-                }
-            }
-            assert(found);
+            lex->token.keyword = get_keyword_kind(lex->token.atom);
         }
 
     } else {
