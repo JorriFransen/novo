@@ -953,133 +953,151 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
     auto ct = parser->lexer.token;
     AST_Statement* result = nullptr;
 
-    if (match_keyword(parser, g_keyword_if)) {
+    assert(ct.kind == TOK_KEYWORD);
+    next_token(&parser->lexer);
 
-        AST_Expression* cond = parse_expression(parser);
-        AST_Statement* then_stmt = parse_statement(parser, scope, true);
+    switch (ct.keyword) {
 
-        auto if_blocks = temp_array_create<AST_If_Block>(&parser->instance->temp_allocator);
+        default: {
+            instance_fatal_error(parser->instance, source_pos(parser, ct), "Unexpected keyword '%s'", atom_string(ct.atom).data);
+            assert(false);
+            break;
+        }
 
-        darray_append(&if_blocks, { cond, then_stmt });
+        case Novo_Keyword::KW_if: {
 
-        AST_Statement* else_stmt = nullptr;
+            AST_Expression* cond = parse_expression(parser);
+            AST_Statement* then_stmt = parse_statement(parser, scope, true);
 
-        while (match_keyword(parser, g_keyword_else)) {
+            auto if_blocks = temp_array_create<AST_If_Block>(&parser->instance->temp_allocator);
 
-            if (match_keyword(parser, g_keyword_if)) {
+            darray_append(&if_blocks, { cond, then_stmt });
 
-                AST_Expression* elif_cond = parse_expression(parser);
-                AST_Statement* elif_stmt = parse_statement(parser, scope, true);
+            AST_Statement* else_stmt = nullptr;
 
-                darray_append(&if_blocks, { elif_cond, elif_stmt });
-            } else {
+            while (match_keyword(parser, g_keyword_else)) {
 
-                else_stmt = parse_statement(parser, scope, true);
+                if (match_keyword(parser, g_keyword_if)) {
 
-                break;
+                    AST_Expression* elif_cond = parse_expression(parser);
+                    AST_Statement* elif_stmt = parse_statement(parser, scope, true);
+
+                    darray_append(&if_blocks, { elif_cond, elif_stmt });
+                } else {
+
+                    else_stmt = parse_statement(parser, scope, true);
+
+                    break;
+                }
             }
+
+            if (else_stmt) {
+                pos = source_pos(pos, source_pos(parser->instance, else_stmt));
+            } else {
+                pos = source_pos(pos, source_pos(parser->instance, if_blocks[if_blocks.array.count - 1].then));
+            }
+
+            auto if_blocks_array = temp_array_finalize(&parser->instance->ast_allocator, &if_blocks);
+
+            result = ast_if_statement(parser->instance, if_blocks_array, else_stmt);
+            break;
         }
 
-        if (else_stmt) {
-            pos = source_pos(pos, source_pos(parser->instance, else_stmt));
-        } else {
-            pos = source_pos(pos, source_pos(parser->instance, if_blocks[if_blocks.array.count - 1].then));
+        break;
+
+        case Novo_Keyword::KW_while: {
+
+            bool expect_close_paren = match_token(parser, '(');
+
+            AST_Expression* cond = parse_expression(parser);
+
+            if (expect_close_paren) {
+                expect_token(parser, ')');
+            }
+
+            AST_Statement* stmt = parse_statement(parser, scope, true);
+
+            result = ast_while_statement(parser->instance, cond, stmt);
+
+            pos = source_pos(pos, source_pos(parser->instance, stmt));
+            break;
         }
 
-        auto if_blocks_array = temp_array_finalize(&parser->instance->ast_allocator, &if_blocks);
+        case Novo_Keyword::KW_for: {
 
-        result = ast_if_statement(parser->instance, if_blocks_array, else_stmt);
+            bool expect_close_paren = match_token(parser, '(');
 
+            Scope* for_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
-    } else if (match_keyword(parser, g_keyword_while)) {
-
-        bool expect_close_paren = match_token(parser, '(');
-
-        AST_Expression* cond = parse_expression(parser);
-
-        if (expect_close_paren) {
-            expect_token(parser, ')');
-        }
-
-        AST_Statement* stmt = parse_statement(parser, scope, true);
-
-        result = ast_while_statement(parser->instance, cond, stmt);
-
-        pos = source_pos(pos, source_pos(parser->instance, stmt));
-
-    } else if (match_keyword(parser, g_keyword_for)) {
-
-        bool expect_close_paren = match_token(parser, '(');
-
-        Scope* for_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
-
-        AST_Statement* init_stmt = parse_statement(parser, for_scope, true);
-        AST_Expression* cond = parse_expression(parser);
-        expect_token(parser, ';');
-        AST_Statement* step_stmt = parse_statement(parser, for_scope, false);
-
-        if (expect_close_paren) {
-            expect_token(parser, ')');
-        } else {
+            AST_Statement* init_stmt = parse_statement(parser, for_scope, true);
+            AST_Expression* cond = parse_expression(parser);
             expect_token(parser, ';');
+            AST_Statement* step_stmt = parse_statement(parser, for_scope, false);
+
+            if (expect_close_paren) {
+                expect_token(parser, ')');
+            } else {
+                expect_token(parser, ';');
+            }
+
+            AST_Statement* do_stmt = parse_statement(parser, for_scope, true);
+
+            assert(init_stmt);
+            assert(cond);
+            assert(step_stmt);
+            assert(do_stmt);
+
+            result = ast_for_statement(parser->instance, init_stmt, cond, step_stmt, do_stmt, for_scope);
+
+            pos = source_pos(pos, source_pos(parser->instance, do_stmt));
+            break;
         }
 
-        AST_Statement* do_stmt = parse_statement(parser, for_scope, true);
+        case Novo_Keyword::KW_break: {
 
-        assert(init_stmt);
-        assert(cond);
-        assert(step_stmt);
-        assert(do_stmt);
+            expect_token(parser, ';');
 
-        result = ast_for_statement(parser->instance, init_stmt, cond, step_stmt, do_stmt, for_scope);
-
-        pos = source_pos(pos, source_pos(parser->instance, do_stmt));
-
-    } else if (match_keyword(parser, g_keyword_break)) {
-
-        expect_token(parser, ';');
-
-        result = ast_break_statement(parser->instance);
-
-    } else if (match_keyword(parser, g_keyword_continue)) {
-
-        expect_token(parser, ';');
-
-        result = ast_continue_statement(parser->instance);
-
-    } else if (match_keyword(parser, g_keyword_return)) {
-
-        AST_Expression* expr = nullptr;
-        if (!is_token(parser, ';')) {
-            expr = parse_expression(parser);
-            pos = source_pos(pos, source_pos(parser->instance, expr));
-        }
-        expect_token(parser, ';');
-
-        result = ast_return_statement(parser->instance, expr);
-
-    } else if (match_keyword(parser, g_keyword_assert)) {
-
-        expect_token(parser, '(');
-        AST_Expression* cond = parse_expression(parser);
-
-        AST_Expression* message = nullptr;
-        if (match_token(parser, ',')) {
-            message = parse_expression(parser);
+            result = ast_break_statement(parser->instance);
+            break;
         }
 
-        expect_token(parser, ')');
-        pos = source_pos(pos, source_pos(&parser->lexer));
-        expect_token(parser, ';');
+        case Novo_Keyword::KW_continue: {
+            expect_token(parser, ';');
 
-        result = ast_assert_statement(parser->instance, cond, message);
+            result = ast_continue_statement(parser->instance);
+            break;
+        }
 
-    } else {
+        case Novo_Keyword::KW_return: {
+            AST_Expression* expr = nullptr;
+            if (!is_token(parser, ';')) {
+                expr = parse_expression(parser);
+                pos = source_pos(pos, source_pos(parser->instance, expr));
+            }
+            expect_token(parser, ';');
 
-        instance_fatal_error(parser->instance, source_pos(parser, ct), "Unexpected keyword '%s'", atom_string(ct.atom).data);
-        assert(false);
+            result = ast_return_statement(parser->instance, expr);
+            break;
+        }
+
+        case Novo_Keyword::KW_assert: {
+
+            expect_token(parser, '(');
+            AST_Expression* cond = parse_expression(parser);
+
+            AST_Expression* message = nullptr;
+            if (match_token(parser, ',')) {
+                message = parse_expression(parser);
+            }
+
+            expect_token(parser, ')');
+            pos = source_pos(pos, source_pos(&parser->lexer));
+            expect_token(parser, ';');
+
+            result = ast_assert_statement(parser->instance, cond, message);
+            break;
+        }
     }
-
 
     assert(result);
     save_source_pos(parser->instance, result, pos);
