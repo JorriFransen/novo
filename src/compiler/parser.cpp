@@ -117,7 +117,7 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
             case '#': {
                 next_token(&parser->lexer);
 
-                if (match_name(parser, "import")) {
+                if (match_name(parser, g_atom_import)) {
                     auto str_tok = parser->lexer.token;
                     expect_token(parser, TOK_STRING);
 
@@ -130,7 +130,7 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
                     if (!stmt) return {};
                     darray_append(&nodes, ast_node(stmt));
 
-                } else if (match_name(parser, "run")) {
+                } else if (match_name(parser, g_atom_run)) {
 
                     AST_Expression_Flags old_flags = parser->new_expr_flags;
                     parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
@@ -151,7 +151,7 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
 
                     darray_append(&nodes, ast_node(run_stmt));
 
-                } else if (match_name(parser, "insert")) {
+                } else if (match_name(parser, g_atom_insert)) {
 
                     AST_Expression_Flags old_flags = parser->new_expr_flags;
                     parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
@@ -689,7 +689,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         case '#': {
             next_token(&parser->lexer);
 
-            if (match_name(parser, "run")) {
+            if (match_name(parser, g_atom_run)) {
 
                 AST_Expression_Flags old_flags = parser->new_expr_flags;
                 parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
@@ -840,7 +840,7 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
     } else if (match_token(parser, '#')) {
 
-        if (match_name(parser, "insert")) {
+        if (match_name(parser, g_atom_insert)) {
             AST_Expression_Flags old_flags = parser->new_expr_flags;
             parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
 
@@ -1152,6 +1152,16 @@ bool match_token(Parser* parser, char c)
 bool match_name(Parser* parser, const char* name)
 {
     if (parser->lexer.token.kind == TOK_NAME && parser->lexer.token.atom == atom_get(name)) {
+        next_token(&parser->lexer);
+        return true;
+    }
+
+    return false;
+}
+
+bool match_name(Parser* parser, Atom name)
+{
+    if (parser->lexer.token.kind == TOK_NAME && parser->lexer.token.atom == name) {
         next_token(&parser->lexer);
         return true;
     }

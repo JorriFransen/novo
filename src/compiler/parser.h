@@ -71,6 +71,7 @@ NAPI bool expect_token_internal(Parser* parser, char c);
 NAPI bool match_token(Parser* parser, Token_Kind kind);
 NAPI bool match_token(Parser* parser, char c);
 NAPI bool match_name(Parser* parser, const char* name);
+NAPI bool match_name(Parser* parser, Atom name);
 NAPI bool match_keyword(Parser* parser, Atom kw_atom);
 
 NAPI bool is_token(Parser* parser, Token_Kind kind);
