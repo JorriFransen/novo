@@ -4,6 +4,7 @@
 #include <nstring.h>
 
 #include "atom.h"
+#include "keywords.h"
 
 #include <assert.h>
 
@@ -63,6 +64,8 @@ struct Token
         u64 integer;
         Real_Value real;
         char character;
+
+        Novo_Keyword keyword;
     };
 
 
