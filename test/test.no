@@ -1,5 +1,4 @@
 // TODO:
-//  - builtin atoms for foreign, run import etc.
 
 // Need this wrapper (for run) because "abc".data is not const, maybe it should be?
 // print :: (msg: string) {
@@ -45,7 +44,8 @@ main :: () {
 
     printf("offsetof(AABB, pos): %d\n".data, offsetof(AABB, pos));
     printf("offsetof(AABB, size): %d\n".data, offsetof(AABB, size));
-
 }
 
+
 #run main();
+

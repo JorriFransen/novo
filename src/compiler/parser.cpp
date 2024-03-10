@@ -117,63 +117,77 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
             case '#': {
                 next_token(&parser->lexer);
 
-                if (match_name(parser, g_atom_import)) {
-                    auto str_tok = parser->lexer.token;
-                    expect_token(parser, TOK_STRING);
+                Token name_token = parser->lexer.token;
+                assert(name_token.kind == Token_Kind::TOK_NAME);
+                next_token(&parser->lexer);
 
-                    String str_lit = atom_string(str_tok.atom);
-
-                    String import_path = string_append(&inst->ast_allocator, parser->cwd, String_Ref(str_lit.data + 1, str_lit.length - 2));
-                    assert(fs_is_file(import_path));
-
-                    AST_Statement* stmt = ast_import_statement(inst, import_path);
-                    if (!stmt) return {};
-                    darray_append(&nodes, ast_node(stmt));
-
-                } else if (match_name(parser, g_atom_run)) {
-
-                    AST_Expression_Flags old_flags = parser->new_expr_flags;
-                    parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
-
-                    AST_Expression* expr = parse_expression(parser);
-                    expect_token(parser, ';');
-
-                    parser->new_expr_flags = old_flags;
-
-                    if (expr->kind != AST_Expression_Kind::CALL) {
-                        instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #run");
+                switch (name_token.keyword) {
+                    default: {
+                        assert(false && "Unhandled directive");
                     }
 
-                    AST_Statement* run_stmt = ast_run_statement(parser->instance, expr);
+                    case Novo_Keyword::KW_import: {
+                        auto str_tok = parser->lexer.token;
+                        expect_token(parser, TOK_STRING);
 
-                    Source_Pos pos = source_pos(source_pos(parser, ct), source_pos(parser->instance, expr));
-                    save_source_pos(parser->instance, run_stmt, pos);
+                        String str_lit = atom_string(str_tok.atom);
 
-                    darray_append(&nodes, ast_node(run_stmt));
+                        String import_path = string_append(&inst->ast_allocator, parser->cwd, String_Ref(str_lit.data + 1, str_lit.length - 2));
+                        assert(fs_is_file(import_path));
 
-                } else if (match_name(parser, g_atom_insert)) {
+                        AST_Statement* stmt = ast_import_statement(inst, import_path);
+                        if (!stmt) return {};
+                        darray_append(&nodes, ast_node(stmt));
 
-                    AST_Expression_Flags old_flags = parser->new_expr_flags;
-                    parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
-
-                    AST_Expression* expr = parse_expression(parser);
-                    expect_token(parser, ';');
-
-                    parser->new_expr_flags = old_flags;
-
-                    if (expr->kind != AST_Expression_Kind::CALL) {
-                        instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #insert");
+                        break;
                     }
 
-                    AST_Statement* insert_stmt = ast_insert_statement(parser->instance, expr);
+                    case Novo_Keyword::KW_run: {
+                        AST_Expression_Flags old_flags = parser->new_expr_flags;
+                        parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
 
-                    Source_Pos pos = source_pos(source_pos(parser, ct), source_pos(parser->instance, expr));
-                    save_source_pos(parser->instance, insert_stmt, pos);
+                        AST_Expression* expr = parse_expression(parser);
+                        expect_token(parser, ';');
 
-                    darray_append(&nodes, ast_node(insert_stmt));
+                        parser->new_expr_flags = old_flags;
 
-                } else {
-                    assert(false && "Unhandled directive");
+                        if (expr->kind != AST_Expression_Kind::CALL) {
+                            instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #run");
+                        }
+
+                        AST_Statement* run_stmt = ast_run_statement(parser->instance, expr);
+
+                        Source_Pos pos = source_pos(source_pos(parser, ct), source_pos(parser->instance, expr));
+                        save_source_pos(parser->instance, run_stmt, pos);
+
+                        darray_append(&nodes, ast_node(run_stmt));
+
+                        break;
+                    }
+
+                    case Novo_Keyword::KW_insert: {
+
+                        AST_Expression_Flags old_flags = parser->new_expr_flags;
+                        parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+
+                        AST_Expression* expr = parse_expression(parser);
+                        expect_token(parser, ';');
+
+                        parser->new_expr_flags = old_flags;
+
+                        if (expr->kind != AST_Expression_Kind::CALL) {
+                            instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #insert");
+                        }
+
+                        AST_Statement* insert_stmt = ast_insert_statement(parser->instance, expr);
+
+                        Source_Pos pos = source_pos(source_pos(parser, ct), source_pos(parser->instance, expr));
+                        save_source_pos(parser->instance, insert_stmt, pos);
+
+                        darray_append(&nodes, ast_node(insert_stmt));
+
+                        break;
+                    }
                 }
 
                 break;
@@ -712,30 +726,38 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
         case '#': {
             next_token(&parser->lexer);
+            Token name_tok = parser->lexer.token;
+            assert(name_tok.kind == Token_Kind::TOK_NAME);
+            next_token(&parser->lexer);
 
-            if (match_name(parser, g_atom_run)) {
-
-                AST_Expression_Flags old_flags = parser->new_expr_flags;
-                parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
-
-                AST_Expression* expr = parse_expression(parser);
-
-                parser->new_expr_flags = old_flags;
-
-
-                if (expr->kind != AST_Expression_Kind::CALL) {
-                    instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #run");
+            switch (name_tok.keyword) {
+                default: {
+                    instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Invalid directive at expression level. Expected 'run' after '#', got: '%s'", tmp_token_str(parser->lexer.token).data);
+                    break;
                 }
 
+                case Novo_Keyword::KW_run: {
+                    AST_Expression_Flags old_flags = parser->new_expr_flags;
+                    parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
 
-                result = ast_run_expression(parser->instance, expr);
-                pos = source_pos(pos, source_pos(&parser->lexer));
+                    AST_Expression* expr = parse_expression(parser);
 
-            } else {
-                instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Invalid directive at expression level. Expected 'run' after '#', got: '%s'", tmp_token_str(parser->lexer.token).data);
+                    parser->new_expr_flags = old_flags;
+
+
+                    if (expr->kind != AST_Expression_Kind::CALL) {
+                        instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #run");
+                    }
+
+
+                    result = ast_run_expression(parser->instance, expr);
+                    pos = source_pos(pos, source_pos(&parser->lexer));
+
+                    break;
+                }
             }
-            break;
 
+            break;
         }
 
         default: {
@@ -864,30 +886,37 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
     } else if (match_token(parser, '#')) {
 
-        if (match_name(parser, g_atom_insert)) {
-            AST_Expression_Flags old_flags = parser->new_expr_flags;
-            parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
+        Token name_tok = parser->lexer.token;
+        assert(name_tok.kind == Token_Kind::TOK_NAME);
+        next_token(&parser->lexer);
 
-            AST_Expression* expr = parse_expression(parser);
-            expect_token(parser, ';');
-
-            parser->new_expr_flags = old_flags;
-
-            if (expr->kind != AST_Expression_Kind::CALL) {
-                instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #insert");
+        switch (name_tok.keyword) {
+            default: {
+                instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Invalid directive at statement level: '%s'", tmp_token_str(parser->lexer.token).data);
+                break;
             }
 
-            AST_Statement* insert_stmt = ast_insert_statement(parser->instance, expr);
+            case Novo_Keyword::KW_insert: {
+                AST_Expression_Flags old_flags = parser->new_expr_flags;
+                parser->new_expr_flags |= AST_EXPR_FLAG_CHILD_OF_RUN;
 
-            pos = source_pos(pos, source_pos(parser->instance, expr));
-            save_source_pos(parser->instance, insert_stmt, pos);
+                AST_Expression* expr = parse_expression(parser);
+                expect_token(parser, ';');
 
-            return insert_stmt;
-        } else {
+                parser->new_expr_flags = old_flags;
 
-            instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Invalid directive at statement level: '%s'", tmp_token_str(parser->lexer.token).data);
+                if (expr->kind != AST_Expression_Kind::CALL) {
+                    instance_fatal_error(parser->instance, source_pos(parser->instance, expr), "Expected call expression after #insert");
+                }
+
+                AST_Statement* insert_stmt = ast_insert_statement(parser->instance, expr);
+
+                pos = source_pos(pos, source_pos(parser->instance, expr));
+                save_source_pos(parser->instance, insert_stmt, pos);
+
+                return insert_stmt;
+            }
         }
-
 
     } else if (is_token(parser, TOK_KEYWORD)) {
         return parse_keyword_statement(parser, scope);
