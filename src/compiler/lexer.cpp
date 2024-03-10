@@ -70,6 +70,7 @@ bool next_token(Lexer* lex)
 
 next_token__start_lexing_token:
     lex->token.kind = TOK_INVALID;
+    lex->token.keyword = Novo_Keyword::KW_INVALID;
     lex->token.offset = (lex->stream - lex->stream_start) + lex->offset;
     lex->token.flags = TOK_FLAG_NONE;
     auto start = lex->stream;
@@ -255,9 +256,14 @@ case (first_char): {                                                \
                 lex->token.atom = atom_get(start, length);
             }
 
-        if (lex->token.kind == TOK_NAME && (lex->token.atom >= g_first_keyword_atom && lex->token.atom <= g_last_keyword_atom)) {
-            lex->token.kind = TOK_KEYWORD;
-            lex->token.keyword = get_keyword_kind(lex->token.atom);
+        if (lex->token.kind == TOK_NAME) {
+
+            if (lex->token.atom >= g_first_keyword_atom && lex->token.atom <= g_last_keyword_atom) {
+                lex->token.kind = TOK_KEYWORD;
+                lex->token.keyword = get_keyword_kind(lex->token.atom);
+            } else if (lex->token.atom >= g_first_extra_atom && lex->token.atom <= g_last_extra_atom) {
+                lex->token.keyword = get_extra_atom_kind(lex->token.atom);
+            }
         }
 
     } else {
