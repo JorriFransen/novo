@@ -84,7 +84,13 @@ struct AST_Declaration
             AST_Type_Spec* type_spec;
             AST_Expression* init_expr;
             s64 index;
-        } variable, constant;
+        } variable;
+
+        struct {
+            AST_Type_Spec* type_spec;
+            AST_Expression* init_expr;
+            s64 index;
+        } constant;
 
         struct {
             Scope* scope;
@@ -312,7 +318,11 @@ struct AST_Expression
 
         struct {
             AST_Expression* operand;
-        } sizeof_expr, alignof_expr;
+        } sizeof_expr;
+
+        struct {
+            AST_Expression* operand;
+        } alignof_expr;
 
         struct {
             AST_Identifier* struct_ident;

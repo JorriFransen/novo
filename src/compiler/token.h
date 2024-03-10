@@ -4,11 +4,12 @@
 #include <nstring.h>
 
 #include "atom.h"
-#include "keywords.h"
 
 #include <assert.h>
 
 namespace Novo {
+
+enum class Novo_Keyword;
 
 enum Token_Kind : u32
 {

@@ -64,7 +64,7 @@ void initialize_keywords()
 
 Novo_Keyword get_keyword_kind(Atom atom)
 {
-    for (s64 i = 0; i < sizeof(g_keyword_info) / sizeof(g_keyword_info[0]); i++) {
+    for (u64 i = 0; i < sizeof(g_keyword_info) / sizeof(g_keyword_info[0]); i++) {
         if (atom == g_keyword_info[i].atom) {
             return g_keyword_info[i].kind;
         }
@@ -76,7 +76,7 @@ Novo_Keyword get_keyword_kind(Atom atom)
 
 Novo_Keyword get_extra_atom_kind(Atom atom)
 {
-    for (s64 i = 0; i < sizeof(g_extra_atom_info) / sizeof(g_extra_atom_info[0]); i++) {
+    for (u64 i = 0; i < sizeof(g_extra_atom_info) / sizeof(g_extra_atom_info[0]); i++) {
         if (atom == g_extra_atom_info[i].atom) {
             return g_extra_atom_info[i].kind;
         }
