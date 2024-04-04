@@ -55,11 +55,11 @@ AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes)
     return result;
 }
 
-AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident)
+AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident, AST_Declaration_Flags flags/*=AST_DECL_FLAG_NONE*/)
 {
     auto result = allocate<AST_Declaration>(&inst->ast_allocator);
     result->kind = kind;
-    result->flags = AST_DECL_FLAG_NONE;
+    result->flags = flags;
     result->ident = ident;
     result->resolved_type = nullptr;
     return result;
@@ -74,11 +74,11 @@ AST_Declaration* ast_builtin_type_decl(Instance* inst, Type* type, const char* n
     return result;
 }
 
-AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init)
+AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init, AST_Declaration_Flags flags/*AST_DECL_FLAG_NONE*/)
 {
     assert(ts || init);
 
-    auto result = ast_declaration(inst, AST_Declaration_Kind::VARIABLE, ident);
+    auto result = ast_declaration(inst, AST_Declaration_Kind::VARIABLE, ident, flags);
     result->variable.type_spec = ts;
     result->variable.init_expr = init;
     result->variable.index = -1;

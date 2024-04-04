@@ -41,6 +41,7 @@ enum SSA_Op : u8
     SSA_OP_ZEXT,            // ZEXT [8-bit dest size reg] [32-bit dest reg] [32-bit operand reg]
 
     SSA_OP_ALLOC,           // ALLOC [32-bit dest reg] [64-bit size in bytes]
+    SSA_OP_GLOB_PTR,        // GLOB_PTR [32-bit dest reg] [32-bit global index]
 
     SSA_OP_MEMCPY,          // MEMCPY [32-bit dest ptr reg] [32-bit source ptr reg] [64-bit size in bytes]
 
@@ -113,6 +114,13 @@ struct SSA_Function
     Source_Pos source_pos;
 };
 
+struct SSA_Global
+{
+    Atom name;
+    Type* type;
+    Source_Pos source_pos;
+};
+
 struct SSA_Constant;
 
 struct SSA_Assert_Pos
@@ -132,6 +140,7 @@ struct SSA_Program
     DArray<SSA_Constant> constants;
     DArray<s64> constant_patch_offsets;
     DArray<SSA_Function> functions;
+    DArray<SSA_Global> globals;
 
     Hash_Table<SSA_Assert_Pos, Source_Pos> instruction_origin_positions;
 };
@@ -149,15 +158,22 @@ NAPI void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* 
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, const char* name);
 
+NAPI void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, AST_Declaration* decl);
+NAPI void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, Type* type, Atom name, Source_Pos source_pos);
+
 NAPI u32 ssa_block_create(SSA_Program* program, SSA_Function* function, const char* name);
 NAPI u32 ssa_block_create(SSA_Builder* builder, const char* name);
 NAPI u32 ssa_register_create(SSA_Builder* builder);
 
 NAPI bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl);
+NAPI bool ssa_emit_global_variable(Instance* inst, SSA_Program* program, AST_Declaration* decl);
 
 NAPI s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Scope* scope);
 
 NAPI bool ssa_find_function(SSA_Program* program, Atom atom, u32* index);
+
+NAPI bool ssa_find_global_variable(SSA_Program* program, Atom atom, u32* index);
+
 NAPI bool ssa_find_alloc(SSA_Builder* builder, AST_Node* node, u32* result);
 NAPI bool ssa_find_alloc(SSA_Builder* builder, AST_Declaration* decl, u32* result);
 NAPI bool ssa_find_alloc(SSA_Builder* builder, AST_Expression* expr, u32* result);
@@ -169,6 +185,7 @@ NAPI void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* s
 NAPI u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* scope);
 NAPI s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
 
+NAPI u32 ssa_emit_global_pointer(SSA_Builder *builder, u32 global_index);
 NAPI u32 ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg);
 NAPI u32 ssa_emit_trunc(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg);
 NAPI u32 ssa_emit_sext(SSA_Builder* builder, s64 target_bit_size, s64 source_bit_size, u32 operand_reg);

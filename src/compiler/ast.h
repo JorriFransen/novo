@@ -60,13 +60,14 @@ enum AST_Declaration_Flag : AST_Declaration_Flags
 {
     AST_DECL_FLAG_NONE              = 0x000,
     AST_DECL_FLAG_PARAM             = 0x001,
+    AST_DECL_FLAG_GLOBAL            = 0x002,
 
-    AST_DECL_FLAG_RESOLVED          = 0x002,
-    AST_DECL_FLAG_TYPED             = 0x004,
+    AST_DECL_FLAG_RESOLVED          = 0x004,
+    AST_DECL_FLAG_TYPED             = 0x008,
 
-    AST_DECL_FLAG_STORAGE_REQUIRED  = 0x008,
-    AST_DECL_FLAG_FOREIGN           = 0x010,
-    AST_DECL_FLAG_FOREIGN_VARARG    = 0x20,
+    AST_DECL_FLAG_STORAGE_REQUIRED  = 0x010,
+    AST_DECL_FLAG_FOREIGN           = 0x020,
+    AST_DECL_FLAG_FOREIGN_VARARG    = 0x040,
     // Last = 0x80000000
 };
 
@@ -388,9 +389,9 @@ NAPI Type* ast_node_type(const AST_Node& node);
 
 NAPI AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes);
 
-NAPI AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident);
+NAPI AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident, AST_Declaration_Flags flags = AST_DECL_FLAG_NONE);
 NAPI AST_Declaration* ast_builtin_type_decl(Instance* inst, Type* type, const char* name);
-NAPI AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init);
+NAPI AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init, AST_Declaration_Flags flags = AST_DECL_FLAG_NONE);
 NAPI AST_Declaration* ast_struct_member_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* default_val);
 NAPI AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> fields, Scope* scope);
 NAPI AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec* return_ts, Scope* scope);

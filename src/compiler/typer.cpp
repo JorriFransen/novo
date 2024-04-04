@@ -269,7 +269,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 assert(task->fn_decl);
                 if (task->fn_decl->resolved_type) {
                     result_type = task->fn_decl->resolved_type->function.return_type;
-                } else if (task->fn_decl->function.return_ts->resolved_type) {
+                } else if (task->fn_decl->function.return_ts && task->fn_decl->function.return_ts->resolved_type) {
                     result_type = task->fn_decl->function.return_ts->resolved_type;
                 }
 

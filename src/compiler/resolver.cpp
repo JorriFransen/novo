@@ -68,6 +68,10 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
 
             if (decl->flags & AST_DECL_FLAG_PARAM) {
                 assert(decl->variable.type_spec);
+
+            } else if (decl->flags & AST_DECL_FLAG_GLOBAL) {
+                assert(decl->variable.type_spec || decl->variable.init_expr);
+
             } else {
                 assert(decl->variable.type_spec || decl->variable.init_expr);
                 assert(task->fn_decl);
@@ -401,6 +405,11 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             // TODO: Mark constant when referring to constant declarations
             assert(expr->identifier->decl);
+
+            if (expr->identifier->decl->flags & AST_DECL_FLAG_GLOBAL) {
+                assert(task->bytecode_deps);
+                darray_append_unique(task->bytecode_deps, ast_node(expr->identifier->decl));
+            }
 
             break;
         }

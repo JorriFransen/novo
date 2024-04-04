@@ -373,6 +373,18 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
                 break;
             }
 
+            case SSA_OP_GLOB_PTR: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                u32 glob_idx = vm_fetch<u32>(block, &ip);
+
+                assert(glob_idx < program->globals.count);
+
+                assert(false); // Allocate memory for this and store pointer in interpreter.
+                void* ptr = nullptr;
+                vm_set_register(vm, dest_reg, (u64)ptr);
+                break;
+            }
+
             case SSA_OP_STORE_PTR: {
                 u8 size = vm_fetch<u8>(block, &ip);
                 u32 ptr_reg = vm_fetch<u32>(block, &ip);

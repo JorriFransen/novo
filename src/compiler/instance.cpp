@@ -304,10 +304,12 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             if (success) {
                 progress = true;
 
-                if (task->node.kind == AST_Node_Kind::DECLARATION &&
-                    task->node.declaration->kind == AST_Declaration_Kind::FUNCTION) {
+                if (task->node.kind == AST_Node_Kind::DECLARATION) {
+                    if (task->node.declaration->kind == AST_Declaration_Kind::FUNCTION ||
+                        (task->node.declaration->kind == AST_Declaration_Kind::VARIABLE && task->node.declaration->flags & AST_DECL_FLAG_GLOBAL)) {
 
-                    add_ssa_task(inst, task->node.declaration, task->bytecode_deps, nullptr);
+                        add_ssa_task(inst, task->node.declaration, task->bytecode_deps, nullptr);
+                    }
 
                 }
 
@@ -320,40 +322,53 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         for (s64 i = 0; i < inst->ssa_tasks.count; i++) {
             SSA_Task task = inst->ssa_tasks[i];
 
-            assert(task.bytecode_deps);
+            if (task.bytecode_deps) {
 
-            auto wait_for = task.bytecode_deps;
+                for (s64 i = 0; i < task.bytecode_deps->count; i++) {
+                    auto wait_node = (*task.bytecode_deps)[i];
 
-            for (s64 i = 0; i < wait_for->count; i++) {
-                auto wait_node = (*wait_for)[i];
-                if (wait_node.kind == AST_Node_Kind::DECLARATION) {
-                    auto decl = wait_node.declaration;
-                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-                    assert(decl->ident);
+                    if (wait_node.kind == AST_Node_Kind::DECLARATION) {
+                        auto decl = wait_node.declaration;
+                        assert(decl->ident);
 
-                    if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
-                        darray_remove_ordered(wait_for, i);
-                        i--;
-                    }
-                } else if (wait_node.kind == AST_Node_Kind::EXPRESSION) {
-                    assert(wait_node.expression->kind == AST_Expression_Kind::RUN);
+                        if (decl->kind == AST_Declaration_Kind::FUNCTION) {
 
-                    if (wait_node.expression->run.generated_expression) {
-                        darray_remove_ordered(wait_for, i);
-                        i--;
-                    }
-                } else {
-                    assert(wait_node.kind == AST_Node_Kind::STATEMENT);
-                    assert(wait_node.statement->kind == AST_Statement_Kind::INSERT);
+                            if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
+                                darray_remove_ordered(task.bytecode_deps, i);
+                                i--;
+                            }
 
-                    if (wait_node.statement->insert.nodes_to_insert.count) {
-                        darray_remove_ordered(wait_for, i);
-                        i--;
+                        } else {
+                            assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+                            assert(decl->flags & AST_DECL_FLAG_GLOBAL);
+
+                            if (ssa_find_global_variable(inst->ssa_program, decl->ident->atom, nullptr)) {
+                                darray_remove_ordered(task.bytecode_deps, i);
+                                i--;
+                            }
+
+                        }
+
+                    } else if (wait_node.kind == AST_Node_Kind::EXPRESSION) {
+                        assert(wait_node.expression->kind == AST_Expression_Kind::RUN);
+
+                        if (wait_node.expression->run.generated_expression) {
+                            darray_remove_ordered(task.bytecode_deps, i);
+                            i--;
+                        }
+                    } else {
+                        assert(wait_node.kind == AST_Node_Kind::STATEMENT);
+                        assert(wait_node.statement->kind == AST_Statement_Kind::INSERT);
+
+                        if (wait_node.statement->insert.nodes_to_insert.count) {
+                            darray_remove_ordered(task.bytecode_deps, i);
+                            i--;
+                        }
                     }
                 }
-            }
 
-            if (wait_for->count != 0) continue;
+                if (task.bytecode_deps->count != 0) continue;
+            }
 
             bool success;
 
@@ -366,10 +381,12 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                     add_run_task(inst, task.node, task.scope, task.insert_bc_deps, wrapper_index);
                 }
 
+            } else if (task.kind == SSA_Task_Kind::GLOBAL_VAR) {
+                success = ssa_emit_global_variable(inst, inst->ssa_program, task.node.declaration);
+                assert(success);
+
             } else {
                 assert(task.kind == SSA_Task_Kind::FUNCTION);
-                assert(task.node.kind == AST_Node_Kind::DECLARATION);
-                assert(task.node.declaration->kind == AST_Declaration_Kind::FUNCTION);
                 success = ssa_emit_function(inst, inst->ssa_program, task.node.declaration);
                 assert(success);
             }
@@ -379,8 +396,10 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 darray_remove_unordered(&inst->ssa_tasks, i);
                 i--;
 
-                darray_free(task.bytecode_deps);
-                free(c_allocator(), task.bytecode_deps);
+                if (task.bytecode_deps) {
+                    darray_free(task.bytecode_deps);
+                    free(c_allocator(), task.bytecode_deps);
+                }
             }
         }
 

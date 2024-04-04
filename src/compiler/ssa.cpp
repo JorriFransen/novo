@@ -64,6 +64,7 @@ void ssa_program_init(SSA_Program* program, Allocator* allocator)
     darray_init(allocator, &program->constants);
     darray_init(allocator, &program->constant_patch_offsets);
     darray_init(allocator, &program->functions);
+    darray_init(allocator, &program->globals);
     hash_table_create(allocator, &program->instruction_origin_positions);
 }
 
@@ -163,6 +164,19 @@ u32 ssa_block_create(SSA_Program* program, SSA_Function* function, const char* n
 
     darray_append(&function->blocks, result);
     return (u32)index;
+}
+
+void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, AST_Declaration* decl)
+{
+    Source_Pos pos = source_pos(inst, decl);
+    ssa_global_variable_init(inst, program, glob, decl->resolved_type, decl->ident->atom, pos);
+}
+
+void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, Type* type, Atom name, Source_Pos source_pos)
+{
+    glob->name = name;
+    glob->type = type;
+    glob->source_pos = source_pos;
 }
 
 u32 ssa_block_create(SSA_Builder* builder, const char* name)
@@ -293,6 +307,20 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     return true;
 }
 
+bool ssa_emit_global_variable(Instance* inst, SSA_Program* program, AST_Declaration* decl)
+{
+    assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+    assert(decl->flags & AST_DECL_FLAG_GLOBAL);
+
+    SSA_Global global;
+    assert(decl->ident);
+    ssa_global_variable_init(inst, program, &global, decl);
+
+    darray_append(&program->globals, global);
+
+    return true;
+}
+
 s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Scope* scope)
 {
     AST_Expression* expr = nullptr;
@@ -384,6 +412,20 @@ bool ssa_find_function(SSA_Program* program, Atom atom, u32* index)
             break;
         }
     }
+    return found;
+}
+
+bool ssa_find_global_variable(SSA_Program* program, Atom atom, u32* index)
+{
+    bool found = false;
+    for (s64 i = 0; i < program->globals.count; i++) {
+        if (program->globals[i].name == atom) {
+            found = true;
+            if (index) *index = i;
+            break;
+        }
+    }
+
     return found;
 }
 
@@ -803,6 +845,17 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
                 u32 param_index = decl->variable.index;
                 if (function->sret) param_index++;
                 return ssa_emit_load_param(builder, param_index);
+
+            } else if (decl->flags & AST_DECL_FLAG_GLOBAL) {
+
+                assert(decl->ident);
+                u32 glob_index;
+                bool found = ssa_find_global_variable(builder->program, decl->ident->atom, &glob_index);
+
+                assert(found);
+
+                return ssa_emit_global_pointer(builder, glob_index);
+
             } else {
 
                 u32 alloc_reg;
@@ -1255,6 +1308,18 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
     }
 
     return result_reg;
+}
+
+u32 ssa_emit_global_pointer(SSA_Builder *builder, u32 global_index)
+{
+    assert(global_index >= 0 && global_index < builder->program->globals.count);
+
+    u32 result = ssa_register_create(builder);
+    ssa_emit_op(builder, SSA_OP_GLOB_PTR);
+    ssa_emit_32(builder, result);
+    ssa_emit_32(builder, global_index);
+
+    return result;
 }
 
 u32 ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
@@ -2011,6 +2076,19 @@ s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* progr
 
             string_builder_append(sb, "  %%%u = ALLOC %lld <%s>\n", dest_reg, size,
                                   temp_type_string(inst, alloc_type).data);
+            break;
+        }
+
+        case SSA_OP_GLOB_PTR: {
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u32 glob_idx = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            assert(glob_idx < program->globals.count);
+            string_builder_append(sb, "  %%%u = GLOB_PTR @%u\n", dest_reg, glob_idx);
+
             break;
         }
 

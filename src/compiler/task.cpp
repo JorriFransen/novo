@@ -184,10 +184,17 @@ void add_type_task(Instance* inst, AST_Node node, Type* suggested_type, Scope* s
 
 void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_deps, DArray<AST_Node>* insert_bc_deps)
 {
-    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+    SSA_Task_Kind kind = SSA_Task_Kind::INVALID;
+
+    if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+        kind = SSA_Task_Kind::FUNCTION;
+    } else {
+        assert(decl->kind == AST_Declaration_Kind::VARIABLE && decl->flags & AST_DECL_FLAG_GLOBAL);
+        kind = SSA_Task_Kind::GLOBAL_VAR;
+    }
 
     SSA_Task task = {
-        .kind = SSA_Task_Kind::FUNCTION,
+        .kind = kind,
         .node = ast_node(decl),
         .bytecode_deps = bc_deps,
         .insert_bc_deps = insert_bc_deps,

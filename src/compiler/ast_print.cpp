@@ -45,7 +45,6 @@ String ast_to_string(Instance* instance, AST_File* file, String_Builder* sb)
             }
 
             case AST_Node_Kind::STATEMENT: {
-                assert(node.statement->kind == AST_Statement_Kind::IMPORT);
                 ast_stmt_to_string(instance, sb, node.statement);
                 break;
             }

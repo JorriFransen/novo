@@ -298,7 +298,12 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
             expect_token(parser, ';');
         }
 
-        result = ast_variable_declaration(parser->instance, ident, ts, init_expr);
+        AST_Declaration_Flags flags = AST_DECL_FLAG_NONE;
+        if (scope->kind == Scope_Kind::GLOBAL) {
+            flags |= AST_DECL_FLAG_GLOBAL;
+        }
+
+        result = ast_variable_declaration(parser->instance, ident, ts, init_expr, flags);
         if (parser->parsing_function_body) {
             result->variable.index = parser->next_index_in_function++;
         }
