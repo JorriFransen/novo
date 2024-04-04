@@ -469,6 +469,11 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 return false;
             }
 
+            if (expr->member.base->kind == AST_Expression_Kind::STRING_LITERAL) {
+                assert(expr->member.base->flags & AST_EXPR_FLAG_CONST);
+                expr->flags |= AST_EXPR_FLAG_CONST;
+            }
+
             break;
         }
 
@@ -625,6 +630,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
         case AST_Expression_Kind::REAL_LITERAL:
         case AST_Expression_Kind::CHAR_LITERAL:
         case AST_Expression_Kind::STRING_LITERAL: {
+            assert(expr->flags & AST_EXPR_FLAG_CONST);
             break;
         }
     }
