@@ -54,6 +54,8 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/027_insert_trivial.no", .return_code = 42 },
     { .file_path = "tests/028_insert_trivial_2.no", .return_code = 42 },
     { .file_path = "tests/029_insert_indirect.no", .return_code = 42 },
+
+    { .file_path = "tests/030_global_variables.no", .return_code = 322 },
 };
 
 static bool run_test_case(Test_Case* tc)

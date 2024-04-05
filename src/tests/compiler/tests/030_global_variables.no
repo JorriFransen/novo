@@ -1,0 +1,24 @@
+
+glob_1 := 1;
+glob_2 := 2;
+glob_3 := 123;
+glob_4 := 124;
+
+Vec2 :: struct {
+    x: s64; y: s64;
+}
+
+glob_vec : Vec2 = { 11, 22 };
+
+main :: () -> int {
+
+    x := glob_1 * 2;
+
+    y := glob_2 * 20 + x;
+
+    glob_vec.x += glob_3;
+    glob_vec.y += glob_4;
+
+    return y + glob_vec.x + glob_vec.y;
+}
+

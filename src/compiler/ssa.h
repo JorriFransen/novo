@@ -234,6 +234,7 @@ NAPI Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_
 NAPI String ssa_to_string(Instance* inst, Allocator* allocator, SSA_Program* program);
 NAPI void ssa_print(Instance* inst, String_Builder* sb, SSA_Program* program);
 NAPI void ssa_print_constant(Instance* inst, String_Builder* sb, SSA_Program* program, u32 index);
+NAPI void ssa_print_pointer_value(String_Builder* sb, Type* type, u8* ptr);
 NAPI s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes);
 
 }

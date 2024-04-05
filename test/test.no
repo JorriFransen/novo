@@ -27,12 +27,19 @@
 glob_var := 123;
 glob_var2 := 124;
 
+Vec2 :: struct {
+    x: s64; y: s64;
+}
+
+
+glob_vec : Vec2 = { 11, 22 };
 
 main :: () -> int {
 
-    x := glob_var;
-    glob_var = 1;
-    return x + glob_var;
+    glob_vec.x += glob_var;
+    glob_vec.y += glob_var2;
+
+    return glob_vec.x + glob_vec.y;
 
 }
 

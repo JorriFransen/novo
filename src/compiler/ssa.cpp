@@ -1986,19 +1986,23 @@ void ssa_print_constant(Instance* inst, String_Builder* sb, SSA_Program* program
     assert(index < program->constants.count);
     SSA_Constant* constant = &program->constants[index];
 
-    assert(constant->type->bit_size % 8 == 0);
-    auto byte_size = constant->type->bit_size / 8;
-
     u8* ptr = program->constant_memory.data + constant->offset;
+    ssa_print_pointer_value(sb, constant->type, ptr);
+}
 
-    switch (constant->type->kind) {
+void ssa_print_pointer_value(String_Builder* sb, Type* type, u8* ptr)
+{
+    assert(type->bit_size % 8 == 0);
+    auto byte_size = type->bit_size / 8;
+
+    switch (type->kind) {
 
         case Type_Kind::INVALID: assert(false); break;
         case Type_Kind::VOID: assert(false); break;
 
         case Type_Kind::INTEGER: {
 
-            if (constant->type->integer.sign) {
+            if (type->integer.sign) {
                 switch (byte_size) {
                     default: assert(false); break;
                     case 1: string_builder_append(sb, "%hhd", *(s8*)ptr); break;
@@ -2022,7 +2026,16 @@ void ssa_print_constant(Instance* inst, String_Builder* sb, SSA_Program* program
         case Type_Kind::BOOLEAN: assert(false); break;
         case Type_Kind::POINTER: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
-        case Type_Kind::STRUCT: assert(false); break;
+
+        case Type_Kind::STRUCT: {
+            string_builder_append(sb, "{ ");
+            for (s64 i = 0; i < type->structure.members.count; i++) {
+                if (i > 0) string_builder_append(sb, ", ");
+                ssa_print_pointer_value(sb, type->structure.members[i].type, ptr + type->structure.members[i].offset / 8);
+            }
+            string_builder_append(sb, " }");
+            break;
+        }
     }
 }
 
