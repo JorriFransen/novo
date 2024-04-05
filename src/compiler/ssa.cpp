@@ -926,8 +926,8 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
             if (lvalue_expr->flags & AST_EXPR_FLAG_CONST) {
 
-                u32 offset = ssa_emit_constant(builder->instance, builder->program, lvalue_expr);
-                return ssa_emit_load_constant(builder, offset);
+                u32 constant_index = ssa_emit_constant(builder->instance, builder->program, lvalue_expr);
+                return ssa_emit_load_constant(builder, constant_index);
 
             } else {
 
@@ -982,8 +982,8 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
 
         case AST_Expression_Kind::STRING_LITERAL: {
-            u32 string_data_const = ssa_emit_constant(builder->instance, builder->program, lvalue_expr);
-            u32 string_data_ptr = ssa_emit_load_constant(builder, string_data_const);
+            u32 string_data_const_index = ssa_emit_constant(builder->instance, builder->program, lvalue_expr);
+            u32 string_data_ptr = ssa_emit_load_constant(builder, string_data_const_index);
             return string_data_ptr;
         }
     }
@@ -1490,13 +1490,15 @@ u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg)
     return dest_reg;
 }
 
-u32 ssa_emit_load_constant(SSA_Builder *builder, u32 offset)
+u32 ssa_emit_load_constant(SSA_Builder *builder, u32 index)
 {
     u32 dest_reg = ssa_register_create(builder);
 
+    assert(index < builder->program->constants.count);
+
     ssa_emit_op(builder, SSA_OP_LOAD_CONST);
     ssa_emit_32(builder, dest_reg);
-    ssa_emit_32(builder, offset);
+    ssa_emit_32(builder, builder->program->constants[index].offset);
 
     return dest_reg;
 }
@@ -1799,8 +1801,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
             String str = atom_string(const_expr->string_literal);
 
             NSTRING_ASSERT_ZERO_TERMINATION(str);
-            u32 str_offset = ssa_emit_constant(program, Array_Ref((u8*)str.data, str.length + 1), nullptr);
-            assert(str_offset >= 0);
+            u32 str_index = ssa_emit_constant(program, Array_Ref((u8*)str.data, str.length + 1), nullptr);
 
             s64 padding = 8 - (program->constant_memory.count % 8);
             if (padding % 8 != 0) {
@@ -1809,7 +1810,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
             patch_offset = program->constant_memory.count;
 
             assert(own_bytes); // We can't emit patch offset properly otherwise...
-            ssa_emit_64(bytes, str_offset);
+            ssa_emit_64(bytes, program->constants[str_index].offset);
             ssa_emit_64(bytes, str.length);
 
             break;
@@ -1822,7 +1823,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
 
     if (own_bytes) {
 
-        s64 old_count = program->constant_memory.count;
+        s64 old_count = program->constants.count;
         result = ssa_emit_constant(program, temp_bytes, const_expr->resolved_type);
         if (result >= old_count) {
             // Means this was the first occurance and actually emitted
@@ -1849,7 +1850,7 @@ u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type)
         if (constant.type == type) {
             if (memcmp(&program->constant_memory[constant.offset], bytes.data, bytes.count) == 0) {
                 match = true;
-                result = constant.offset;
+                result = i;
                 break;
             }
         }
@@ -1862,8 +1863,9 @@ u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type)
             for (s64 i = 0; i < padding; i++) darray_append(&program->constant_memory, (u8)0);
         }
 
-        result = program->constant_memory.count;
-        darray_append(&program->constants, { type, result });
+        u32 offset = program->constant_memory.count;
+        result = program->constants.count;
+        darray_append(&program->constants, { type, offset });
 
         darray_append_array(&program->constant_memory, Array_Ref<u8>(bytes));
     }

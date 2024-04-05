@@ -25,6 +25,7 @@
 
 
 glob_var := 123;
+glob_var2 := 124;
 
 
 main :: () -> int {
