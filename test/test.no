@@ -2,7 +2,7 @@
 
 //  - // AST_DECL_FLAG_STORAGE_REQUIRED is only used for arguments/parameters?
 
-//  - Constant variables
+//  - Constant variables (aggregates)
 //  - Basic control flow
 //      - switch
 //      - defer
@@ -22,15 +22,16 @@
 // malloc :: (size: s64) -> *void #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
+Vec2 :: struct {
+    x: s64;
+    y: s64;
+}
 
-y : s32 : 24;
+pos : Vec2 : { 1, 2 };
 
-main :: () -> s32 {
+main :: () -> s64 {
 
-    x : s32 : 42;
-
-    return x + y;
-
+    return pos.x;
 }
 
 

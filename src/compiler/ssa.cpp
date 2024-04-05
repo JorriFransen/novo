@@ -1749,7 +1749,7 @@ u32 ssa_emit_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* s
             AST_Expression* value_expr = decl->constant.value;
             assert(value_expr->resolved_type->kind == Type_Kind::INTEGER);
 
-            return ssa_emit_load_immediate(builder, value_expr->resolved_type->bit_size, value_expr->integer_literal);
+            return ssa_emit_load_immediate(builder, expr->resolved_type->bit_size, value_expr->integer_literal);
             break;
         }
 

@@ -71,6 +71,14 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                     return false;
                 }
 
+                if (!result_type) result_type = decl->variable.init_expr->resolved_type;
+                else if (result_type != decl->variable.init_expr->resolved_type) {
+                    Source_Pos pos = source_pos(inst, decl->variable.init_expr);
+                    instance_fatal_error(inst, pos, "Mismatching types in variable declaration, expected: '%s', got: '%s'",
+                            temp_type_string(inst, result_type).data,
+                            temp_type_string(inst, decl->variable.init_expr->resolved_type).data);
+                }
+
                 if (!result_type) {
                     result_type = decl->variable.init_expr->resolved_type;
                 }
@@ -519,7 +527,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
         case AST_Expression_Kind::IDENTIFIER: {
             auto decl = expr->identifier->decl;
 
-            if (!type_identifier(inst, task, expr->identifier, scope)) {
+            if (!type_identifier(inst, task, expr->identifier, scope, suggested_type)) {
                 return false;
             }
 
@@ -528,6 +536,14 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             expr->resolved_type = decl->resolved_type;
+
+            if (decl->kind == AST_Declaration_Kind::CONSTANT &&
+                suggested_type && suggested_type != decl->resolved_type) {
+
+                assert(decl->resolved_type->kind == Type_Kind::INTEGER);
+
+                expr->resolved_type = suggested_type;
+            }
             break;
         }
 
@@ -869,7 +885,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
         }
 
         case AST_Expression_Kind::OFFSETOF: {
-            if (!type_identifier(inst, task, expr->offsetof_expr.struct_ident, scope)) {
+            if (!type_identifier(inst, task, expr->offsetof_expr.struct_ident, scope, suggested_type)) {
                 return false;
             }
 
@@ -877,7 +893,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             assert(agg_decl->kind == AST_Declaration_Kind::STRUCT);
             Scope* agg_scope = agg_decl->structure.scope;
 
-            if (!type_identifier(inst, task, expr->offsetof_expr.member_ident, agg_scope)) {
+            if (!type_identifier(inst, task, expr->offsetof_expr.member_ident, agg_scope, suggested_type)) {
                 return false;
             }
 
@@ -1001,7 +1017,7 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
         case AST_Type_Spec_Kind::INVALID: assert(false); break;
 
         case AST_Type_Spec_Kind::IDENTIFIER: {
-            if (!type_identifier(inst, task, ts->identifier, scope)) {
+            if (!type_identifier(inst, task, ts->identifier, scope, nullptr)) {
                 return false;
             }
 
@@ -1025,7 +1041,7 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
     return true;
 }
 
-bool type_identifier(Instance* inst, Type_Task*task, AST_Identifier* ident, Scope* scope)
+bool type_identifier(Instance* inst, Type_Task*task, AST_Identifier* ident, Scope* scope, Type* suggested_type)
 {
     task->waiting_for = nullptr;
 
