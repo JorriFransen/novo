@@ -114,14 +114,20 @@ struct SSA_Function
     Source_Pos source_pos;
 };
 
+struct SSA_Constant
+{
+    Type *type;
+    u32 offset;
+};
+
 struct SSA_Global
 {
     Atom name;
     Type* type;
+    u32 initializer_constant_index;
+    u64 offset;
     Source_Pos source_pos;
 };
-
-struct SSA_Constant;
 
 struct SSA_Assert_Pos
 {
@@ -140,7 +146,9 @@ struct SSA_Program
     DArray<SSA_Constant> constants;
     DArray<s64> constant_patch_offsets;
     DArray<SSA_Function> functions;
+
     DArray<SSA_Global> globals;
+    u64 globals_size;
 
     Hash_Table<SSA_Assert_Pos, Source_Pos> instruction_origin_positions;
 };
@@ -158,8 +166,8 @@ NAPI void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* 
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, Atom name);
 NAPI void ssa_block_init(SSA_Program* program, SSA_Function* func, SSA_Block* block, const char* name);
 
-NAPI void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, AST_Declaration* decl);
-NAPI void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, Type* type, Atom name, Source_Pos source_pos);
+NAPI void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, AST_Declaration* decl, u64 offset);
+NAPI void ssa_global_variable_init(SSA_Global* glob, Type* type, Atom name, u32 init_const_index, Source_Pos source_pos, u64 offset);
 
 NAPI u32 ssa_block_create(SSA_Program* program, SSA_Function* function, const char* name);
 NAPI u32 ssa_block_create(SSA_Builder* builder, const char* name);
@@ -218,13 +226,14 @@ NAPI void ssa_emit_16(DArray<u8> *bytes, u16 value);
 NAPI void ssa_emit_32(DArray<u8> *bytes, u32 value);
 NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 
-NAPI u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
-NAPI u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type);
+NAPI u32 ssa_emit_constant(Instance *inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
+NAPI u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type);
 
 NAPI Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref name);
 
 NAPI String ssa_to_string(Instance* inst, Allocator* allocator, SSA_Program* program);
 NAPI void ssa_print(Instance* inst, String_Builder* sb, SSA_Program* program);
+NAPI void ssa_print_constant(Instance* inst, String_Builder* sb, SSA_Program* program, u32 index);
 NAPI s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes);
 
 }

@@ -29,8 +29,9 @@ glob_var := 123;
 
 main :: () -> int {
 
-    // return 42;
-    return glob_var;
+    x := glob_var;
+    glob_var = 1;
+    return x + glob_var;
 
 }
 

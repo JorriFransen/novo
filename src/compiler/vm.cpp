@@ -52,6 +52,9 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
     vm->constant_memory_size = NOVO_VM_DEFAULT_CONST_MEM_SIZE;
     vm->constant_memory = allocate_array<u8>(vm->allocator, vm->constant_memory_size);
 
+    vm->global_memory_size = 0;
+    vm->global_memory = nullptr;
+
     ffi_init(&vm->ffi, allocator);
 }
 
@@ -83,7 +86,8 @@ void vm_free(VM* vm)
         block = next;
     }
 
-    free(vm->allocator, vm->constant_memory);
+    if (vm->constant_memory) free(vm->allocator, vm->constant_memory);
+    if (vm->global_memory) free(vm->allocator, vm->global_memory);
     ffi_free(&vm->ffi);
 }
 
@@ -180,6 +184,23 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
         u8* dest_ptr = &vm->constant_memory[dest_offset];
 
         *patch_ptr = (u64)dest_ptr;
+    }
+
+    if (program->globals_size > vm->global_memory_size) {
+        s64 new_size = max((s64)2, vm->global_memory_size);
+        while (new_size < program->globals_size) new_size *= 2;
+
+        if (vm->global_memory) free(vm->allocator, vm->global_memory);
+        vm->global_memory = allocate_array<u8>(vm->allocator, new_size);
+        vm->global_memory_size = new_size;
+    }
+
+    for (s64 i = 0; i < program->globals.count; i++) {
+        SSA_Global global = program->globals[i];
+        SSA_Constant initializer = program->constants[global.initializer_constant_index];
+        assert(global.type == initializer.type);
+
+        memcpy(vm->global_memory + global.offset, vm->constant_memory + initializer.offset, global.type->bit_size / 8);
     }
 
     SSA_Block* block = &fn->blocks[vm->block_index];
@@ -379,8 +400,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
 
                 assert(glob_idx < program->globals.count);
 
-                assert(false); // Allocate memory for this and store pointer in interpreter.
-                void* ptr = nullptr;
+                u8* ptr = vm->global_memory + program->globals[glob_idx].offset;
                 vm_set_register(vm, dest_reg, (u64)ptr);
                 break;
             }

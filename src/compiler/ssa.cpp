@@ -38,12 +38,6 @@ struct SSA_Builder
     Stack<SSA_Break_Info> break_info_stack;
 };
 
-struct SSA_Constant
-{
-    Type *type;
-    u32 offset;
-};
-
 u64 hash_key(SSA_Assert_Pos key)
 {
     u64 r = hash_combine(key.block_index, key.offset);
@@ -65,6 +59,7 @@ void ssa_program_init(SSA_Program* program, Allocator* allocator)
     darray_init(allocator, &program->constant_patch_offsets);
     darray_init(allocator, &program->functions);
     darray_init(allocator, &program->globals);
+    program->globals_size = 0;
     hash_table_create(allocator, &program->instruction_origin_positions);
 }
 
@@ -166,16 +161,23 @@ u32 ssa_block_create(SSA_Program* program, SSA_Function* function, const char* n
     return (u32)index;
 }
 
-void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, AST_Declaration* decl)
+void ssa_global_variable_init(Instance *inst, SSA_Program* program, SSA_Global* glob, AST_Declaration* decl, u64 offset)
 {
     Source_Pos pos = source_pos(inst, decl);
-    ssa_global_variable_init(inst, program, glob, decl->resolved_type, decl->ident->atom, pos);
+
+    assert(decl->variable.init_expr);
+
+    u32 init_index = ssa_emit_constant(inst, program, decl->variable.init_expr);
+
+    ssa_global_variable_init(glob, decl->resolved_type, decl->ident->atom, init_index, pos, offset);
 }
 
-void ssa_global_variable_init(Instance* inst, SSA_Program* program, SSA_Global* glob, Type* type, Atom name, Source_Pos source_pos)
+void ssa_global_variable_init(SSA_Global* glob, Type* type, Atom name, u32 init_const_index, Source_Pos source_pos, u64 offset)
 {
     glob->name = name;
     glob->type = type;
+    glob->initializer_constant_index = init_const_index;
+    glob->offset = offset;
     glob->source_pos = source_pos;
 }
 
@@ -312,9 +314,16 @@ bool ssa_emit_global_variable(Instance* inst, SSA_Program* program, AST_Declarat
     assert(decl->kind == AST_Declaration_Kind::VARIABLE);
     assert(decl->flags & AST_DECL_FLAG_GLOBAL);
 
+    s64 global_size = decl->resolved_type->bit_size;
+    assert(global_size % 8 == 0);
+
+    program->globals_size = get_aligned(program->globals_size, decl->resolved_type->alignment * 8);
+    u64 offset = program->globals_size;
+    program->globals_size += global_size;
+
     SSA_Global global;
     assert(decl->ident);
-    ssa_global_variable_init(inst, program, &global, decl);
+    ssa_global_variable_init(inst, program, &global, decl, offset);
 
     darray_append(&program->globals, global);
 
@@ -917,7 +926,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
             if (lvalue_expr->flags & AST_EXPR_FLAG_CONST) {
 
-                u32 offset = ssa_emit_constant(builder, lvalue_expr);
+                u32 offset = ssa_emit_constant(builder->instance, builder->program, lvalue_expr);
                 return ssa_emit_load_constant(builder, offset);
 
             } else {
@@ -973,7 +982,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
 
         case AST_Expression_Kind::STRING_LITERAL: {
-            u32 string_data_const = ssa_emit_constant(builder, lvalue_expr);
+            u32 string_data_const = ssa_emit_constant(builder->instance, builder->program, lvalue_expr);
             u32 string_data_ptr = ssa_emit_load_constant(builder, string_data_const);
             return string_data_ptr;
         }
@@ -1716,7 +1725,7 @@ void ssa_emit_64(DArray<u8> *bytes, u64 value)
     darray_append(bytes, (u8)((value >> 56) & 0xFF));
 }
 
-u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u8>* bytes/*=nullptr*/)
+u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes/*=nullptr*/)
 {
     assert(const_expr->flags & AST_EXPR_FLAG_CONST);
 
@@ -1727,7 +1736,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
     if (!bytes) {
         own_bytes = true;
 
-        temp_bytes = temp_array_create<u8>(&builder->instance->temp_allocator, byte_size);
+        temp_bytes = temp_array_create<u8>(&inst->temp_allocator, byte_size);
         bytes = &temp_bytes.array;
     }
 
@@ -1752,7 +1761,7 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
             assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
 
             for (s64 i = 0; i < const_expr->compound.expressions.count; i++) {
-                ssa_emit_constant(builder, const_expr->compound.expressions[i], bytes);
+                ssa_emit_constant(inst, program, const_expr->compound.expressions[i], bytes);
             }
             break;
         }
@@ -1790,14 +1799,14 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
             String str = atom_string(const_expr->string_literal);
 
             NSTRING_ASSERT_ZERO_TERMINATION(str);
-            u32 str_offset = ssa_emit_constant(builder, Array_Ref((u8*)str.data, str.length + 1), nullptr);
+            u32 str_offset = ssa_emit_constant(program, Array_Ref((u8*)str.data, str.length + 1), nullptr);
             assert(str_offset >= 0);
 
-            s64 padding = 8 - (builder->program->constant_memory.count % 8);
+            s64 padding = 8 - (program->constant_memory.count % 8);
             if (padding % 8 != 0) {
-                for (s64 i = 0; i < padding; i++) darray_append(&builder->program->constant_memory, (u8)0);
+                for (s64 i = 0; i < padding; i++) darray_append(&program->constant_memory, (u8)0);
             }
-            patch_offset = builder->program->constant_memory.count;
+            patch_offset = program->constant_memory.count;
 
             assert(own_bytes); // We can't emit patch offset properly otherwise...
             ssa_emit_64(bytes, str_offset);
@@ -1813,13 +1822,13 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
 
     if (own_bytes) {
 
-        s64 old_count = builder->program->constant_memory.count;
-        result = ssa_emit_constant(builder, temp_bytes, const_expr->resolved_type);
+        s64 old_count = program->constant_memory.count;
+        result = ssa_emit_constant(program, temp_bytes, const_expr->resolved_type);
         if (result >= old_count) {
             // Means this was the first occurance and actually emitted
 
             if (patch_offset >= 0) {
-                darray_append(&builder->program->constant_patch_offsets, patch_offset);
+                darray_append(&program->constant_patch_offsets, patch_offset);
             }
         }
 
@@ -1829,16 +1838,16 @@ u32 ssa_emit_constant(SSA_Builder* builder, AST_Expression* const_expr, DArray<u
     return result;
 }
 
-u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type)
+u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type)
 {
     u32 result = 0;
 
     bool match = false;
-    for (s64 i = 0; i < builder->program->constants.count; i++) {
-        SSA_Constant constant = builder->program->constants[i];
+    for (s64 i = 0; i < program->constants.count; i++) {
+        SSA_Constant constant = program->constants[i];
 
         if (constant.type == type) {
-            if (memcmp(&builder->program->constant_memory[constant.offset], bytes.data, bytes.count) == 0) {
+            if (memcmp(&program->constant_memory[constant.offset], bytes.data, bytes.count) == 0) {
                 match = true;
                 result = constant.offset;
                 break;
@@ -1848,15 +1857,15 @@ u32 ssa_emit_constant(SSA_Builder* builder, Array_Ref<u8> bytes, Type* type)
 
     if (!match) {
 
-        s64 padding = 8 - (builder->program->constant_memory.count % 8);
+        s64 padding = 8 - (program->constant_memory.count % 8);
         if (padding % 8 != 0) {
-            for (s64 i = 0; i < padding; i++) darray_append(&builder->program->constant_memory, (u8)0);
+            for (s64 i = 0; i < padding; i++) darray_append(&program->constant_memory, (u8)0);
         }
 
-        result = builder->program->constant_memory.count;
-        darray_append(&builder->program->constants, { type, result });
+        result = program->constant_memory.count;
+        darray_append(&program->constants, { type, result });
 
-        darray_append_array(&builder->program->constant_memory, Array_Ref<u8>(bytes));
+        darray_append_array(&program->constant_memory, Array_Ref<u8>(bytes));
     }
 
     return result;
@@ -1922,6 +1931,16 @@ void ssa_print(Instance* inst, String_Builder* sb, SSA_Program* program)
         string_builder_append(sb, "\n");
     }
 
+    if (program->globals.count) {
+        for (s64 i = 0; i < program->globals.count; i++) {
+            string_builder_append(sb, "@%u = ", i);
+            ssa_print_constant(inst, sb, program, program->globals[i].initializer_constant_index);
+            string_builder_append(sb, " <%s>\n", temp_type_string(inst, program->globals[i].type));
+        }
+
+        string_builder_append(sb, "\n");
+    }
+
     for (s64 fi = 0; fi < program->functions.count; fi++) {
         if (fi != 0) string_builder_append(sb, "\n");
 
@@ -1957,6 +1976,51 @@ void ssa_print(Instance* inst, String_Builder* sb, SSA_Program* program)
         }
 
         assert(printed_block_count == fn->blocks.count);
+    }
+}
+
+void ssa_print_constant(Instance* inst, String_Builder* sb, SSA_Program* program, u32 index)
+{
+    assert(index < program->constants.count);
+    SSA_Constant* constant = &program->constants[index];
+
+    assert(constant->type->bit_size % 8 == 0);
+    auto byte_size = constant->type->bit_size / 8;
+
+    u8* ptr = program->constant_memory.data + constant->offset;
+
+    switch (constant->type->kind) {
+
+        case Type_Kind::INVALID: assert(false); break;
+        case Type_Kind::VOID: assert(false); break;
+
+        case Type_Kind::INTEGER: {
+
+            if (constant->type->integer.sign) {
+                switch (byte_size) {
+                    default: assert(false); break;
+                    case 1: string_builder_append(sb, "%hhd", *(s8*)ptr); break;
+                    case 2: string_builder_append(sb, "%hd", *(s16*)ptr); break;
+                    case 4: string_builder_append(sb, "%d", *(s32*)ptr); break;
+                    case 8: string_builder_append(sb, "%lld", *(s64*)ptr); break;
+                }
+            } else {
+                switch (byte_size) {
+                    default: assert(false); break;
+                    case 1: string_builder_append(sb, "%hhu", *(u8*)ptr); break;
+                    case 2: string_builder_append(sb, "%hu", *(u16*)ptr); break;
+                    case 4: string_builder_append(sb, "%u", *(u32*)ptr); break;
+                    case 8: string_builder_append(sb, "%llu", *(u64*)ptr); break;
+                }
+            }
+
+            break;
+        }
+
+        case Type_Kind::BOOLEAN: assert(false); break;
+        case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::FUNCTION: assert(false); break;
+        case Type_Kind::STRUCT: assert(false); break;
     }
 }
 
@@ -2087,6 +2151,7 @@ s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* progr
             ip += sizeof(u32);
 
             assert(glob_idx < program->globals.count);
+
             string_builder_append(sb, "  %%%u = GLOB_PTR @%u\n", dest_reg, glob_idx);
 
             break;

@@ -39,6 +39,7 @@ struct VM
     u32 bp;
     u32 register_count;
     s64 constant_memory_size;
+    s64 global_memory_size;
 
     u64* registers;
     Stack<u64> register_stack;
@@ -48,6 +49,7 @@ struct VM
     VM_Alloc_Block first_alloc_block;
 
     u8* constant_memory;
+    u8* global_memory;
 
     FFI ffi;
 };
