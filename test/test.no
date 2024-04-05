@@ -2,7 +2,6 @@
 
 //  - // AST_DECL_FLAG_STORAGE_REQUIRED is only used for arguments/parameters?
 
-//  - Global variables
 //  - Constant variables
 //  - Basic control flow
 //      - switch
@@ -24,22 +23,12 @@
 // free :: (ptr: *void) -> void #foreign;
 
 
-glob_var := 123;
-glob_var2 := 124;
 
-Vec2 :: struct {
-    x: s64; y: s64;
-}
+main :: () -> s32 {
 
+    x : s64 = 42;
 
-glob_vec : Vec2 = { 11, 22 };
-
-main :: () -> int {
-
-    glob_vec.x += glob_var;
-    glob_vec.y += glob_var2;
-
-    return glob_vec.x + glob_vec.y;
+    return x;
 
 }
 

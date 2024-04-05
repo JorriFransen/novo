@@ -262,24 +262,35 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
         }
 
         case AST_Statement_Kind::RETURN: {
+
+            Type* result_type = nullptr;
+
+            assert(task->fn_decl);
+            if (task->fn_decl->resolved_type) {
+                result_type = task->fn_decl->resolved_type->function.return_type;
+            } else if (task->fn_decl->function.return_ts && task->fn_decl->function.return_ts->resolved_type) {
+                result_type = task->fn_decl->function.return_ts->resolved_type;
+            }
+
+            if (!result_type) {
+                return false;
+            }
+
             if (stmt->return_expr) {
-
-                Type* result_type = nullptr;
-
-                assert(task->fn_decl);
-                if (task->fn_decl->resolved_type) {
-                    result_type = task->fn_decl->resolved_type->function.return_type;
-                } else if (task->fn_decl->function.return_ts && task->fn_decl->function.return_ts->resolved_type) {
-                    result_type = task->fn_decl->function.return_ts->resolved_type;
-                }
-
-                if (!result_type) {
-                    return false;
-                }
-
                 if (!type_expression(inst, task, stmt->return_expr, scope, result_type)) {
                     return false;
                 }
+
+                if (result_type != stmt->return_expr->resolved_type) {
+                    Source_Pos pos = source_pos(inst, stmt);
+                    instance_fatal_error(inst, pos, "Mismatching type in return statment, got: '%s', expected: '%s'",
+                                         temp_type_string(inst, stmt->return_expr->resolved_type).data,
+                                         temp_type_string(inst, result_type).data);
+                }
+
+
+            } else {
+                assert(result_type->kind == Type_Kind::VOID);
             }
 
             break;
