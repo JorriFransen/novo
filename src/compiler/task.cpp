@@ -108,6 +108,7 @@ void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_
 
         case AST_Declaration_Kind::STRUCT: break;
         case AST_Declaration_Kind::VARIABLE: break;
+        case AST_Declaration_Kind::CONSTANT: break;
 
         case AST_Declaration_Kind::FUNCTION: {
 

@@ -226,6 +226,8 @@ NAPI void ssa_emit_16(DArray<u8> *bytes, u16 value);
 NAPI void ssa_emit_32(DArray<u8> *bytes, u32 value);
 NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 
+
+NAPI u32 ssa_emit_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
 NAPI u32 ssa_emit_constant(Instance *inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
 NAPI u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type);
 

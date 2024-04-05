@@ -160,6 +160,25 @@ static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Decla
             break;
         }
 
+        case AST_Declaration_Kind::CONSTANT: {
+            string_builder_append(sb, "CONST_DECL: '%s'\n", name.data);
+
+            if (decl->constant.type_spec) {
+                ast_print_pos(instance, sb, decl->constant.type_spec);
+                ast_print_indent(sb, indent + 1);
+                string_builder_append(sb, "TS:\n");
+                ast_ts_to_string(instance, sb, decl->constant.type_spec, indent + 2);
+            }
+
+            if (decl->constant.value) {
+                ast_print_pos(instance, sb, decl->constant.value);
+                ast_print_indent(sb, indent + 1);
+                string_builder_append(sb, "INIT:\n");
+                ast_expr_to_string(instance, sb, decl->constant.value, indent + 2);
+            }
+            break;
+        }
+
         case AST_Declaration_Kind::STRUCT_MEMBER: {
             string_builder_append(sb, "STRUCT_MEMBER: '%s'\n", name.data);
             assert(decl->variable.type_spec);

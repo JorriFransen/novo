@@ -82,6 +82,18 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
             break;
         }
 
+        case AST_Declaration_Kind::CONSTANT: {
+
+            if (decl->constant.type_spec && !resolve_ts(inst, task, decl->constant.type_spec, scope)) {
+                return false;
+            }
+
+            if (!resolve_expression(inst, task, decl->constant.value, scope)) {
+                return false;
+            }
+            break;
+        }
+
         case AST_Declaration_Kind::STRUCT_MEMBER: {
             if (!resolve_ts(inst, task, decl->variable.type_spec, scope)) {
                 return false;

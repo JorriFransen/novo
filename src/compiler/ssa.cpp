@@ -528,6 +528,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     }
                 }
 
+            } else if (stmt->declaration->kind == AST_Declaration_Kind::CONSTANT) {
+                // No init required, emitted when used (referenced)
             } else {
                 assert(stmt->declaration->kind == AST_Declaration_Kind::STRUCT);
             }
@@ -1005,36 +1007,44 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
         case AST_Expression_Kind::IDENTIFIER: {
             assert(expr->identifier->decl);
             AST_Declaration* decl = expr->identifier->decl;
-            assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
-            if (decl->flags & AST_DECL_FLAG_PARAM) {
+            if (decl->kind == AST_Declaration_Kind::VARIABLE) {
 
-                if (decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
+                if (decl->flags & AST_DECL_FLAG_PARAM) {
 
-                    assert(decl->variable.index >= 0 && decl->variable.index < function->param_count);
+                    if (decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
 
-                    u32 alloc_reg;
-                    bool found = ssa_find_alloc(builder, decl, &alloc_reg);
-                    assert(found);
+                        assert(decl->variable.index >= 0 && decl->variable.index < function->param_count);
 
-                    result_reg = ssa_emit_load_ptr(builder, decl->resolved_type->bit_size, alloc_reg);
+                        u32 alloc_reg;
+                        bool found = ssa_find_alloc(builder, decl, &alloc_reg);
+                        assert(found);
+
+                        result_reg = ssa_emit_load_ptr(builder, decl->resolved_type->bit_size, alloc_reg);
+
+                    } else {
+
+                        u32 param_index = decl->variable.index;
+                        if (function->sret) param_index++;
+
+                        result_reg = ssa_emit_load_param(builder, param_index);
+                    }
 
                 } else {
 
-                    u32 param_index = decl->variable.index;
-                    if (function->sret) param_index++;
-
-                    result_reg = ssa_emit_load_param(builder, param_index);
+                    auto lvalue = ssa_emit_lvalue(builder, expr, scope);
+                    if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+                        result_reg = lvalue;
+                    } else {
+                        result_reg = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
+                    }
                 }
 
             } else {
+                assert(decl->kind == AST_Declaration_Kind::CONSTANT);
+                assert(!(decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED));
 
-                auto lvalue = ssa_emit_lvalue(builder, expr, scope);
-                if (expr->resolved_type->kind == Type_Kind::STRUCT) {
-                    result_reg = lvalue;
-                } else {
-                    result_reg = ssa_emit_load_ptr(builder, expr->resolved_type->bit_size, lvalue);
-                }
+                result_reg = ssa_emit_constant_value(builder, expr, scope);
             }
             break;
         }
@@ -1725,6 +1735,44 @@ void ssa_emit_64(DArray<u8> *bytes, u64 value)
     darray_append(bytes, (u8)((value >> 40) & 0xFF));
     darray_append(bytes, (u8)((value >> 48) & 0xFF));
     darray_append(bytes, (u8)((value >> 56) & 0xFF));
+}
+
+u32 ssa_emit_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
+{
+    switch (expr->kind) {
+        case AST_Expression_Kind::INVALID: assert(false); break;
+
+        case AST_Expression_Kind::IDENTIFIER: {
+            AST_Declaration* decl = expr->identifier->decl;
+            assert(decl->kind == AST_Declaration_Kind::CONSTANT);
+
+            AST_Expression* value_expr = decl->constant.value;
+            assert(value_expr->resolved_type->kind == Type_Kind::INTEGER);
+
+            return ssa_emit_load_immediate(builder, value_expr->resolved_type->bit_size, value_expr->integer_literal);
+            break;
+        }
+
+        case AST_Expression_Kind::UNARY: assert(false); break;
+        case AST_Expression_Kind::BINARY: assert(false); break;
+        case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::CALL: assert(false); break;
+        case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
+        case AST_Expression_Kind::DEREF: assert(false); break;
+        case AST_Expression_Kind::CAST: assert(false); break;
+        case AST_Expression_Kind::COMPOUND: assert(false); break;
+        case AST_Expression_Kind::RUN: assert(false); break;
+        case AST_Expression_Kind::SIZEOF: assert(false); break;
+        case AST_Expression_Kind::ALIGNOF: assert(false); break;
+        case AST_Expression_Kind::OFFSETOF: assert(false); break;
+        case AST_Expression_Kind::TYPE: assert(false); break;
+        case AST_Expression_Kind::INTEGER_LITERAL: assert(false); break;
+        case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
+        case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
+    }
 }
 
 u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes/*=nullptr*/)

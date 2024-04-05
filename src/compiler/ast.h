@@ -48,6 +48,7 @@ enum class AST_Declaration_Kind : u32
 {
     INVALID,
     VARIABLE,
+    CONSTANT,
     STRUCT_MEMBER,
     STRUCT,
     FUNCTION,
@@ -89,8 +90,8 @@ struct AST_Declaration
 
         struct {
             AST_Type_Spec* type_spec;
-            AST_Expression* init_expr;
-            s64 index;
+            AST_Expression* value;
+            // s64 index;
         } constant;
 
         struct {
@@ -392,6 +393,7 @@ NAPI AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes);
 NAPI AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident, AST_Declaration_Flags flags = AST_DECL_FLAG_NONE);
 NAPI AST_Declaration* ast_builtin_type_decl(Instance* inst, Type* type, const char* name);
 NAPI AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* init, AST_Declaration_Flags flags = AST_DECL_FLAG_NONE);
+NAPI AST_Declaration* ast_constant_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* value, AST_Declaration_Flags flags = AST_DECL_FLAG_NONE);
 NAPI AST_Declaration* ast_struct_member_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* default_val);
 NAPI AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> fields, Scope* scope);
 NAPI AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec* return_ts, Scope* scope);

@@ -85,6 +85,17 @@ AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* ident,
     return result;
 }
 
+AST_Declaration* ast_constant_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* value, AST_Declaration_Flags flags/*=AST_DECL_FLAG_NONE*/)
+{
+    assert(value);
+
+    auto result = ast_declaration(inst, AST_Declaration_Kind::CONSTANT, ident, flags);
+    result->constant.type_spec = ts;
+    result->constant.value = value;
+
+    return result;
+}
+
 AST_Declaration* ast_struct_member_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* default_val)
 {
     auto result = ast_declaration(inst, AST_Declaration_Kind::STRUCT_MEMBER, ident);

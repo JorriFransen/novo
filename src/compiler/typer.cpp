@@ -82,6 +82,29 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
             break;
         }
 
+        case AST_Declaration_Kind::CONSTANT: {
+
+            Type* ts_type = nullptr;
+
+            if (decl->constant.type_spec) {
+                if (!type_type_spec(inst, task, decl->constant.type_spec, scope)) {
+                    return false;
+                }
+
+                ts_type = decl->constant.type_spec->resolved_type;
+            }
+
+            if (!type_expression(inst, task, decl->constant.value, scope, ts_type)) {
+                return false;
+            }
+
+            if (ts_type) assert(ts_type == decl->constant.value->resolved_type);
+
+            decl->resolved_type = decl->constant.value->resolved_type;
+
+            break;
+        }
+
         case AST_Declaration_Kind::STRUCT_MEMBER: {
             if (!type_type_spec(inst, task, decl->variable.type_spec, scope)) {
                 return false;

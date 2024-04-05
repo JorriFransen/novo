@@ -274,15 +274,21 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
 
     if (match_token(parser, ':')) {
 
-        if (ts) {
-            // TODO: report error
-            assert(false);
-        }
 
         if (match_keyword(parser, g_keyword_struct)) {
+            if (ts) {
+                // TODO: report error
+                assert(false);
+            }
             result = parse_struct_declaration(parser, ident, scope);
-        } else {
+        } else if (is_token(parser, '(')) {
+            if (ts) {
+                // TODO: report error
+                assert(false);
+            }
             result = parse_function_declaration(parser, ident, scope);
+        } else {
+            result = parse_constant_declaration(parser, ident, ts, scope);
         }
 
     } else {
@@ -493,6 +499,19 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
     result->flags |= flags;
     save_source_pos(parser->instance, result, pos);
     if (body_array.count) hash_table_add(&parser->instance->function_body_positions, result, body_pos);
+    return result;
+}
+
+AST_Declaration* parse_constant_declaration(Parser* parser, AST_Identifier* ident, AST_Type_Spec* ts, Scope* scope)
+{
+    AST_Expression* value = parse_expression(parser);
+
+    AST_Declaration* result = ast_constant_declaration(parser->instance, ident, ts, value);
+    Source_Pos pos = source_pos(source_pos(parser->instance, ident), source_pos(&parser->lexer));
+    save_source_pos(parser->instance, result, pos);
+
+    expect_token(parser, ';');
+
     return result;
 }
 

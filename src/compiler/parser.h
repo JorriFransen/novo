@@ -54,6 +54,7 @@ NAPI AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_s
 NAPI AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi);
 NAPI AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident, Scope* scope);
 NAPI AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* ident, Scope* scope);
+NAPI AST_Declaration* parse_constant_declaration(Parser* parser, AST_Identifier* ident, AST_Type_Spec* ts, Scope* scope);
 
 NAPI AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi);
 NAPI AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope);
