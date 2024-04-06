@@ -1773,6 +1773,9 @@ u32 ssa_emit_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* s
         case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
         case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
     }
+
+    assert(false);
+    return 0;
 }
 
 u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes/*=nullptr*/)
