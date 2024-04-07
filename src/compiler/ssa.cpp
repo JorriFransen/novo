@@ -850,7 +850,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             if (decl->kind == AST_Declaration_Kind::CONSTANT) {
 
                 bool found = false;
-                u32 index;
+                u32 index = 0;
                 for (s64 i = 0; i < builder->program->const_decls.count; i++) {
                     if (builder->program->const_decls[i].decl == decl) {
                         found = true;
