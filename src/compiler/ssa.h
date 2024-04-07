@@ -156,7 +156,7 @@ struct SSA_Program
     DArray<SSA_Constant_Decl> const_decls;
 
     DArray<SSA_Global> globals;
-    u64 globals_size;
+    s64 globals_size;
 
     Hash_Table<SSA_Assert_Pos, Source_Pos> instruction_origin_positions;
 };
