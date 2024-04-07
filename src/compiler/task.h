@@ -71,6 +71,7 @@ enum class SSA_Task_Kind : u32
 {
     INVALID,
     FUNCTION,
+    CONSTANT,
     GLOBAL_VAR,
     RUN,
     INSERT,

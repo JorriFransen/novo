@@ -136,6 +136,12 @@ struct SSA_Assert_Pos
     u32 block_index;
 };
 
+struct SSA_Constant_Decl
+{
+    AST_Declaration* decl;
+    u32 const_index;
+};
+
 struct SSA_Program
 {
     Allocator* allocator;
@@ -146,6 +152,8 @@ struct SSA_Program
     DArray<SSA_Constant> constants;
     DArray<s64> constant_patch_offsets;
     DArray<SSA_Function> functions;
+
+    DArray<SSA_Constant_Decl> const_decls;
 
     DArray<SSA_Global> globals;
     u64 globals_size;
@@ -227,7 +235,7 @@ NAPI void ssa_emit_32(DArray<u8> *bytes, u32 value);
 NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 
 
-NAPI u32 ssa_emit_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
+NAPI u32 ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
 NAPI u32 ssa_emit_constant(Instance *inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
 NAPI u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type);
 

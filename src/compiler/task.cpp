@@ -6,6 +6,7 @@
 #include "instance.h"
 #include "parser.h"
 #include "scope.h"
+#include "type.h"
 
 #include <assert.h>
 
@@ -189,6 +190,11 @@ void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node> *bc_de
 
     if (decl->kind == AST_Declaration_Kind::FUNCTION) {
         kind = SSA_Task_Kind::FUNCTION;
+    } else if (decl->kind == AST_Declaration_Kind::CONSTANT) {
+
+        assert(decl->resolved_type->kind == Type_Kind::STRUCT);
+        kind = SSA_Task_Kind::CONSTANT;
+
     } else {
         assert(decl->kind == AST_Declaration_Kind::VARIABLE && decl->flags & AST_DECL_FLAG_GLOBAL);
         kind = SSA_Task_Kind::GLOBAL_VAR;

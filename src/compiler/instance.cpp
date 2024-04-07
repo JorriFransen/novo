@@ -305,12 +305,21 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 progress = true;
 
                 if (task->node.kind == AST_Node_Kind::DECLARATION) {
+
                     if (task->node.declaration->kind == AST_Declaration_Kind::FUNCTION ||
-                        (task->node.declaration->kind == AST_Declaration_Kind::VARIABLE && task->node.declaration->flags & AST_DECL_FLAG_GLOBAL)) {
+                        (task->node.declaration->kind == AST_Declaration_Kind::VARIABLE && task->node.declaration->flags & AST_DECL_FLAG_GLOBAL) ||
+                        (task->node.declaration->kind == AST_Declaration_Kind::CONSTANT && task->node.declaration->resolved_type->kind == Type_Kind::STRUCT)) {
 
                         add_ssa_task(inst, task->node.declaration, task->bytecode_deps, nullptr);
                     }
 
+                } else if (task->node.kind == AST_Node_Kind::STATEMENT) {
+
+                    auto stmt = task->node.statement;
+                    if (stmt->kind == AST_Statement_Kind::DECLARATION && stmt->declaration->kind == AST_Declaration_Kind::CONSTANT && stmt->declaration->resolved_type->kind == Type_Kind::STRUCT) {
+
+                        add_ssa_task(inst, stmt->declaration, task->bytecode_deps, nullptr);
+                    }
                 }
 
                 darray_remove_unordered(&inst->type_tasks, i);
@@ -385,6 +394,12 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 success = ssa_emit_global_variable(inst, inst->ssa_program, task.node.declaration);
                 assert(success);
 
+            } else if (task.kind == SSA_Task_Kind::CONSTANT) {
+
+                u32 const_index = ssa_emit_constant(inst, inst->ssa_program, task.node.declaration->constant.value);
+                darray_append(&inst->ssa_program->const_decls, { task.node.declaration, const_index });
+                success = true;
+
             } else {
                 assert(task.kind == SSA_Task_Kind::FUNCTION);
                 success = ssa_emit_function(inst, inst->ssa_program, task.node.declaration);
@@ -396,7 +411,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 darray_remove_unordered(&inst->ssa_tasks, i);
                 i--;
 
-                if (task.bytecode_deps) {
+                if (task.bytecode_deps && task.kind != SSA_Task_Kind::CONSTANT) {
                     darray_free(task.bytecode_deps);
                     free(c_allocator(), task.bytecode_deps);
                 }
