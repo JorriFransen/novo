@@ -21,6 +21,7 @@ enum File_Mode : u32
 };
 
 NAPI bool fs_read_entire_file(Allocator* allocator, const String_Ref path, String* out_string);
+NAPI bool fs_write_entire_file(const String_Ref path, const String_Ref content);
 
 NAPI bool fs_open(const String_Ref path, File_Mode mode, File_Handle* out_handle);
 NAPI void fs_close(File_Handle* handle);

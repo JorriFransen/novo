@@ -73,6 +73,23 @@ bool fs_read_entire_file(Allocator* allocator, const String_Ref path, String* ou
     return true;
 }
 
+bool fs_write_entire_file(const String_Ref path, const String_Ref content)
+{
+    File_Handle file;
+    if (!fs_open(path, File_Mode::FILE_MODE_WRITE, &file)) {
+        log_error("Can't open/create file: %s\n", path.data);
+    }
+
+    u64 written;
+    bool write_result = fs_write(&file, content.length, (u8*)content.data, &written);
+    assert(write_result);
+    assert(written == content.length);
+
+    fs_close(&file);
+
+    return false;
+}
+
 bool fs_open(const String_Ref path, File_Mode mode, File_Handle* out_handle)
 {
     assert(out_handle);
@@ -90,7 +107,7 @@ bool fs_open(const String_Ref path, File_Mode mode, File_Handle* out_handle)
     } else if (read && !write) {
         mode_str = "rb";
     } else if (!read && write) {
-        mode_str = "ab";
+        mode_str = "wb";
     } else {
         log_error("Invalid mode passed to filesystem_open(): %s", path.data);
         return false;
