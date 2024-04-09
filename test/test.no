@@ -30,7 +30,7 @@ main :: () -> s64 {
 
     // printf("Hello, World!".data);
 
-    return ret_x(42);
+    return add(ret_x(42), 11);
 }
 
 

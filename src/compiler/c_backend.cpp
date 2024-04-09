@@ -60,11 +60,7 @@ typedef u64 p_uint_t;)PREAMBLE";
         if (i > 0) string_builder_append(&sb, "\n");
 
         SSA_Function *func = &program->functions[i];
-        c_backend_emit_c_type(inst, &sb, func->type, atom_string(func->name));
-
-        string_builder_append(&sb, "\n{\n");
-        c_backend_emit_function_body(inst, &sb, func, &arg_stack);
-        string_builder_append(&sb, "\n}\n");
+        c_backend_emit_function(inst, &sb, func, &arg_stack);
     }
     string_builder_append(&sb, "/* End function definitions */\n\n");
 
@@ -112,8 +108,11 @@ void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, Strin
         case Type_Kind::VOID: assert(false); break;
 
         case Type_Kind::INTEGER: {
-            assert(name.length == 0);
             string_builder_append(sb, "%c%d", type->integer.sign ? 's' : 'u', type->bit_size);
+
+            if (name.length) {
+                string_builder_append(sb, " %.*s", (int)name.length, name.data);
+            }
             break;
         }
 
@@ -135,7 +134,10 @@ void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, Strin
 
                 if (i > 0) string_builder_append(sb, ", ");
 
-                c_backend_emit_c_type(inst, sb, param_type, "");
+                char param_name[32];
+                string_format(param_name, "a%u", i);
+
+                c_backend_emit_c_type(inst, sb, param_type, param_name);
             }
 
             string_builder_append(sb, ")");
@@ -146,8 +148,11 @@ void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, Strin
     }
 }
 
-void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Function *func, Stack<u32> *arg_stack)
+void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *func, Stack<u32> *arg_stack)
 {
+    c_backend_emit_c_type(inst, sb, func->type, atom_string(func->name));
+    string_builder_append(sb, "\n{\n");
+
     for (s64 bi = 0; bi < func->blocks.count; bi++) {
         SSA_Block* block = &func->blocks[bi];
 
@@ -217,7 +222,14 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Functi
                     u32 result_reg = FETCH32();
                     u32 param_index = FETCH32();
 
-                    string_builder_append(sb, "// load_param %d %d\n", result_reg, param_index);
+                    Type* param_type = func->type->function.param_types[param_index];
+
+                    char reg_name[32];
+                    string_format(reg_name, "r%u", result_reg);
+
+                    string_builder_append(sb, "    ");
+                    c_backend_emit_c_type(inst, sb, param_type, reg_name);
+                    string_builder_append(sb, " = a%u;\n", param_index);
                     break;
                 }
 
@@ -249,17 +261,22 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Functi
                     assert(!callee->foreign);
 
                     string_builder_append(sb, "    ");
-                    c_backend_emit_c_type(inst, sb, callee->type->function.return_type, "");
-                    string_builder_append(sb, " r%u = %.*s(", result_reg, (int)callee_name.length, callee_name.data);
+
+                    char result_name[32];
+                    string_format(result_name, "r%u", result_reg);
+
+                    c_backend_emit_c_type(inst, sb, callee->type->function.return_type, result_name);
+                    string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
 
                     u32 arg_count = callee->param_count;
                     assert(stack_count(arg_stack) >= arg_count);
 
+                    s64 arg_offset = arg_count - 1;
                     for (s64 i = 0; i < arg_count; i++) {
 
                         if (i > 0) string_builder_append(sb, ", ");
 
-                        u32 arg_reg = stack_peek(arg_stack, i);
+                        u32 arg_reg = stack_peek(arg_stack, arg_offset--);
                         string_builder_append(sb, "r%u", arg_reg);
                     }
 
@@ -282,6 +299,8 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Functi
             }
         }
     }
+
+    string_builder_append(sb, "}\n");
 
 #undef FETCH
 #undef FETCH16
