@@ -64,6 +64,7 @@ void instance_init(Instance* inst, Options options)
     }
 
     darray_init(&inst->ast_allocator, &inst->function_types);
+    darray_init(&inst->ast_allocator, &inst->struct_types);
 
     inst->fatal_error = false;
 
@@ -180,6 +181,7 @@ void instance_free(Instance* inst)
 
     darray_free(&inst->imported_files);
     darray_free(&inst->function_types);
+    darray_free(&inst->struct_types);
 
     ssa_program_free(inst->ssa_program);
     vm_free(&inst->vm);

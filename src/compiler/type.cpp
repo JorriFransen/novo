@@ -91,6 +91,9 @@ Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, 
     result->structure.name = name;
     result->structure.members = members;
     result->structure.scope = scope;
+
+    darray_append(&inst->struct_types, result);
+
     return result;
 }
 

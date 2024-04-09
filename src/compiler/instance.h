@@ -65,6 +65,7 @@ struct Instance
     String_Ref inserted_strings_path;
 
     DArray<Type*> function_types;
+    DArray<Type*> struct_types;
 
     bool fatal_error;
 

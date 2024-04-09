@@ -32,11 +32,19 @@ typedef signed long long s64;
 typedef float  r32;
 typedef double r64;
 
-typedef u64 p_uint_t;)PREAMBLE";
+typedef u64 p_uint_t;
+
+#include <string.h>)PREAMBLE";
 
     string_builder_append(&sb, "/* Preamble */\n");
     string_builder_append(&sb, "%s\n", preamble);
     string_builder_append(&sb, "/* End preamble */\n\n");
+
+    // Type declarations
+    for (s64 i = 0; i < inst->struct_types.count; i++) {
+        c_backend_emit_struct_declaration(inst, &sb, inst->struct_types[i]);
+        string_builder_append(&sb, "\n");
+    }
 
     // Function declarations
     string_builder_append(&sb, "/* Function declarations */\n");
@@ -80,7 +88,7 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     fs_write_entire_file("c_backend_output.c", str);
 
-    Command_Result c_res = platform_run_command(Array_Ref<String_Ref>({"clang", "-g", "c_backend_output.c"}));
+    Command_Result c_res = platform_run_command(Array_Ref<String_Ref>({"clang", "-std=c99", "-g", "c_backend_output.c"}));
 
     if (!c_res.success) {
         log_error("C backend errors:\n%s\n", c_res.error_string.data);
@@ -92,7 +100,30 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     platform_free_command_result(&c_res);
 
-    return true;
+    return c_res.success;
+}
+
+void c_backend_emit_struct_declaration(Instance* inst, String_Builder* sb, Type *type)
+{
+    assert(type->kind == Type_Kind::STRUCT);
+
+    String name = atom_string(type->structure.name);
+
+    string_builder_append(sb, "typedef struct %.*s\n", (int)name.length, name.data);
+    string_builder_append(sb, "{\n");
+
+    char member_name[32];
+
+    for (s64 i = 0; i < type->structure.members.count; i++) {
+        Type_Struct_Member member = type->structure.members[i];
+
+        string_builder_append(sb, "    ");
+        string_format(member_name, "m%d", i);
+        c_backend_emit_c_type(inst, sb, member.type, member_name);
+        string_builder_append(sb, ";\n");
+    }
+
+    string_builder_append(sb, "} %.*s;\n", (int)name.length, name.data);
 }
 
 void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, String_Ref name)
@@ -139,17 +170,34 @@ void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, Strin
                 c_backend_emit_c_type(inst, sb, param_type, param_name);
             }
 
+            if (type->flags & TYPE_FLAG_FOREIGN_VARARG) {
+                string_builder_append(sb, ", ...");
+            }
+
             string_builder_append(sb, ")");
             break;
         }
 
-        case Type_Kind::STRUCT: assert(false); break;
+        case Type_Kind::STRUCT: {
+            String struct_name = atom_string(type->structure.name);
+            string_builder_append(sb, "%.*s", (int)struct_name.length, struct_name.data);
+
+            if (name.length) string_builder_append(sb, " %.*s", (int)name.length, name.data);
+
+            break;
+        }
     }
 }
 
 void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *func, Stack<u32> *arg_stack)
 {
     c_backend_emit_c_type(inst, sb, func->type, atom_string(func->name));
+
+    if (func->foreign) {
+        string_builder_append(sb, ";\n");
+        return;
+    }
+
     string_builder_append(sb, "\n{\n");
 
     char reg_name[32];
@@ -162,20 +210,15 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
             string_builder_append(sb, "%.*s:\n", (int)block_name.length, block_name.data);
         }
 
-#define FETCH() (block->bytes[offset++])
-#define FETCH16() ({u16 r = *(u16*)&block->bytes[offset]; offset += 2; r;})
-#define FETCH32() ({u32 r = *(u32*)&block->bytes[offset]; offset += 4; r;})
-#define FETCH64() ({u64 r = *(u64*)&block->bytes[offset]; offset += 8; r;})
+#define FETCH() (block->bytes[instruction_offset++])
+#define FETCH16() ({u16 r = *(u16*)&block->bytes[instruction_offset]; instruction_offset += 2; r;})
+#define FETCH32() ({u32 r = *(u32*)&block->bytes[instruction_offset]; instruction_offset += 4; r;})
+#define FETCH64() ({u64 r = *(u64*)&block->bytes[instruction_offset]; instruction_offset += 8; r;})
 
-        s64 offset = 0;
-        while (offset < block->bytes.count) {
+        s64 instruction_offset = 0;
+        while (instruction_offset < block->bytes.count) {
 
             SSA_Op op = (SSA_Op)FETCH();
-
-            if (offset > 0 && op != SSA_OP_PUSH && op != SSA_OP_POP_N) {
-                string_builder_append(sb, "\n");
-            }
-
 
             switch (op) {
                 case SSA_OP_NOP: assert(false); break;
@@ -229,7 +272,18 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                 }
 
                 case SSA_OP_GLOB_PTR: assert(false); break;
-                case SSA_OP_MEMCPY: assert(false); break;
+
+                case SSA_OP_MEMCPY: {
+                    u32 dest_ptr_reg = FETCH32();
+                    u32 source_ptr_reg = FETCH32();
+                    u64 byte_count = FETCH64();
+
+                    string_format(reg_name, "r%u", dest_ptr_reg);
+                    string_builder_append(sb, "    memcpy(%s, ", reg_name);
+                    string_format(reg_name, "r%u", source_ptr_reg);
+                    string_builder_append(sb, "%s, %llu);\n", reg_name, byte_count);
+                    break;
+                }
 
                 case SSA_OP_STORE_PTR: {
                     /*u8 size =*/ FETCH();
@@ -264,13 +318,36 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                     u32 result_reg = FETCH32();
                     u32 param_index = FETCH32();
 
-                    Type* param_type = func->type->function.param_types[param_index];
-
-                    string_format(reg_name, "r%u", result_reg);
-
                     string_builder_append(sb, "    ");
-                    c_backend_emit_c_type(inst, sb, param_type, reg_name);
-                    string_builder_append(sb, " = a%u;\n", param_index);
+                    string_format(reg_name, "r%u", result_reg);
+                    Type *type = nullptr;
+
+                    bool sret = false;
+                    if (func->sret) {
+
+                        if (param_index == 0) {
+
+                            // Loading return value
+                            type = pointer_type_get(inst, func->type->function.return_type);
+                            sret = true;
+
+                        } else {
+                            param_index--;
+                        }
+                    }
+
+                    if (!sret) {
+                        type = func->type->function.param_types[param_index];
+                    }
+
+                    c_backend_emit_c_type(inst, sb, type, reg_name);
+                    string_builder_append(sb, " = ");
+
+                    if (sret) {
+                        string_builder_append(sb, "r0;\n");
+                    } else {
+                        string_builder_append(sb, "a%u;\n", param_index);
+                    }
                     break;
                 }
 
@@ -288,7 +365,24 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                 }
 
                 case SSA_OP_LOAD_CONST: assert(false); break;
-                case SSA_OP_STRUCT_OFFSET: assert(false); break;
+
+                case SSA_OP_STRUCT_OFFSET: {
+                    u32 result_reg = FETCH32();
+                    u32 base_ptr_reg = FETCH32();
+                    /*u32 offset =*/ FETCH32();
+                    u16 index = FETCH16();
+
+                    string_builder_append(sb, "    ");
+                    string_format(reg_name, "r%u", result_reg);
+                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
+
+                    string_format(reg_name, "r%u", base_ptr_reg);
+                    string_builder_append(sb, " = &(%s)->", reg_name);
+                    string_format(reg_name, "m%u", index);
+                    string_builder_append(sb, "%s;\n", reg_name);
+                    break;
+                }
+
                 case SSA_OP_POINTER_OFFSET: assert(false); break;
                 case SSA_OP_POINTER_DIFF: assert(false); break;
 
@@ -310,19 +404,25 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
 
                     SSA_Function* callee = &inst->ssa_program->functions[fn_index];
                     String callee_name = atom_string(callee->name);
+                    string_builder_append(sb, "    ");
 
                     assert(!callee->foreign);
 
-                    string_builder_append(sb, "    ");
-
-                    char result_name[32];
-                    string_format(result_name, "r%u", result_reg);
-
-                    c_backend_emit_c_type(inst, sb, callee->type->function.return_type, result_name);
-                    string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
-
                     u32 arg_count = callee->param_count;
                     assert(stack_count(arg_stack) >= arg_count);
+
+                    if (!callee->sret) {
+                        string_format(reg_name, "r%u", result_reg);
+                        c_backend_emit_c_type(inst, sb, callee->type->function.return_type, reg_name);
+                    } else {
+                        u32 res_reg = stack_peek(arg_stack, arg_count - 1);
+                        string_builder_append(sb, "*(r%u)", res_reg);
+                    }
+                    string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
+
+                    if (callee->sret) {
+                        arg_count -= 1;
+                    }
 
                     s64 arg_offset = arg_count - 1;
                     for (s64 i = 0; i < arg_count; i++) {
@@ -341,7 +441,11 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
 
                 case SSA_OP_RET: {
                     u32 value_reg = FETCH32();
-                    string_builder_append(sb, "    return r%u;\n", value_reg);
+                    if (func->sret) {
+                        string_builder_append(sb, "    return *(r%u);\n", value_reg);
+                    } else {
+                        string_builder_append(sb, "    return r%u;\n", value_reg);
+                    }
                     break;
                 }
 

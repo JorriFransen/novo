@@ -1,5 +1,3 @@
-// TODO:
-
 //  - // AST_DECL_FLAG_STORAGE_REQUIRED is only used for arguments/parameters?
 
 //  - Constant variables (aggregates, dissallow modification...)
@@ -23,20 +21,27 @@
 // free :: (ptr: *void) -> void #foreign;
 
 
-ret_x :: (x: s64) -> int { return x; }
-add :: (a: s64, b: s64) -> s64 { return a + b; }
+// ret_x :: (x: s64) -> int { return x; }
+// add :: (a: s64, b: s64) -> s64 { return a + b; }
 
-// Vec2 :: struct {
-//     x: s64; y: s64;
-// }
+Vec2 :: struct {
+    x: s64; y: s64;
+}
+
+make_vec :: (x: s64, y: s64) -> Vec2 {
+    return { x, y };
+}
 
 main :: () -> s64 {
 
     // printf("Hello, World!".data);
 
-    x: int = 5;
+    // return add(ret_x(42), 11) + x;
 
-    return add(ret_x(42), 11) + x;
+    v := make_vec(11, 22);
+    // v : Vec2 = { 11, 22 };
+
+    return v.x + v.y;
 }
 
 
