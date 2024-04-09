@@ -9,6 +9,7 @@
 #include "ast.h"
 #include "ast_print.h"
 #include "atom.h"
+#include "backend.h"
 #include "keywords.h"
 #include "parser.h"
 #include "resolver.h"
@@ -523,7 +524,11 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         log_debug("Bytecode vm returned: %llu", inst->entry_run_result.return_value);
     }
 
-    return true;
+    if (builtin_module) {
+        return true;
+    } else {
+        return backend_emit(inst);
+    }
 }
 
 u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)

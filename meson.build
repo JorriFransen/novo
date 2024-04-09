@@ -51,6 +51,8 @@ compiler_source = [
   'src/compiler/ast.cpp', 'src/compiler/ast.h',
   'src/compiler/ast_print.cpp', 'src/compiler/ast_print.h',
   'src/compiler/atom.cpp', 'src/compiler/atom.h',
+  'src/compiler/backend.cpp', 'src/compiler/backend.h',
+  'src/compiler/c_backend.cpp', 'src/compiler/c_backend.h',
   'src/compiler/ffi.cpp', 'src/compiler/ffi.h',
   'src/compiler/instance.cpp', 'src/compiler/instance.h',
   'src/compiler/keywords.cpp', 'src/compiler/keywords.h',

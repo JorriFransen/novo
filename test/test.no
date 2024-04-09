@@ -18,18 +18,20 @@
 // putchar :: (char: s32) -> s32 #foreign;
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-printf :: (format: *u8, ..) -> s32 #foreign;
+// printf :: (format: *u8, ..) -> s32 #foreign;
 // malloc :: (size: s64) -> *void #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
 
+ret_x :: (x: s64) -> int { return x; }
+add :: (a: s64, b: s64) -> s64 { return a + b; }
+
 main :: () -> s64 {
 
-    printf("Hello, World!".data);
+    // printf("Hello, World!".data);
 
-    return 0;
+    return ret_x(42);
 }
 
 
 // #run main();
-

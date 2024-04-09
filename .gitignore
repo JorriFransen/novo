@@ -8,4 +8,7 @@ inserted_strings.no
 .nvim.lua
 .luarc.json
 
+c_backend_output.c
+a.out
+
 *.sln
