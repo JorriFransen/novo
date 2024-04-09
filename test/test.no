@@ -27,12 +27,14 @@ Vec2 :: struct {
     y: s64;
 }
 
-pos : Vec2 : { 11, 22 };
+make_vec :: (x: s64, y: s64) -> Vec2 {
+    return { x, y };
+}
 
 main :: () -> s64 {
 
-    size : Vec2 : { 11, 22 };
-    return pos.x + size.y;
+    p := make_vec(1, 2);
+    return 0;
 }
 
 
