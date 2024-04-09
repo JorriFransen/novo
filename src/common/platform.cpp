@@ -173,7 +173,7 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
             } while (read_count > 0);
         }
 
-        Command_Result result;
+        Command_Result result = {};
         result.exit_code = WEXITSTATUS(exit_status);
         result.success = result.exit_code == 0;
 

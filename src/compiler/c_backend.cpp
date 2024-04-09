@@ -80,7 +80,7 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     fs_write_entire_file("c_backend_output.c", str);
 
-    Command_Result c_res = platform_run_command(Array_Ref<String_Ref>({"clang", "c_backend_output.c"}));
+    Command_Result c_res = platform_run_command(Array_Ref<String_Ref>({"clang", "-g", "c_backend_output.c"}));
 
     if (!c_res.success) {
         log_error("C backend errors:\n%s\n", c_res.error_string.data);
@@ -119,9 +119,8 @@ void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, Strin
         case Type_Kind::BOOLEAN: assert(false); break;
 
         case Type_Kind::POINTER: {
-            string_builder_append(sb, "(");
             c_backend_emit_c_type(inst, sb, type->pointer.base, "");
-            string_builder_append(sb, ")*");
+            string_builder_append(sb, "(* %.*s)", (int)name.length, name.data);
             break;
         }
 
@@ -153,6 +152,8 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
     c_backend_emit_c_type(inst, sb, func->type, atom_string(func->name));
     string_builder_append(sb, "\n{\n");
 
+    char reg_name[32];
+
     for (s64 bi = 0; bi < func->blocks.count; bi++) {
         SSA_Block* block = &func->blocks[bi];
 
@@ -168,18 +169,27 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
 
         s64 offset = 0;
         while (offset < block->bytes.count) {
+
             SSA_Op op = (SSA_Op)FETCH();
+
+            if (offset > 0 && op != SSA_OP_PUSH && op != SSA_OP_POP_N) {
+                string_builder_append(sb, "\n");
+            }
+
 
             switch (op) {
                 case SSA_OP_NOP: assert(false); break;
 
                 case SSA_OP_ADD: {
-                    u8 size = FETCH();
+                    /*u8 size =*/ FETCH();
                     u32 result_reg = FETCH32();
                     u32 left_reg = FETCH32();
                     u32 right_reg = FETCH32();
 
-                    string_builder_append(sb, "    u%hhu r%u = r%u + r%u;\n", size * 8, result_reg, left_reg, right_reg);
+                    string_builder_append(sb, "    ");
+                    string_format(reg_name, "r%u", result_reg);
+                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
+                    string_builder_append(sb, " = r%u + r%u;\n", left_reg, right_reg);
                     break;
                 }
 
@@ -196,10 +206,39 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                 case SSA_OP_TRUNC: assert(false); break;
                 case SSA_OP_SEXT: assert(false); break;
                 case SSA_OP_ZEXT: assert(false); break;
-                case SSA_OP_ALLOC: assert(false); break;
+
+                case SSA_OP_ALLOC: {
+                    u32 result_reg = FETCH32();
+                    /*u64 size =*/ FETCH64();
+
+                    Type* alloc_type = func->register_types[result_reg];
+                    Type* pointer_type = pointer_type_get(inst, alloc_type);
+
+                    char alloc_name[32];
+
+                    string_builder_append(sb, "    ");
+                    string_format(alloc_name, "alloc_r%u", result_reg);
+                    c_backend_emit_c_type(inst, sb, alloc_type, alloc_name);
+                    string_builder_append(sb, ";\n");
+
+                    string_builder_append(sb, "    ");
+                    string_format(reg_name, "r%u", result_reg);
+                    c_backend_emit_c_type(inst, sb, pointer_type, reg_name);
+                    string_builder_append(sb, " = &(%s);\n", alloc_name);
+                    break;
+                }
+
                 case SSA_OP_GLOB_PTR: assert(false); break;
                 case SSA_OP_MEMCPY: assert(false); break;
-                case SSA_OP_STORE_PTR: assert(false); break;
+
+                case SSA_OP_STORE_PTR: {
+                    /*u8 size =*/ FETCH();
+                    u32 ptr_reg = FETCH32();
+                    u32 value_reg = FETCH32();
+
+                    string_builder_append(sb, "    *(r%u) = r%u;\n", ptr_reg, value_reg);
+                    break;
+                }
 
                 case SSA_OP_LOAD_IM: {
                     u8 size = FETCH();
@@ -214,7 +253,10 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                         case 8: value = FETCH64(); break;
                     }
 
-                    string_builder_append(sb, "    u%hhu r%u = %llu;\n", size * 8, result_reg, value);
+                    string_builder_append(sb, "    ");
+                    string_format(reg_name, "r%u", result_reg);
+                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
+                    string_builder_append(sb, " = %llu;\n", value);
                     break;
                 }
 
@@ -224,7 +266,6 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
 
                     Type* param_type = func->type->function.param_types[param_index];
 
-                    char reg_name[32];
                     string_format(reg_name, "r%u", result_reg);
 
                     string_builder_append(sb, "    ");
@@ -233,7 +274,19 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                     break;
                 }
 
-                case SSA_OP_LOAD_PTR: assert(false); break;
+                case SSA_OP_LOAD_PTR: {
+                    /*u8 size =*/ FETCH();
+                    u32 result_reg = FETCH32();
+                    u32 ptr_reg = FETCH32();
+
+                    string_builder_append(sb, "    ");
+                    string_format(reg_name, "r%u", result_reg);
+                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
+                    string_format(reg_name, "r%u", ptr_reg);
+                    string_builder_append(sb, " = *(%s);\n", reg_name);
+                    break;
+                }
+
                 case SSA_OP_LOAD_CONST: assert(false); break;
                 case SSA_OP_STRUCT_OFFSET: assert(false); break;
                 case SSA_OP_POINTER_OFFSET: assert(false); break;
