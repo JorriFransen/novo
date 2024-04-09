@@ -85,12 +85,6 @@ struct SSA_Block
 struct AST_Node;
 struct SSA_Alloc;
 
-struct SSA_Instruction_Metadata
-{
-    u32 dest_reg;
-    Type* type;
-};
-
 struct SSA_Function
 {
     Atom name;
@@ -105,7 +99,7 @@ struct SSA_Function
     DArray<SSA_Alloc> allocs;
     u32 total_alloc_size;
 
-    DArray<SSA_Instruction_Metadata> instruction_metadata;
+    DArray<Type*> register_types;
 
     bool sret;
     bool foreign;
@@ -179,7 +173,7 @@ NAPI void ssa_global_variable_init(SSA_Global* glob, Type* type, Atom name, u32 
 
 NAPI u32 ssa_block_create(SSA_Program* program, SSA_Function* function, const char* name);
 NAPI u32 ssa_block_create(SSA_Builder* builder, const char* name);
-NAPI u32 ssa_register_create(SSA_Builder* builder);
+NAPI u32 ssa_register_create(SSA_Builder* builder, Type* type);
 
 NAPI bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl);
 NAPI bool ssa_emit_global_variable(Instance* inst, SSA_Program* program, AST_Declaration* decl);
@@ -203,18 +197,18 @@ NAPI s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* 
 
 NAPI u32 ssa_emit_global_pointer(SSA_Builder *builder, u32 global_index);
 NAPI u32 ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg);
-NAPI u32 ssa_emit_trunc(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg);
-NAPI u32 ssa_emit_sext(SSA_Builder* builder, s64 target_bit_size, s64 source_bit_size, u32 operand_reg);
-NAPI u32 ssa_emit_zext(SSA_Builder* builder, s64 target_bit_size, u32 operand_reg);
-NAPI u32 ssa_emit_alloc(SSA_Builder* builder, s64 bit_size);
+NAPI u32 ssa_emit_trunc(SSA_Builder* builder, Type* target_type, u32 operand_reg);
+NAPI u32 ssa_emit_sext(SSA_Builder* builder, Type* target_type, s64 source_bit_size, u32 operand_reg);
+NAPI u32 ssa_emit_zext(SSA_Builder* builder, Type* target_type, u32 operand_reg);
+NAPI u32 ssa_emit_alloc(SSA_Builder* builder, Type* type);
 NAPI void ssa_emit_memcpy(SSA_Builder* builder, u32 dest_ptr_reg, u32 src_ptr_reg, s64 bit_size);
 NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, u32 dest_reg, u32 source_reg);
-NAPI u32 ssa_emit_load_immediate(SSA_Builder* builder, s64 bit_size, u64 immediate_value);
+NAPI u32 ssa_emit_load_immediate(SSA_Builder* builder, Type* type, u64 immediate_value);
 NAPI u32 ssa_emit_load_param(SSA_Builder* builder, u32 param_index);
-NAPI u32 ssa_emit_load_ptr(SSA_Builder* builder, s64 bit_size, u32 ptr_reg);
+NAPI u32 ssa_emit_load_ptr(SSA_Builder* builder, Type* type, u32 ptr_reg);
 NAPI u32 ssa_emit_load_constant(SSA_Builder *builder, u32 index);
-NAPI u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, s64 bit_offset, s64 index);
-NAPI u32 ssa_emit_pointer_offset(SSA_Builder* builder, s64 pointee_bit_size, u32 base_reg, u32 index_reg);
+NAPI u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, Type* struct_type, s64 index);
+NAPI u32 ssa_emit_pointer_offset(SSA_Builder* builder, Type* pointer_type, u32 base_reg, u32 index_reg);
 NAPI u32 ssa_emit_pointer_diff(SSA_Builder* builder, s64 pointee_bit_size, u32 left_reg, u32 right_reg);
 NAPI void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u32 false_block);
 NAPI void ssa_emit_jmp(SSA_Builder* builder, u32 block);
