@@ -1,4 +1,5 @@
 
+#include <defines.h>
 #include <containers/hash_table.h>
 #include <memory/allocator.h>
 

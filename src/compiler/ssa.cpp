@@ -58,6 +58,7 @@ void ssa_program_init(SSA_Program* program, Allocator* allocator)
     darray_init(allocator, &program->constants);
     darray_init(allocator, &program->constant_patch_offsets);
     darray_init(allocator, &program->functions);
+    darray_init(allocator, &program->const_decls);
     darray_init(allocator, &program->globals);
     program->globals_size = 0;
     hash_table_create(allocator, &program->instruction_origin_positions);
@@ -82,6 +83,8 @@ void ssa_program_free(SSA_Program* program)
     }
 
     darray_free(&program->functions);
+    darray_free(&program->const_decls);
+    darray_free(&program->globals);
 }
 
 void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, AST_Declaration *decl)
@@ -843,6 +846,22 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
         case AST_Expression_Kind::IDENTIFIER: {
             assert(lvalue_expr->identifier->decl);
             AST_Declaration* decl = lvalue_expr->identifier->decl;
+
+            if (decl->kind == AST_Declaration_Kind::CONSTANT) {
+
+                bool found = false;
+                u32 index = 0;
+                for (s64 i = 0; i < builder->program->const_decls.count; i++) {
+                    if (builder->program->const_decls[i].decl == decl) {
+                        found = true;
+                        index = builder->program->const_decls[i].const_index;
+                        break;
+                    }
+                }
+
+                assert(found);
+                return ssa_emit_load_constant(builder, index);
+            }
             assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
             bool is_struct = decl->resolved_type->kind == Type_Kind::STRUCT;
@@ -1044,7 +1063,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 assert(decl->kind == AST_Declaration_Kind::CONSTANT);
                 assert(!(decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED));
 
-                result_reg = ssa_emit_constant_value(builder, expr, scope);
+                result_reg = ssa_emit_load_constant_value(builder, expr, scope);
             }
             break;
         }
@@ -1737,7 +1756,7 @@ void ssa_emit_64(DArray<u8> *bytes, u64 value)
     darray_append(bytes, (u8)((value >> 56) & 0xFF));
 }
 
-u32 ssa_emit_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
+u32 ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
 {
     switch (expr->kind) {
         case AST_Expression_Kind::INVALID: assert(false); break;
@@ -1773,6 +1792,9 @@ u32 ssa_emit_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* s
         case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
         case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
     }
+
+    assert(false);
+    return 0;
 }
 
 u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes/*=nullptr*/)
