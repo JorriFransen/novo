@@ -256,6 +256,129 @@ String platform_exe_path(Allocator* allocator, const char* argv_0)
     return {};
 }
 
+Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
+{
+    assert(command_line.count);
+
+    auto ca = c_allocator();
+
+    // Used for the pipes
+    SECURITY_ATTRIBUTES sec_attr;
+    sec_attr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sec_attr.bInheritHandle = true;
+    sec_attr.lpSecurityDescriptor = nullptr;
+
+    HANDLE stdout_read_handle = nullptr;
+    HANDLE stdout_write_handle = nullptr;
+    HANDLE stderr_read_handle = nullptr;
+    HANDLE stderr_write_handle = nullptr;
+
+    if (!CreatePipe(&stdout_read_handle, &stdout_write_handle, &sec_attr, 0)) {
+        ZFATAL("[platform_execute_process] Failed to create stdout pipe")
+    }
+
+    if (!SetHandleInformation(stdout_read_handle, HANDLE_FLAG_INHERIT, 0)) {
+        ZFATAL("[platform_execute_process] SetHandleInformation failed for stdout pipe")
+    }
+
+    if (!CreatePipe(&stderr_read_handle, &stderr_write_handle, &sec_attr, 0)) {
+        ZFATAL("[platform_execute_process] Failed to create stderr pipe")
+    }
+
+    if (!SetHandleInformation(stderr_read_handle, HANDLE_FLAG_INHERIT, 0)) {
+        ZFATAL("[platform_execute_process] SetHandleInformation failed for stderr pipe")
+    }
+
+    PROCESS_INFORMATION process_info;
+    STARTUPINFOW startup_info;
+    ZeroMemory(&startup_info, sizeof(startup_info));
+    ZeroMemory(&process_info, sizeof(process_info));
+
+    startup_info.cb = sizeof(startup_info);
+    startup_info.hStdOutput = stdout_write_handle;
+    startup_info.hStdError = stderr_write_handle;
+    startup_info.dwFlags |= STARTF_USESTDHANDLES;
+
+
+    auto arg_str_ = string_append(ta, command_line, " ");
+    Wide_String arg_str(ta, arg_str_);
+
+    bool proc_res = CreateProcessW(nullptr, (LPWSTR)arg_str.data,
+        nullptr, nullptr, true, 0, nullptr,
+        nullptr, &startup_info, &process_info);
+
+    Commanad_Result result = {};
+    if (!proc_res) {
+        auto err = GetLastError();
+        LPSTR message_buf = nullptr;
+        size_t size = FormatMessageA((FORMAT_MESSAGE_ALLOCATE_BUFFER |
+            FORMAT_MESSAGE_FROM_SYSTEM |
+            FORMAT_MESSAGE_IGNORE_INSERTS),
+            nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPSTR)&message_buf, 0, nullptr);
+
+
+        result.error_string = string_copy(c_allocator(), String_Ref(message_buf, size));
+        LocalFree(message_buf);
+
+        result.success = false;
+        ZERROR("CreateProcessW failed with commandline: '%.*s", (int)arg_str.length, arg_str.data);
+    }
+    else {
+        WaitForSingleObject(process_info.hProcess, INFINITE);
+
+        CloseHandle(stdout_write_handle);
+        CloseHandle(stderr_write_handle);
+
+        String_Builder stdout_sb;
+        string_builder_create(&stdout_sb, ta);
+
+        String_Builder stderr_sb;
+        string_builder_create(&stderr_sb, ta);
+
+        for (;;) {
+            const int buf_size = 1024;
+            char buf_[buf_size];
+            DWORD read_count;
+            BOOL success = ReadFile(stdout_read_handle, buf_, buf_size, &read_count, nullptr);
+            if (!success || read_count == 0) {
+                break;
+            }
+
+            auto buf = platform_windows_normalize_line_endings(ta, String_Ref(buf_, read_count));
+            string_builder_append(&stdout_sb, "%.*s", buf.length, buf.data);
+        }
+
+        for (;;) {
+            const int buf_size = 1024;
+            char buf_[buf_size];
+            DWORD read_count;
+            BOOL success = ReadFile(stderr_read_handle, buf_, buf_size, &read_count, nullptr);
+            if (!success || read_count == 0) {
+                break;
+            }
+
+            auto buf = platform_windows_normalize_line_endings(ta, String_Ref(buf_, read_count));
+            string_builder_append(&stderr_sb, "%.*s", buf.length, buf.data);
+        }
+
+        DWORD exit_code;
+        GetExitCodeProcess(process_info.hProcess, &exit_code);
+
+        CloseHandle(process_info.hProcess);
+        CloseHandle(process_info.hThread);
+
+        result.exit_code = exit_code;
+        result.success = result.exit_code == 0;
+
+        if (stdout_sb.total_size) result.result_string = string_builder_to_string(ca, &stdout_sb);
+        if (stderr_sb.total_size) result.error_string = string_builder_to_string(ca, &stderr_sb);
+
+    }
+
+    return result;
+}
+
 #else // NPLATFORM_LINUX
 static_assert(false, "Unsupported platform")
 #endif // NPLATFORM_LINUX
