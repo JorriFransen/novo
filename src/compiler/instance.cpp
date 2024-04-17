@@ -400,7 +400,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             } else if (task.kind == SSA_Task_Kind::CONSTANT) {
 
                 u32 const_index = ssa_emit_constant(inst, inst->ssa_program, task.node.declaration->constant.value);
-                darray_append(&inst->ssa_program->const_decls, { task.node.declaration, const_index });
+                darray_append(&inst->ssa_program->constant_references, { task.node, const_index });
                 success = true;
 
             } else {

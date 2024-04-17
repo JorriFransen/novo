@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast.h"
 #include "atom.h"
 #include "source_pos.h"
 
@@ -112,6 +113,8 @@ struct SSA_Constant
 {
     Type *type;
     u32 offset;
+
+    AST_Expression* from_expression;
 };
 
 struct SSA_Global
@@ -130,9 +133,9 @@ struct SSA_Assert_Pos
     u32 block_index;
 };
 
-struct SSA_Constant_Decl
+struct SSA_Constant_Reference
 {
-    AST_Declaration* decl;
+    AST_Node ast_node;
     u32 const_index;
 };
 
@@ -147,7 +150,7 @@ struct SSA_Program
     DArray<s64> constant_patch_offsets;
     DArray<SSA_Function> functions;
 
-    DArray<SSA_Constant_Decl> const_decls;
+    DArray<SSA_Constant_Reference> constant_references;
 
     DArray<SSA_Global> globals;
     s64 globals_size;
@@ -231,7 +234,7 @@ NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 
 NAPI u32 ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
 NAPI u32 ssa_emit_constant(Instance *inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
-NAPI u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type);
+NAPI u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, AST_Expression* const_expr);
 
 NAPI Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref name);
 

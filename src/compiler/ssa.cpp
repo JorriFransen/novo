@@ -58,7 +58,7 @@ void ssa_program_init(SSA_Program* program, Allocator* allocator)
     darray_init(allocator, &program->constants);
     darray_init(allocator, &program->constant_patch_offsets);
     darray_init(allocator, &program->functions);
-    darray_init(allocator, &program->const_decls);
+    darray_init(allocator, &program->constant_references);
     darray_init(allocator, &program->globals);
     program->globals_size = 0;
     hash_table_create(allocator, &program->instruction_origin_positions);
@@ -83,7 +83,7 @@ void ssa_program_free(SSA_Program* program)
     }
 
     darray_free(&program->functions);
-    darray_free(&program->const_decls);
+    darray_free(&program->constant_references);
     darray_free(&program->globals);
 }
 
@@ -852,10 +852,14 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
                 bool found = false;
                 u32 index = 0;
-                for (s64 i = 0; i < builder->program->const_decls.count; i++) {
-                    if (builder->program->const_decls[i].decl == decl) {
+                for (s64 i = 0; i < builder->program->constant_references.count; i++) {
+
+                    SSA_Constant_Reference ref = builder->program->constant_references[i];
+
+                    if (ref.ast_node.kind == AST_Node_Kind::DECLARATION &&
+                        ref.ast_node.declaration == decl) {
                         found = true;
-                        index = builder->program->const_decls[i].const_index;
+                        index = ref.const_index;
                         break;
                     }
                 }
@@ -1924,7 +1928,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
     if (own_bytes) {
 
         s64 old_count = program->constants.count;
-        result = ssa_emit_constant(program, temp_bytes, const_expr->resolved_type);
+        result = ssa_emit_constant(program, temp_bytes, const_expr);
         if (result >= old_count) {
             // Means this was the first occurance and actually emitted
 
@@ -1939,7 +1943,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
     return result;
 }
 
-u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type)
+u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, AST_Expression* const_expr)
 {
     u32 result = 0;
 
@@ -1947,7 +1951,7 @@ u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type)
     for (s64 i = 0; i < program->constants.count; i++) {
         SSA_Constant constant = program->constants[i];
 
-        if (constant.type == type) {
+        if (constant.type == const_expr->resolved_type) {
             if (memcmp(&program->constant_memory[constant.offset], bytes.data, bytes.count) == 0) {
                 match = true;
                 result = i;
@@ -1965,7 +1969,9 @@ u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type)
 
         u32 offset = program->constant_memory.count;
         result = program->constants.count;
-        darray_append(&program->constants, { type, offset });
+
+        Type* type = const_expr ? const_expr->resolved_type : nullptr;
+        darray_append(&program->constants, { type, offset, const_expr });
 
         darray_append_array(&program->constant_memory, Array_Ref<u8>(bytes));
     }

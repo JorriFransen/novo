@@ -34,24 +34,52 @@ typedef double r64;
 
 typedef u64 p_uint_t;
 
-#include <string.h>)PREAMBLE";
+#include <stdio.h>
+#include <string.h>
+)PREAMBLE";
 
     string_builder_append(&sb, "/* Preamble */\n");
     string_builder_append(&sb, "%s\n", preamble);
     string_builder_append(&sb, "/* End preamble */\n\n");
 
     // Type declarations
+    string_builder_append(&sb, "/* Type declarations */\n");
     for (s64 i = 0; i < inst->struct_types.count; i++) {
         c_backend_emit_struct_declaration(inst, &sb, inst->struct_types[i]);
         string_builder_append(&sb, "\n");
     }
+    string_builder_append(&sb, "/* End type declarations */\n\n");
+
+    // Constants
+    string_builder_append(&sb, "/* Constants */\n");
+    for (s64 i = 0; i < inst->ssa_program->constants.count; i++) {
+
+        SSA_Constant const_info = inst->ssa_program->constants[i];
+
+        if (const_info.type == nullptr) {
+            assert(const_info.from_expression == nullptr);
+            continue;
+        }
+
+        char cname[32];
+        string_format(cname, "const c%lld", const_info.offset);
+        c_backend_emit_c_type(inst, &sb, const_info.type, cname);
+
+        string_builder_append(&sb, " = ");
+
+        c_backend_emit_constant_expression(inst, &sb, const_info.from_expression);
+
+        string_builder_append(&sb, ";\n");
+    }
+    string_builder_append(&sb, "/* End constants*/\n\n");
 
     // Function declarations
     string_builder_append(&sb, "/* Function declarations */\n");
     for (s64 i = 0; i < program->functions.count; i++) {
-        SSA_Function *func = &program->functions[i];
-        c_backend_emit_c_type(inst, &sb, func->type, atom_string(func->name));
 
+        if (program->functions[i].foreign) continue;
+
+        c_backend_emit_function_decl(inst, &sb, &program->functions[i]);
         string_builder_append(&sb, ";\n");
     }
     string_builder_append(&sb, "/* End function declarations */\n\n");
@@ -68,7 +96,12 @@ typedef u64 p_uint_t;
         if (i > 0) string_builder_append(&sb, "\n");
 
         SSA_Function *func = &program->functions[i];
-        c_backend_emit_function(inst, &sb, func, &arg_stack);
+
+        if (func->foreign) continue;
+
+        c_backend_emit_function_decl(inst, &sb, func);
+        string_builder_append(&sb, "\n");
+        c_backend_emit_function_body(inst, &sb, func, &arg_stack);
     }
     string_builder_append(&sb, "/* End function definitions */\n\n");
 
@@ -128,77 +161,124 @@ void c_backend_emit_struct_declaration(Instance* inst, String_Builder* sb, Type 
 
 void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, String_Ref name)
 {
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+
+    String result = c_backend_emit_c_type(inst, type, name);
+    string_builder_append(sb, "%.*s", (int)result.length, result.data);
+
+    temp_allocator_reset(&inst->temp_allocator_data, mark);
+}
+
+String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
+{
     if (string_equal(name, "main")) {
         assert(type->kind == Type_Kind::FUNCTION);
 
         name = "novo_main";
     }
 
+    Allocator* ta = &inst->temp_allocator;
+
     switch (type->kind) {
         case Type_Kind::INVALID: assert(false); break;
         case Type_Kind::VOID: assert(false); break;
 
         case Type_Kind::INTEGER: {
-            string_builder_append(sb, "%c%d", type->integer.sign ? 's' : 'u', type->bit_size);
-
-            if (name.length) {
-                string_builder_append(sb, " %.*s", (int)name.length, name.data);
-            }
-            break;
+            return string_format(ta, "%c%lld %.*s", type->integer.sign ? 's' : 'u', type->bit_size, (int)name.length, name.data);
         }
 
         case Type_Kind::BOOLEAN: assert(false); break;
 
         case Type_Kind::POINTER: {
-            c_backend_emit_c_type(inst, sb, type->pointer.base, "");
-            string_builder_append(sb, "(* %.*s)", (int)name.length, name.data);
-            break;
+            return c_backend_emit_c_type(inst, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
         }
 
         case Type_Kind::FUNCTION: {
-            c_backend_emit_c_type(inst, sb, type->function.return_type, "");
-            string_builder_append(sb, " (%.*s)(", (int)name.length, name.data);
+            String_Builder sb;
+            string_builder_init(&sb, ta);
 
-            for (s64 i = 0; i < type->function.param_types.count; i++) {
-                Type* param_type = type->function.param_types[i];
+            string_builder_append(&sb, "(%s%.*s)(", (type->flags & TYPE_FLAG_FOREIGN_VARARG) ? "*" : "",
+                                  (int)name.length, name.data);
 
-                if (i > 0) string_builder_append(sb, ", ");
-
-                char param_name[32];
-                string_format(param_name, "a%u", i);
-
-                c_backend_emit_c_type(inst, sb, param_type, param_name);
+            if (type->function.param_types.count) {
+                for (s64 i = 0; i < type->function.param_types.count; i++) {
+                    string_builder_append(&sb, "%s%s", i == 0 ? "" : ", ", c_backend_emit_c_type(inst, type->function.param_types[i], ""));
+                }
             }
 
             if (type->flags & TYPE_FLAG_FOREIGN_VARARG) {
-                string_builder_append(sb, ", ...");
+                if (type->function.param_types.count) string_builder_append(&sb, ", ");
+                string_builder_append(&sb, "...");
             }
 
-            string_builder_append(sb, ")");
-            break;
+            string_builder_append(&sb, ")");
+
+            String result = string_builder_to_string(&sb);
+
+            return c_backend_emit_c_type(inst, type->function.return_type, result);
         }
 
         case Type_Kind::STRUCT: {
+            String_Builder sb;
+            string_builder_init(&sb, ta);
+
             String struct_name = atom_string(type->structure.name);
-            string_builder_append(sb, "%.*s", (int)struct_name.length, struct_name.data);
 
-            if (name.length) string_builder_append(sb, " %.*s", (int)name.length, name.data);
+            string_builder_append(&sb, "%.*s", (int)struct_name.length, struct_name.data);
 
-            break;
+            if (name.length) string_builder_append(&sb, " %.*s", (int)name.length, name.data);
+
+            return string_builder_to_string(&sb);
         }
     }
+
+    assert(false);
+    return {};
 }
 
-void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *func, Stack<u32> *arg_stack)
+void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Function* func)
 {
-    c_backend_emit_c_type(inst, sb, func->type, atom_string(func->name));
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+    auto ta = &inst->temp_allocator;
 
-    if (func->foreign) {
-        string_builder_append(sb, ";\n");
-        return;
+    String_Builder local_sb;
+    string_builder_init(&local_sb, ta);
+
+    String_Ref name = atom_string(func->name);
+    if (string_equal(name, "main")) {
+        name = "novo_main";
     }
 
-    string_builder_append(sb, "\n{\n");
+    string_builder_append(&local_sb, "%.*s(", (int)name.length, name.data);
+
+    if (func->param_count) {
+        for (s64 i = 0; i < func->param_count; i++) {
+            Type* param_type = func->type->function.param_types[i];
+
+            if (i > 0) string_builder_append(&local_sb, ", ");
+
+            char param_name[32];
+            string_format(param_name, "p%lld", i);
+
+            c_backend_emit_c_type(inst, &local_sb, param_type, param_name);
+        }
+    }
+
+    if (func->type->flags & TYPE_FLAG_FOREIGN_VARARG) {
+        string_builder_append(&local_sb, ", ...");
+    }
+
+    string_builder_append(&local_sb, ")");
+
+    String result = string_builder_to_string(&local_sb);
+    c_backend_emit_c_type(inst, sb, func->type->function.return_type, result);
+
+    temp_allocator_reset(&inst->temp_allocator_data, mark);
+}
+
+void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Function *func, Stack<u32> *arg_stack)
+{
+    string_builder_append(sb, "{\n");
 
     char reg_name[32];
 
@@ -364,7 +444,23 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                     break;
                 }
 
-                case SSA_OP_LOAD_CONST: assert(false); break;
+                case SSA_OP_LOAD_CONST: {
+                    u32 result_reg = FETCH32();
+                    u32 offset = FETCH32();
+
+                    Type* pointer_type = pointer_type_get(inst, func->register_types[result_reg]);
+
+                    string_builder_append(sb, "    const ");
+                    string_format(reg_name, "r%u", result_reg);
+                    c_backend_emit_c_type(inst, sb, pointer_type, reg_name);
+
+                    string_format(reg_name, "&c%lld", offset);
+
+                    string_builder_append(sb, " = %s;\n", reg_name);
+
+                    // assert(false);
+                    break;
+                }
 
                 case SSA_OP_STRUCT_OFFSET: {
                     u32 result_reg = FETCH32();
@@ -437,7 +533,45 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
                     break;
                 }
 
-                case SSA_OP_CALL_FOREIGN: assert(false); break;
+                case SSA_OP_CALL_FOREIGN: {
+                    u32 result_reg = FETCH32();
+                    u32 fn_index = FETCH32();
+                    u16 arg_count = FETCH16();
+
+                    SSA_Function* callee = &inst->ssa_program->functions[fn_index];
+                    assert(callee->foreign);
+
+                    String callee_name = atom_string(callee->name);
+                    string_builder_append(sb, "    ");
+
+                    assert(stack_count(arg_stack) >= arg_count);
+
+                    if (!callee->sret) {
+                        string_format(reg_name, "r%u", result_reg);
+                        c_backend_emit_c_type(inst, sb, callee->type->function.return_type, reg_name);
+                    } else {
+                        u32 res_reg = stack_peek(arg_stack, arg_count - 1);
+                        string_builder_append(sb, "*(r%u)", res_reg);
+                    }
+                    string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
+
+                    if (callee->sret) {
+                        arg_count -= 1;
+                    }
+
+                    s64 arg_offset = arg_count - 1;
+                    for (s64 i = 0; i < arg_count; i++) {
+
+                        if (i > 0) string_builder_append(sb, ", ");
+
+                        u32 arg_reg = stack_peek(arg_stack, arg_offset--);
+                        string_builder_append(sb, "r%u", arg_reg);
+                    }
+
+                    string_builder_append(sb, ");\n");
+
+                    break;
+                }
 
                 case SSA_OP_RET: {
                     u32 value_reg = FETCH32();
@@ -463,6 +597,77 @@ void c_backend_emit_function(Instance* inst, String_Builder* sb, SSA_Function *f
 #undef FETCH16
 #undef FETCH32
 #undef FETCH64
+}
+
+void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_Expression* const_expr)
+{
+    assert(const_expr->flags & AST_EXPR_FLAG_CONST);
+
+    switch (const_expr->kind) {
+        case AST_Expression_Kind::INVALID: assert(false); break;
+        case AST_Expression_Kind::IDENTIFIER: assert(false); break;
+        case AST_Expression_Kind::UNARY: assert(false); break;
+        case AST_Expression_Kind::BINARY: assert(false); break;
+        case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::CALL: assert(false); break;
+        case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
+        case AST_Expression_Kind::DEREF: assert(false); break;
+        case AST_Expression_Kind::CAST: assert(false); break;
+
+        case AST_Expression_Kind::COMPOUND: {
+            assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
+            assert(const_expr->compound.expressions.count == const_expr->resolved_type->structure.members.count);
+
+            string_builder_append(sb, " { ");
+
+            for (s64 i = 0; i < const_expr->compound.expressions.count; i++) {
+                if (i > 0) string_builder_append(sb, ", ");
+
+                c_backend_emit_constant_expression(inst, sb, const_expr->compound.expressions[i]);
+            }
+
+            string_builder_append(sb, " }");
+
+            break;
+        }
+
+        case AST_Expression_Kind::RUN: assert(false); break;
+        case AST_Expression_Kind::SIZEOF: assert(false); break;
+        case AST_Expression_Kind::ALIGNOF: assert(false); break;
+        case AST_Expression_Kind::OFFSETOF: assert(false); break;
+        case AST_Expression_Kind::TYPE: assert(false); break;
+
+        case AST_Expression_Kind::INTEGER_LITERAL: {
+
+            if (const_expr->resolved_type->integer.sign) {
+                string_builder_append(sb, "%lld", const_expr->integer_literal);
+            } else {
+                string_builder_append(sb, "%llu", const_expr->integer_literal);
+            }
+
+            break;
+        }
+
+        case AST_Expression_Kind::REAL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::CHAR_LITERAL: assert(false); break;
+        case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
+        case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
+
+        case AST_Expression_Kind::STRING_LITERAL: {
+            string_builder_append(sb, "{ ");
+
+            String _str = atom_string(const_expr->string_literal);
+
+            auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+            String str = convert_special_characters_to_escape_characters(&inst->temp_allocator, _str);
+            temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+            string_builder_append(sb, "(u8*) \"%.*s\"", (int)str.length, str.data);
+            string_builder_append(sb, ", %lld }", _str.length);
+            break;
+        }
+
+    }
 }
 
 }

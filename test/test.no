@@ -16,7 +16,7 @@
 // putchar :: (char: s32) -> s32 #foreign;
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-// printf :: (format: *u8, ..) -> s32 #foreign;
+printf :: (format: *u8, ..) -> s32 #foreign;
 // malloc :: (size: s64) -> *void #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
@@ -28,20 +28,21 @@ Vec2 :: struct {
     x: s64; y: s64;
 }
 
-make_vec :: (x: s64, y: s64) -> Vec2 {
-    return { x, y };
-}
-
 main :: () -> s64 {
 
-    // printf("Hello, World!".data);
+    printf("Hello, World!\n".data);
 
     // return add(ret_x(42), 11) + x;
 
-    v := make_vec(11, 22);
-    // v : Vec2 = { 11, 22 };
+    // v := make_vec(11, 22);
+    v : Vec2 = { 11, 22 };
+
 
     return v.x + v.y;
+
+    // x := 2;
+    //
+    // return <*x;
 }
 
 

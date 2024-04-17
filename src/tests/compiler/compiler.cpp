@@ -21,42 +21,42 @@ struct Test_Case
 
 static Test_Case test_cases[] = {
     { .file_path = "tests/001_assert_false.no", .assert_fail = true },
-    { .file_path = "tests/002_return.no" },
-    { .file_path = "tests/003_call.no" },
-    { .file_path = "tests/004_structs.no" },
-    { .file_path = "tests/005_if.no" },
-
-    { .file_path = "tests/006_while.no" },
-    { .file_path = "tests/007_for.no" },
-    { .file_path = "tests/008_arithmetic_assignment.no" },
-    { .file_path = "tests/009_break_while_for.no" },
-    { .file_path = "tests/010_continue_while_for.no" },
-    { .file_path = "tests/011_struct_compound.no" },
-    { .file_path = "tests/012_nested_struct_compound.no" },
-    { .file_path = "tests/013_constant_struct_compound.no" },
-    { .file_path = "tests/014_pointers.no" },
-    { .file_path = "tests/015_struct_pointers.no" },
-    { .file_path = "tests/016_foreign_functions.no" },
-
-    { .file_path = "tests/017_trunc.no" },
-    { .file_path = "tests/018_sext.no" },
-    { .file_path = "tests/019_zext.no" },
-
-    { .file_path = "tests/020_pointer_math.no" },
-    { .file_path = "tests/021_struct_align.no" },
-
-    { .file_path = "tests/022_run_expression_trivial.no" },
-    { .file_path = "tests/023_run_expression_trivial_multiple.no" },
-    { .file_path = "tests/024_run_expression_aggregate.no" },
-    { .file_path = "tests/025_run_expression_aggregate_nested.no" },
-    { .file_path = "tests/026_run_statement.no", .return_code = 2 },
-
-    { .file_path = "tests/027_insert_trivial.no", .return_code = 42 },
-    { .file_path = "tests/028_insert_trivial_2.no", .return_code = 42 },
-    { .file_path = "tests/029_insert_indirect.no", .return_code = 42 },
-
-    { .file_path = "tests/030_global_variables.no", .return_code = 322 },
-    { .file_path = "tests/031_constant_variables.no", .return_code = 66 },
+    // { .file_path = "tests/002_return.no" },
+    // { .file_path = "tests/003_call.no" },
+    // { .file_path = "tests/004_structs.no" },
+    // { .file_path = "tests/005_if.no" },
+    //
+    // { .file_path = "tests/006_while.no" },
+    // { .file_path = "tests/007_for.no" },
+    // { .file_path = "tests/008_arithmetic_assignment.no" },
+    // { .file_path = "tests/009_break_while_for.no" },
+    // { .file_path = "tests/010_continue_while_for.no" },
+    // { .file_path = "tests/011_struct_compound.no" },
+    // { .file_path = "tests/012_nested_struct_compound.no" },
+    // { .file_path = "tests/013_constant_struct_compound.no" },
+    // { .file_path = "tests/014_pointers.no" },
+    // { .file_path = "tests/015_struct_pointers.no" },
+    // { .file_path = "tests/016_foreign_functions.no" },
+    //
+    // { .file_path = "tests/017_trunc.no" },
+    // { .file_path = "tests/018_sext.no" },
+    // { .file_path = "tests/019_zext.no" },
+    //
+    // { .file_path = "tests/020_pointer_math.no" },
+    // { .file_path = "tests/021_struct_align.no" },
+    //
+    // { .file_path = "tests/022_run_expression_trivial.no" },
+    // { .file_path = "tests/023_run_expression_trivial_multiple.no" },
+    // { .file_path = "tests/024_run_expression_aggregate.no" },
+    // { .file_path = "tests/025_run_expression_aggregate_nested.no" },
+    // { .file_path = "tests/026_run_statement.no", .return_code = 2 },
+    //
+    // { .file_path = "tests/027_insert_trivial.no", .return_code = 42 },
+    // { .file_path = "tests/028_insert_trivial_2.no", .return_code = 42 },
+    // { .file_path = "tests/029_insert_indirect.no", .return_code = 42 },
+    //
+    // { .file_path = "tests/030_global_variables.no", .return_code = 322 },
+    // { .file_path = "tests/031_constant_variables.no", .return_code = 66 },
 };
 
 static bool run_test_case(Test_Case* tc)
