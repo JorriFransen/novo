@@ -1,6 +1,7 @@
 .cache/
 .vs/
 .vscode/
+.helix/
 
 build*/
 inserted_strings.no
