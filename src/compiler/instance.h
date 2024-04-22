@@ -87,6 +87,9 @@ struct Instance
     Type* builtin_type_int;
     Type* builtin_type_bool;
 
+    Type* builtin_type_cchar;
+    Type* builtin_type_cstring;
+
     String compiler_install_dir;
     String module_dir;
 

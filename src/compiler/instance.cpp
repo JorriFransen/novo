@@ -128,6 +128,12 @@ void instance_init(Instance* inst, Options options)
     auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
 
+    inst->builtin_type_cchar = integer_type_new(inst, false, 8);
+
+    inst->builtin_type_cstring = pointer_type_new(inst, inst->builtin_type_cchar);
+    auto cstring_decl = ast_builtin_type_decl(inst, inst->builtin_type_cstring, "cstring");
+    scope_add_symbol(inst->global_scope, cstring_decl->ident->atom, cstring_decl);
+
     if (fs_is_directory(options.install_dir)) {
 
         assert(fs_is_directory(options.install_dir));

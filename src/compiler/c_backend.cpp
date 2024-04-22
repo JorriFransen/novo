@@ -77,8 +77,6 @@ typedef u64 p_uint_t;
     string_builder_append(&sb, "/* Function declarations */\n");
     for (s64 i = 0; i < program->functions.count; i++) {
 
-        if (program->functions[i].foreign) continue;
-
         c_backend_emit_function_decl(inst, &sb, &program->functions[i]);
         string_builder_append(&sb, ";\n");
     }
@@ -187,10 +185,16 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
             return string_format(ta, "%c%lld %.*s", type->integer.sign ? 's' : 'u', type->bit_size, (int)name.length, name.data);
         }
 
-        case Type_Kind::BOOLEAN: assert(false); break;
+        case Type_Kind::BOOLEAN: {
+            return string_format(ta, "bool");
+        }
 
         case Type_Kind::POINTER: {
-            return c_backend_emit_c_type(inst, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
+            if (type == inst->builtin_type_cstring) {
+                return string_format(ta, "const char (*%.*s)", (int)name.length, name.data);
+            } else {
+                return c_backend_emit_c_type(inst, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
+            }
         }
 
         case Type_Kind::FUNCTION: {
@@ -450,13 +454,15 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Functi
 
                     Type* pointer_type = pointer_type_get(inst, func->register_types[result_reg]);
 
-                    string_builder_append(sb, "    const ");
+                    string_builder_append(sb, "    ");
                     string_format(reg_name, "r%u", result_reg);
                     c_backend_emit_c_type(inst, sb, pointer_type, reg_name);
 
                     string_format(reg_name, "&c%lld", offset);
 
-                    string_builder_append(sb, " = %s;\n", reg_name);
+                    string_builder_append(sb, " = (");
+                    c_backend_emit_c_type(inst, sb, pointer_type, "");
+                    string_builder_append(sb, ")%s;\n", reg_name);
 
                     // assert(false);
                     break;
@@ -565,6 +571,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Functi
                         if (i > 0) string_builder_append(sb, ", ");
 
                         u32 arg_reg = stack_peek(arg_stack, arg_offset--);
+
+                        if (callee->type->function.param_types[i] == inst->builtin_type_cstring) {
+                            string_builder_append(sb, "(const char*) ");
+                        }
                         string_builder_append(sb, "r%u", arg_reg);
                     }
 

@@ -84,7 +84,9 @@ NAPI Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type
 
 NAPI bool is_pointer_or_parent_of_pointer(Type* type);
 
+NAPI bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to);
+
 NAPI String temp_type_string(Instance* inst, Type* type);
-NAPI void type_to_string(String_Builder* sb, Type* type);
+NAPI void type_to_string(Instance* instance, String_Builder* sb, Type* type);
 
 }

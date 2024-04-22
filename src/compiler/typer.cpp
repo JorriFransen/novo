@@ -72,7 +72,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
 
                 if (!result_type) result_type = decl->variable.init_expr->resolved_type;
-                else if (result_type != decl->variable.init_expr->resolved_type) {
+                else if (valid_implicit_type_conversion(inst, result_type, decl->variable.init_expr->resolved_type)) {
                     Source_Pos pos = source_pos(inst, decl->variable.init_expr);
                     instance_fatal_error(inst, pos, "Mismatching types in variable declaration, expected: '%s', got: '%s'",
                             temp_type_string(inst, result_type).data,
@@ -231,7 +231,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 return false;
             }
 
-            if (lvalue->resolved_type != rvalue->resolved_type) {
+            if (!valid_implicit_type_conversion(inst, lvalue->resolved_type, rvalue->resolved_type)) {
                 Source_Pos pos = source_pos(inst, stmt);
                 instance_fatal_error(inst, pos, "Mismatching types in assignment, left: '%s', right: '%s'",
                         temp_type_string(inst, lvalue->resolved_type).data,
@@ -274,7 +274,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 }
             }
 
-            if (!pointer_math && lvalue->resolved_type != rvalue->resolved_type) {
+            if (!pointer_math && !valid_implicit_type_conversion(inst, lvalue->resolved_type, rvalue->resolved_type)) {
                 Source_Pos pos = source_pos(inst, stmt);
                 instance_fatal_error(inst, pos, "Mismatching types in arithmetic assignment, left: '%s', right: '%s'",
                         temp_type_string(inst, lvalue->resolved_type).data,
@@ -312,9 +312,9 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                     return false;
                 }
 
-                if (result_type != stmt->return_expr->resolved_type) {
+                if (result_type != stmt->return_expr->resolved_type && !valid_implicit_type_conversion(inst, result_type, stmt->return_expr->resolved_type)) {
                     Source_Pos pos = source_pos(inst, stmt);
-                    instance_fatal_error(inst, pos, "Mismatching type in return statment, got: '%s', expected: '%s'",
+                    instance_fatal_error(inst, pos, "Mismatching type in return statement, got: '%s', expected: '%s'",
                                          temp_type_string(inst, stmt->return_expr->resolved_type).data,
                                          temp_type_string(inst, result_type).data);
                 }
@@ -618,7 +618,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                             temp_type_string(inst, lhs->resolved_type).data);
                 }
 
-                if (lhs->resolved_type != rhs->resolved_type) {
+                if (lhs->resolved_type != rhs->resolved_type && !valid_implicit_type_conversion(inst, lhs->resolved_type, rhs->resolved_type)) {
                     instance_fatal_error(inst, source_pos(inst, expr), "Mismatching types in binary expression: '%s' %s '%s'",
                             temp_type_string(inst, lhs->resolved_type).data,
                             tmp_token_kind_str((Token_Kind)expr->binary.op).data,
@@ -719,7 +719,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
                 AST_Expression* arg_expr = expr->call.args[i];
 
-                if (param_type && arg_expr->resolved_type != param_type) {
+                if (param_type && !valid_implicit_type_conversion(inst, arg_expr->resolved_type, param_type)) {
 
                     Source_Pos pos = source_pos(inst, arg_expr);
 
