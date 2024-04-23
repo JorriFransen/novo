@@ -34,8 +34,21 @@ typedef double r64;
 
 typedef u64 p_uint_t;
 
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+
+#define novo_c_assert(cond, msg_ptr, file, line, col) { \
+    if (!cond) { \
+        fprintf(stderr, "%s:%u:%u: Assertion failed", file, line, col); \
+        if (msg_ptr) fprintf(stderr, ": \"%.*s\"\n", (int)msg_ptr->m1, msg_ptr->m0); \
+        else fprintf(stderr, "!\n"); \
+        raise(SIGABRT); \
+    }  \
+}
+
 )PREAMBLE";
 
     string_builder_append(&sb, "/* Preamble */\n");
@@ -99,7 +112,7 @@ typedef u64 p_uint_t;
 
         c_backend_emit_function_decl(inst, &sb, func);
         string_builder_append(&sb, "\n");
-        c_backend_emit_function_body(inst, &sb, func, &arg_stack);
+        c_backend_emit_function_body(inst, &sb, i, &arg_stack);
     }
     string_builder_append(&sb, "/* End function definitions */\n\n");
 
@@ -186,7 +199,7 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
         }
 
         case Type_Kind::BOOLEAN: {
-            return string_format(ta, "bool");
+            return string_format(ta, "bool %.*s", (int)name.length, name.data);
         }
 
         case Type_Kind::POINTER: {
@@ -280,8 +293,11 @@ void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Functi
     temp_allocator_reset(&inst->temp_allocator_data, mark);
 }
 
-void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Function *func, Stack<u32> *arg_stack)
+void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack)
 {
+    assert(fn_index < inst->ssa_program->functions.count);
+    SSA_Function* func = &inst->ssa_program->functions[fn_index];
+
     string_builder_append(sb, "{\n");
 
     char reg_name[32];
@@ -596,7 +612,24 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, SSA_Functi
                 case SSA_OP_RET_VOID: assert(false); break;
                 case SSA_OP_JMP_IF: assert(false); break;
                 case SSA_OP_JMP: assert(false); break;
-                case SSA_OP_ASSERT: assert(false); break;
+
+                case SSA_OP_ASSERT: {
+                    u32 offset = instruction_offset - sizeof(SSA_Op);
+                    u32 cond_reg = FETCH32();
+                    u32 string_reg = FETCH32();
+
+                    Source_Pos pos;
+                    bool found = hash_table_find(&inst->ssa_program->instruction_origin_positions, { offset, fn_index, (u32)bi }, &pos);
+                    assert(found);
+
+                    Imported_File file = inst->imported_files[pos.file_index];
+                    String file_name = atom_string(file.name);
+                    Line_Info li = line_info(file.newline_offsets, pos.offset);
+
+                    string_builder_append(sb, "    novo_c_assert(r%u, r%u, \"%.*s\", %u, %u);\n", cond_reg, string_reg,
+                                          (int)file_name.length, file_name.data, li.line, li.offset);
+                    break;
+                }
             }
         }
     }

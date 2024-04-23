@@ -820,7 +820,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 u32 str_ptr = ssa_emit_lvalue(builder, stmt->assert_stmt.message, scope);
                 string_reg = str_ptr;
             } else {
-                string_reg = ssa_emit_load_immediate(builder, builder->instance->builtin_type_int, 0); // null
+                Type* string_pointer_type = pointer_type_get(builder->instance, builder->instance->type_string);
+                string_reg = ssa_emit_load_immediate(builder, string_pointer_type, 0);
             }
 
             u32 op_offset = ssa_emit_op(builder, SSA_OP_ASSERT);

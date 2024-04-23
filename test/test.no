@@ -37,12 +37,7 @@ main :: () -> s64 {
     // v := make_vec(11, 22);
     v : Vec2 = { 11, 22 };
 
-
     return v.x + v.y;
-
-    // x := 2;
-    //
-    // return <*x;
 }
 
 

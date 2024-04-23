@@ -231,7 +231,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                 return false;
             }
 
-            if (!valid_implicit_type_conversion(inst, lvalue->resolved_type, rvalue->resolved_type)) {
+            if (lvalue->resolved_type != rvalue->resolved_type && !valid_implicit_type_conversion(inst, lvalue->resolved_type, rvalue->resolved_type)) {
                 Source_Pos pos = source_pos(inst, stmt);
                 instance_fatal_error(inst, pos, "Mismatching types in assignment, left: '%s', right: '%s'",
                         temp_type_string(inst, lvalue->resolved_type).data,
