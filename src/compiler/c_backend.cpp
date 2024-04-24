@@ -358,19 +358,20 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
             switch (op) {
                 case SSA_OP_NOP: assert(false); break;
 
-                case SSA_OP_ADD: {
-                    /*u8 size =*/ FETCH();
-                    u32 result_reg = FETCH32();
-                    u32 left_reg = FETCH32();
-                    u32 right_reg = FETCH32();
+#define BINOP(op) case SSA_OP_##op: { \
+    /*u8 size =*/ FETCH(); \
+    u32 result_reg = FETCH32(); \
+    u32 left_reg = FETCH32(); \
+    u32 right_reg = FETCH32(); \
+    String_Ref op_string = tmp_token_kind_str(TOK_##op); \
+    string_builder_append(sb, "    r%u = r%u %.*s r%u;\n", result_reg, left_reg, (int)op_string.length, op_string.data, right_reg); \
+    break; \
+}
+                BINOP(ADD)
+                BINOP(SUB)
+                BINOP(MUL)
+                BINOP(DIV)
 
-                    string_builder_append(sb, "    r%u = r%u + r%u;\n", result_reg, left_reg, right_reg);
-                    break;
-                }
-
-                case SSA_OP_SUB: assert(false); break;
-                case SSA_OP_MUL: assert(false); break;
-                case SSA_OP_DIV: assert(false); break;
 
 #define CMP_BINOP(op) case SSA_OP_##op: { \
     /*u8 size =*/ FETCH(); \
@@ -660,6 +661,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 #undef FETCH16
 #undef FETCH32
 #undef FETCH64
+#undef BINOP
 #undef CMP_BINOP
 }
 

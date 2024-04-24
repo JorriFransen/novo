@@ -35,8 +35,8 @@ main :: () -> s64 {
     v := vec(1, 2);
 
 
-    return 0;
-    // return v.y - (v.x * 2);
+    // return 0;
+    return v.y - (v.x * 2);
 }
 
 
