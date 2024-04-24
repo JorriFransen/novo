@@ -353,6 +353,12 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
         s64 instruction_offset = 0;
         while (instruction_offset < block->bytes.count) {
 
+            bool no_op = false;
+            bool no_print = false;
+#if NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+            s64 ip = instruction_offset;
+#endif // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+
             SSA_Op op = (SSA_Op)FETCH();
 
             switch (op) {
@@ -364,7 +370,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     u32 left_reg = FETCH32(); \
     u32 right_reg = FETCH32(); \
     String_Ref op_string = tmp_token_kind_str(TOK_##op); \
-    string_builder_append(sb, "    r%u = r%u %.*s r%u;\n", result_reg, left_reg, (int)op_string.length, op_string.data, right_reg); \
+    string_builder_append(sb, "    r%u = r%u %.*s r%u;", result_reg, left_reg, (int)op_string.length, op_string.data, right_reg); \
     break; \
 }
                 BINOP(ADD)
@@ -379,7 +385,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     u32 left_reg = FETCH32(); \
     u32 right_reg = FETCH32(); \
     String_Ref op_string = tmp_token_kind_str(TOK_##op); \
-    string_builder_append(sb, "    r%u = r%u %.*s r%u;\n", result_reg, left_reg, (int)op_string.length, op_string.data, right_reg); \
+    string_builder_append(sb, "    r%u = r%u %.*s r%u;", result_reg, left_reg, (int)op_string.length, op_string.data, right_reg); \
     break; \
 }
 
@@ -400,7 +406,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     /*u64 size =*/ FETCH64();
 
                     string_format(reg_name, "alloc_r%u", result_reg);
-                    string_builder_append(sb, "    r%u = &(%s);\n", result_reg, reg_name);
+                    string_builder_append(sb, "    r%u = &(%s);", result_reg, reg_name);
                     break;
                 }
 
@@ -415,7 +421,9 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         string_format(reg_name, "r%u", dest_ptr_reg);
                         string_builder_append(sb, "    memcpy(%s, ", reg_name);
                         string_format(reg_name, "r%u", source_ptr_reg);
-                        string_builder_append(sb, "%s, %llu);\n", reg_name, byte_count);
+                        string_builder_append(sb, "%s, %llu);", reg_name, byte_count);
+                    } else {
+                        no_op = true;
                     }
                     break;
                 }
@@ -425,7 +433,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 ptr_reg = FETCH32();
                     u32 value_reg = FETCH32();
 
-                    string_builder_append(sb, "    *(r%u) = r%u;\n", ptr_reg, value_reg);
+                    string_builder_append(sb, "    *(r%u) = r%u;", ptr_reg, value_reg);
                     break;
                 }
 
@@ -442,9 +450,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         case 8: value = FETCH64(); break;
                     }
 
-                    // string_format(reg_name, "r%u", result_reg);
-                    // c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
-                    string_builder_append(sb, "    r%u = %llu;\n", result_reg, value);
+                    string_builder_append(sb, "    r%u = %llu;", result_reg, value);
                     break;
                 }
 
@@ -468,7 +474,9 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     }
 
                     if (!sret) {
-                        string_builder_append(sb, "    r%u = p%u;\n", result_reg, param_index);
+                        string_builder_append(sb, "    r%u = p%u;", result_reg, param_index);
+                    } else {
+                        no_op = true;
                     }
 
                     break;
@@ -479,7 +487,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     u32 ptr_reg = FETCH32();
 
-                    string_builder_append(sb, "    r%u = *(r%u);\n", result_reg, ptr_reg);
+                    string_builder_append(sb, "    r%u = *(r%u);", result_reg, ptr_reg);
                     break;
                 }
 
@@ -491,7 +499,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                     string_builder_append(sb, "    r%u = (", result_reg);
                     c_backend_emit_c_type(inst, sb, pointer_type, "");
-                    string_builder_append(sb, ")&c%lld;\n", offset);
+                    string_builder_append(sb, ")&c%lld;", offset);
 
                     break;
                 }
@@ -502,7 +510,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     /*u32 offset =*/ FETCH32();
                     u16 index = FETCH16();
 
-                    string_builder_append(sb, "    r%u = &(r%u)->m%u;\n", result_reg, base_ptr_reg, index);
+                    string_builder_append(sb, "    r%u = &(r%u)->m%u;", result_reg, base_ptr_reg, index);
                     break;
                 }
 
@@ -510,12 +518,14 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                 case SSA_OP_POINTER_DIFF: assert(false); break;
 
                 case SSA_OP_PUSH: {
+                    no_print = true;
                     u32 arg_reg = FETCH32();
                     stack_push(arg_stack, arg_reg);
                     break;
                 }
 
                 case SSA_OP_POP_N: {
+                    no_print = true;
                     u32 count = FETCH32();
                     stack_pop(arg_stack, count);
                     break;
@@ -533,13 +543,22 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 arg_count = callee->param_count;
                     assert(stack_count(arg_stack) >= arg_count);
 
-                    if (!callee->sret) {
-                        string_builder_append(sb, "    r%u", result_reg);
-                    } else {
+                    bool return_used = false;
+                    if (callee->sret) {
                         u32 res_reg = stack_peek(arg_stack, arg_count - 1);
-                        string_builder_append(sb, "    *(r%u)", res_reg);
+                        if(func->registers[res_reg].used) {
+                            return_used = true;
+                            string_builder_append(sb, "    *(r%u) = ", res_reg);
+                        }
+                    } else if (func->registers[result_reg].used) {
+                        return_used = true;
+                        string_builder_append(sb, "    r%u = ", result_reg);
                     }
-                    string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
+
+                    if (!return_used) {
+                        string_builder_append(sb, "    ");
+                    }
+                    string_builder_append(sb, "%.*s(", (int)callee_name.length, callee_name.data);
 
                     if (callee->sret) {
                         arg_count -= 1;
@@ -554,7 +573,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         string_builder_append(sb, "r%u", arg_reg);
                     }
 
-                    string_builder_append(sb, ");\n");
+                    string_builder_append(sb, ");");
                     break;
                 }
 
@@ -570,13 +589,22 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                     assert(stack_count(arg_stack) >= arg_count);
 
-                    if (!callee->sret) {
-                        string_builder_append(sb, "    r%u", result_reg);
-                    } else {
+                    bool return_used = false;
+                    if (callee->sret) {
                         u32 res_reg = stack_peek(arg_stack, arg_count - 1);
-                        string_builder_append(sb, "    *(r%u)", res_reg);
+                        if(func->registers[res_reg].used) {
+                            return_used = true;
+                            string_builder_append(sb, "    *(r%u) = ", res_reg);
+                        }
+                    } else if (func->registers[result_reg].used) {
+                        return_used = true;
+                        string_builder_append(sb, "    r%u = ", result_reg);
                     }
-                    string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
+
+                    if (!return_used) {
+                        string_builder_append(sb, "    ");
+                    }
+                    string_builder_append(sb, "%.*s(", (int)callee_name.length, callee_name.data);
 
                     if (callee->sret) {
                         arg_count -= 1;
@@ -595,7 +623,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         string_builder_append(sb, "r%u", arg_reg);
                     }
 
-                    string_builder_append(sb, ");\n");
+                    string_builder_append(sb, ");");
 
                     break;
                 }
@@ -605,9 +633,9 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                     if (func->sret) {
                         assert(value_reg == sret_double_index);
-                        string_builder_append(sb, "    return alloc_r0;\n");
+                        string_builder_append(sb, "    return alloc_r0;");
                     } else {
-                        string_builder_append(sb, "    return r%u;\n", value_reg);
+                        string_builder_append(sb, "    return r%u;", value_reg);
                     }
                     break;
                 }
@@ -620,7 +648,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 false_block = FETCH32();
 
                     string_builder_append(sb, "    if (r%u) goto b%u;\n", cond_reg, true_block);
-                    string_builder_append(sb, "    else goto b%u;\n", false_block);
+                    string_builder_append(sb, "    else goto b%u;", false_block);
 
                     break;
                 }
@@ -628,7 +656,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                 case SSA_OP_JMP: {
                     u32 target_block = FETCH32();
 
-                    string_builder_append(sb, "    goto b%u;\n", target_block);
+                    string_builder_append(sb, "    goto b%u;", target_block);
                     break;
                 }
 
@@ -645,11 +673,22 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     String file_name = atom_string(file.name);
                     Line_Info li = line_info(file.newline_offsets, pos.offset);
 
-                    string_builder_append(sb, "    novo_c_assert(r%u, r%u, \"%.*s\", %u, %u);\n", cond_reg, string_reg,
+                    string_builder_append(sb, "    novo_c_assert(r%u, r%u, \"%.*s\", %u, %u);", cond_reg, string_reg,
                                           (int)file_name.length, file_name.data, li.line, li.offset);
                     break;
                 }
             }
+
+#if NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+            if (!no_print)  {
+                if (no_op) string_builder_append(sb, "    // ");
+                else string_builder_append(sb, " // ");
+                ssa_print_instruction(inst, sb, inst->ssa_program, func, ip, block->bytes);
+            }
+#else // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+            if (!no_print && !no_op) string_builder_append(sb, "\n");
+#endif // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+
         }
 
         bi = block->next_index;

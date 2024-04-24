@@ -4,6 +4,8 @@
 
 #include <nstring.h>
 
+#define NOVO_C_BACKEND_PRINT_SSA_COMMENTS 1
+
 namespace Novo {
 
 template <typename T> struct Stack;

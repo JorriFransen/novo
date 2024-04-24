@@ -34,8 +34,11 @@ main :: () -> s64 {
 
     v := vec(1, 2);
 
-
-    // return 0;
+    if (v.x == 1) {
+        printf("x == 1\n".data);
+    } else {
+        printf("x != 1\n".data);
+    }
     return v.y - (v.x * 2);
 }
 
