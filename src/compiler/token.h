@@ -21,6 +21,8 @@ enum Token_Kind : u32
     TOK_RPAREN = ')', // 41
     TOK_STAR   = '*', // 42
     TOK_DOT    = '.', // 46
+    TOK_LT     = '<', // 60
+    TOK_GT     = '>', // 62
     TOK_LBRACK = '[', // 91
     TOK_RBRACK = ']', // 93
 

@@ -2,6 +2,7 @@
 
 #include "instance.h"
 #include "ssa.h"
+#include "token.h"
 #include "type.h"
 
 #include <filesystem.h>
@@ -302,12 +303,27 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
     char reg_name[32];
 
+    for (s64 i = 0; i < func->register_types.count; i++) {
+        Type* register_type = func->register_types[i];
+
+        string_builder_append(sb, "    ");
+        string_format(reg_name, "r%u", i);
+
+        if (register_type->kind == Type_Kind::STRUCT) {
+            register_type = pointer_type_get(inst, register_type);
+        }
+
+        c_backend_emit_c_type(inst, sb, register_type, reg_name);
+        string_builder_append(sb, ";\n");
+    }
+
+    string_builder_append(sb, "\n");
+
     for (s64 bi = 0; bi < func->blocks.count; bi++) {
         SSA_Block* block = &func->blocks[bi];
 
         if (bi > 0) {
-            String block_name = atom_string(block->name);
-            string_builder_append(sb, "%.*s:\n", (int)block_name.length, block_name.data);
+            string_builder_append(sb, "b%u:\n", bi);
         }
 
 #define FETCH() (block->bytes[instruction_offset++])
@@ -339,12 +355,24 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                 case SSA_OP_SUB: assert(false); break;
                 case SSA_OP_MUL: assert(false); break;
                 case SSA_OP_DIV: assert(false); break;
-                case SSA_OP_LT: assert(false); break;
-                case SSA_OP_GT: assert(false); break;
-                case SSA_OP_EQ: assert(false); break;
-                case SSA_OP_NEQ: assert(false); break;
-                case SSA_OP_LTEQ: assert(false); break;
-                case SSA_OP_GTEQ: assert(false); break;
+
+#define CMP_BINOP(op) case SSA_OP_##op: { \
+    /*u8 size =*/ FETCH(); \
+    u32 result_reg = FETCH32(); \
+    u32 left_reg = FETCH32(); \
+    u32 right_reg = FETCH32(); \
+    String_Ref op_string = tmp_token_kind_str(TOK_##op); \
+    string_builder_append(sb, "    r%u = r%u %.*s r%u;\n", result_reg, left_reg, (int)op_string.length, op_string.data, right_reg); \
+    break; \
+}
+
+                CMP_BINOP(LT);
+                CMP_BINOP(GT);
+                CMP_BINOP(EQ);
+                CMP_BINOP(NEQ);
+                CMP_BINOP(LTEQ);
+                CMP_BINOP(GTEQ);
+
                 case SSA_OP_BITCAST: assert(false); break;
                 case SSA_OP_TRUNC: assert(false); break;
                 case SSA_OP_SEXT: assert(false); break;
@@ -407,10 +435,9 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         case 8: value = FETCH64(); break;
                     }
 
-                    string_builder_append(sb, "    ");
-                    string_format(reg_name, "r%u", result_reg);
-                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
-                    string_builder_append(sb, " = %llu;\n", value);
+                    // string_format(reg_name, "r%u", result_reg);
+                    // c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
+                    string_builder_append(sb, "    r%u = %llu;\n", result_reg, value);
                     break;
                 }
 
@@ -456,11 +483,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     u32 ptr_reg = FETCH32();
 
-                    string_builder_append(sb, "    ");
-                    string_format(reg_name, "r%u", result_reg);
-                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
-                    string_format(reg_name, "r%u", ptr_reg);
-                    string_builder_append(sb, " = *(%s);\n", reg_name);
+                    string_builder_append(sb, "    r%u = *(r%u);\n", result_reg, ptr_reg);
                     break;
                 }
 
@@ -470,17 +493,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                     Type* pointer_type = pointer_type_get(inst, func->register_types[result_reg]);
 
-                    string_builder_append(sb, "    ");
-                    string_format(reg_name, "r%u", result_reg);
-                    c_backend_emit_c_type(inst, sb, pointer_type, reg_name);
-
-                    string_format(reg_name, "&c%lld", offset);
-
-                    string_builder_append(sb, " = (");
+                    string_builder_append(sb, "    r%u = (", result_reg);
                     c_backend_emit_c_type(inst, sb, pointer_type, "");
-                    string_builder_append(sb, ")%s;\n", reg_name);
+                    string_builder_append(sb, ")&c%lld;\n", offset);
 
-                    // assert(false);
                     break;
                 }
 
@@ -490,14 +506,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     /*u32 offset =*/ FETCH32();
                     u16 index = FETCH16();
 
-                    string_builder_append(sb, "    ");
-                    string_format(reg_name, "r%u", result_reg);
-                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
-
-                    string_format(reg_name, "r%u", base_ptr_reg);
-                    string_builder_append(sb, " = &(%s)->", reg_name);
-                    string_format(reg_name, "m%u", index);
-                    string_builder_append(sb, "%s;\n", reg_name);
+                    string_builder_append(sb, "    r%u = &(r%u)->m%u;\n", result_reg, base_ptr_reg, index);
                     break;
                 }
 
@@ -522,7 +531,6 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                     SSA_Function* callee = &inst->ssa_program->functions[fn_index];
                     String callee_name = atom_string(callee->name);
-                    string_builder_append(sb, "    ");
 
                     assert(!callee->foreign);
 
@@ -530,11 +538,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     assert(stack_count(arg_stack) >= arg_count);
 
                     if (!callee->sret) {
-                        string_format(reg_name, "r%u", result_reg);
-                        c_backend_emit_c_type(inst, sb, callee->type->function.return_type, reg_name);
+                        string_builder_append(sb, "    r%u", result_reg);
                     } else {
                         u32 res_reg = stack_peek(arg_stack, arg_count - 1);
-                        string_builder_append(sb, "*(r%u)", res_reg);
+                        string_builder_append(sb, "    *(r%u)", res_reg);
                     }
                     string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
 
@@ -564,16 +571,14 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     assert(callee->foreign);
 
                     String callee_name = atom_string(callee->name);
-                    string_builder_append(sb, "    ");
 
                     assert(stack_count(arg_stack) >= arg_count);
 
                     if (!callee->sret) {
-                        string_format(reg_name, "r%u", result_reg);
-                        c_backend_emit_c_type(inst, sb, callee->type->function.return_type, reg_name);
+                        string_builder_append(sb, "    r%u", result_reg);
                     } else {
                         u32 res_reg = stack_peek(arg_stack, arg_count - 1);
-                        string_builder_append(sb, "*(r%u)", res_reg);
+                        string_builder_append(sb, "    *(r%u)", res_reg);
                     }
                     string_builder_append(sb, " = %.*s(", (int)callee_name.length, callee_name.data);
 
@@ -610,8 +615,24 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                 }
 
                 case SSA_OP_RET_VOID: assert(false); break;
-                case SSA_OP_JMP_IF: assert(false); break;
-                case SSA_OP_JMP: assert(false); break;
+
+                case SSA_OP_JMP_IF: {
+                    u32 cond_reg = FETCH32();
+                    u32 true_block = FETCH32();
+                    u32 false_block = FETCH32();
+
+                    string_builder_append(sb, "    if (r%u) goto b%u;\n", cond_reg, true_block);
+                    string_builder_append(sb, "    else goto b%u;\n", false_block);
+                    
+                    break;
+                }
+
+                case SSA_OP_JMP: {
+                    u32 target_block = FETCH32();
+
+                    string_builder_append(sb, "    goto b%u;\n", target_block);
+                    break;
+                }
 
                 case SSA_OP_ASSERT: {
                     u32 offset = instruction_offset - sizeof(SSA_Op);
@@ -640,6 +661,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 #undef FETCH16
 #undef FETCH32
 #undef FETCH64
+#undef CMP_BINOP
 }
 
 void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_Expression* const_expr)

@@ -84,7 +84,13 @@ struct SSA_Block
 };
 
 struct AST_Node;
-struct SSA_Alloc;
+
+struct SSA_Alloc
+{
+    AST_Node ast_node;
+    u32 alloc_reg;
+};
+
 
 struct SSA_Function
 {
