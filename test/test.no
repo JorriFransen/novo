@@ -28,15 +28,15 @@ Vec2 :: struct {
     x: s64; y: s64;
 }
 
+vec :: (x: s64, y: s64) -> Vec2 { return { x, y }; }
+
 main :: () -> s64 {
 
-    if (false) {
-        printf("true\n".data);
-    } else {
-        printf("false\n".data);
-    }
+    v := vec(1, 2);
+
 
     return 0;
+    // return v.y - (v.x * 2);
 }
 
 

@@ -269,7 +269,7 @@ void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Functi
     string_builder_append(&local_sb, "%.*s(", (int)name.length, name.data);
 
     if (func->param_count) {
-        for (s64 i = 0; i < func->param_count; i++) {
+        for (s64 i = 0; i < func->type->function.param_types.count; i++) {
             Type* param_type = func->type->function.param_types[i];
 
             if (i > 0) string_builder_append(&local_sb, ", ");
@@ -298,16 +298,35 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     assert(fn_index < inst->ssa_program->functions.count);
     SSA_Function* func = &inst->ssa_program->functions[fn_index];
 
+    s64 sret_double_index = -1;
+
     string_builder_append(sb, "{\n");
 
     char reg_name[32];
 
-    for (s64 i = 0; i < func->register_types.count; i++) {
-        Type* register_type = func->register_types[i];
+    for (s64 i = 0; i < func->allocs.count; i++) {
+        string_builder_append(sb, "    ");
+        string_format(reg_name, "alloc_r%u", i);
+
+        SSA_Register_Handle reg = func->allocs[i].alloc_reg;
+
+        c_backend_emit_c_type(inst, sb, func->registers[reg.index].type, reg_name);
+        string_builder_append(sb, ";\n");
+    }
+
+    s64 register_count = func->registers.count;
+    if (func->sret) register_count--; // Used in bytecode to copy struct back to caller, not used in c backend
+
+    for (s64 i = 0; i < register_count; i++) {
+
+        if (!func->registers[i].used) continue;
+
+        Type* register_type = func->registers[i].type;
 
         string_builder_append(sb, "    ");
         string_format(reg_name, "r%u", i);
 
+        // Only allocs have aggregate types.
         if (register_type->kind == Type_Kind::STRUCT) {
             register_type = pointer_type_get(inst, register_type);
         }
@@ -379,20 +398,8 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     /*u64 size =*/ FETCH64();
 
-                    Type* alloc_type = func->register_types[result_reg];
-                    Type* pointer_type = pointer_type_get(inst, alloc_type);
-
-                    char alloc_name[32];
-
-                    string_builder_append(sb, "    ");
-                    string_format(alloc_name, "alloc_r%u", result_reg);
-                    c_backend_emit_c_type(inst, sb, alloc_type, alloc_name);
-                    string_builder_append(sb, ";\n");
-
-                    string_builder_append(sb, "    ");
-                    string_format(reg_name, "r%u", result_reg);
-                    c_backend_emit_c_type(inst, sb, pointer_type, reg_name);
-                    string_builder_append(sb, " = &(%s);\n", alloc_name);
+                    string_format(reg_name, "alloc_r%u", result_reg);
+                    string_builder_append(sb, "    r%u = &(%s);\n", result_reg, reg_name);
                     break;
                 }
 
@@ -403,10 +410,12 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 source_ptr_reg = FETCH32();
                     u64 byte_count = FETCH64();
 
-                    string_format(reg_name, "r%u", dest_ptr_reg);
-                    string_builder_append(sb, "    memcpy(%s, ", reg_name);
-                    string_format(reg_name, "r%u", source_ptr_reg);
-                    string_builder_append(sb, "%s, %llu);\n", reg_name, byte_count);
+                    if (dest_ptr_reg != sret_double_index) {
+                        string_format(reg_name, "r%u", dest_ptr_reg);
+                        string_builder_append(sb, "    memcpy(%s, ", reg_name);
+                        string_format(reg_name, "r%u", source_ptr_reg);
+                        string_builder_append(sb, "%s, %llu);\n", reg_name, byte_count);
+                    }
                     break;
                 }
 
@@ -450,19 +459,17 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                             // Loading return value
                             sret = true;
+                            sret_double_index = result_reg;
 
                         } else {
                             param_index--;
                         }
                     }
 
-                    string_builder_append(sb, "    r%u = ", result_reg);
-
-                    if (sret) {
-                        string_builder_append(sb, "r0;\n");
-                    } else {
-                        string_builder_append(sb, "p%u;\n", param_index);
+                    if (!sret) {
+                        string_builder_append(sb, "    r%u = p%u;\n", result_reg, param_index);
                     }
+
                     break;
                 }
 
@@ -479,7 +486,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     u32 offset = FETCH32();
 
-                    Type* pointer_type = pointer_type_get(inst, func->register_types[result_reg]);
+                    Type* pointer_type = pointer_type_get(inst, func->registers[result_reg].type);
 
                     string_builder_append(sb, "    r%u = (", result_reg);
                     c_backend_emit_c_type(inst, sb, pointer_type, "");
@@ -594,8 +601,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                 case SSA_OP_RET: {
                     u32 value_reg = FETCH32();
+
                     if (func->sret) {
-                        string_builder_append(sb, "    return *(r%u);\n", value_reg);
+                        assert(value_reg == sret_double_index);
+                        string_builder_append(sb, "    return alloc_r0;\n");
                     } else {
                         string_builder_append(sb, "    return r%u;\n", value_reg);
                     }
@@ -611,7 +620,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                     string_builder_append(sb, "    if (r%u) goto b%u;\n", cond_reg, true_block);
                     string_builder_append(sb, "    else goto b%u;\n", false_block);
-                    
+
                     break;
                 }
 

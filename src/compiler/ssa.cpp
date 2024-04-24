@@ -72,7 +72,7 @@ void ssa_program_free(SSA_Program* program)
 
         darray_free(&func->blocks);
         darray_free(&func->allocs);
-        darray_free(&func->register_types);
+        darray_free(&func->registers);
 
     }
 
@@ -102,7 +102,7 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
     func->type = type;
     darray_init(program->allocator, &func->blocks);
     darray_init(program->allocator, &func->allocs);
-    darray_init(program->allocator, &func->register_types, 0);
+    darray_init(program->allocator, &func->registers, 0);
     func->total_alloc_size = 0;
 
     if (!foreign) ssa_block_create(program, func, "entry");
@@ -184,12 +184,12 @@ u32 ssa_block_create(SSA_Builder* builder, const char* name)
     return ssa_block_create(builder->program, function, name);
 }
 
-u32 ssa_register_create(SSA_Builder* builder, Type* type)
+SSA_Register_Handle ssa_register_create(SSA_Builder* builder, Type* type)
 {
     SSA_Function* function = &builder->program->functions[builder->function_index];
     assert(function->register_count != U32_MAX);
-    darray_append(&function->register_types, type);
-    return function->register_count++;
+    darray_append(&function->registers, { type, false });
+    return { function->register_count++ };
 }
 
 static int cmp_decl_order(AST_Declaration* a, AST_Declaration* b) {
@@ -241,7 +241,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
 
         if (param_decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
 
-            u32 alloc_reg = ssa_emit_alloc(builder, param_decl->resolved_type);
+            SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, param_decl->resolved_type);
             darray_append(&func->allocs, { ast_node(param_decl), alloc_reg });
         }
     }
@@ -253,7 +253,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
 
         auto var_decl = decl->function.variables[i];
 
-        u32 alloc_reg = ssa_emit_alloc(builder, var_decl->resolved_type);
+        SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, var_decl->resolved_type);
         darray_append(&func->allocs, { ast_node(var_decl), alloc_reg });
     }
 
@@ -262,7 +262,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
 
         auto expr = decl->function.temp_structs[i];
 
-        u32 alloc_reg = ssa_emit_alloc(builder, expr->resolved_type);
+        SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, expr->resolved_type);
         darray_append(&func->allocs, { ast_node(expr), alloc_reg });
     }
 
@@ -275,9 +275,11 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
 
             u32 param_index = i;
             if (sret) param_index++;
-            u32 param_reg = ssa_emit_load_param(builder, param_index);
+            SSA_Register_Handle param_reg = ssa_emit_load_param(builder, param_index);
 
-            ssa_emit_store_ptr(builder, param_decl->resolved_type->bit_size, param_storage_index++, param_reg);
+            SSA_Register_Handle param_storage_reg = { param_storage_index++ };
+
+            ssa_emit_store_ptr(builder, param_decl->resolved_type->bit_size, param_storage_reg, param_reg);
         }
     }
 
@@ -380,7 +382,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
     SSA_Builder* builder = &local_builder;
 
     bool sret = return_type->kind == Type_Kind::STRUCT;
-    u32 sret_alloc_reg = 0;
+    SSA_Register_Handle sret_alloc_reg;
 
     if (sret) {
         sret_alloc_reg = ssa_emit_alloc(builder, return_type);
@@ -391,17 +393,18 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
         AST_Expression* arg_expr = expr->call.args[i];
 
         if (arg_expr->resolved_type->kind == Type_Kind::STRUCT) {
-            u32 alloc_reg = ssa_emit_alloc(builder, arg_expr->resolved_type);
+            SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, arg_expr->resolved_type);
             darray_append(&func->allocs, { ast_node(arg_expr), alloc_reg });
         }
     }
 
-    u32 result_reg = ssa_emit_expression(builder, expr, scope);
+    SSA_Register_Handle result_reg = ssa_emit_expression(builder, expr, scope);
     ssa_emit_op(builder, SSA_OP_RET);
+
     if (sret) {
-        ssa_emit_32(builder, sret_alloc_reg);
+        ssa_emit_reg(builder, sret_alloc_reg);
     } else {
-        ssa_emit_32(builder, result_reg);
+        ssa_emit_reg(builder, result_reg);
     }
 
     temp_allocator_reset(&inst->temp_allocator_data, mark);
@@ -436,7 +439,7 @@ bool ssa_find_global_variable(SSA_Program* program, Atom atom, u32* index)
     return found;
 }
 
-bool ssa_find_alloc(SSA_Builder* builder, AST_Node* ast_node, u32* result)
+bool ssa_find_alloc(SSA_Builder* builder, AST_Node* ast_node, SSA_Register_Handle* result)
 {
     SSA_Function* function = &builder->program->functions[builder->function_index];
 
@@ -451,13 +454,13 @@ bool ssa_find_alloc(SSA_Builder* builder, AST_Node* ast_node, u32* result)
     return false;
 }
 
-bool ssa_find_alloc(SSA_Builder* builder, AST_Declaration* decl, u32* result)
+bool ssa_find_alloc(SSA_Builder* builder, AST_Declaration* decl, SSA_Register_Handle* result)
 {
     AST_Node node = ast_node(decl);
     return ssa_find_alloc(builder, &node, result);
 }
 
-bool ssa_find_alloc(SSA_Builder* builder, AST_Expression* expr, u32* result)
+bool ssa_find_alloc(SSA_Builder* builder, AST_Expression* expr, SSA_Register_Handle* result)
 {
     AST_Node node = ast_node(expr);
     return ssa_find_alloc(builder, &node, result);
@@ -499,7 +502,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 AST_Expression* init_expr = stmt->declaration->variable.init_expr;
                 if (init_expr) {
 
-                    u32 alloc_reg;
+                    SSA_Register_Handle alloc_reg;
                     bool found = ssa_find_alloc(builder, stmt->declaration, &alloc_reg);
                     assert(found);
 
@@ -511,7 +514,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                         case Type_Kind::INTEGER:
                         case Type_Kind::BOOLEAN:
                         case Type_Kind::POINTER: {
-                            u32 value_reg = ssa_emit_expression(builder, init_expr, scope);
+                            SSA_Register_Handle value_reg = ssa_emit_expression(builder, init_expr, scope);
                             ssa_emit_store_ptr(builder, init_expr->resolved_type->bit_size, alloc_reg, value_reg);
                             break;
                         }
@@ -519,7 +522,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                         case Type_Kind::FUNCTION: assert(false); break;
 
                         case Type_Kind::STRUCT: {
-                            u32 value_reg = ssa_emit_lvalue(builder, init_expr, scope);
+                            SSA_Register_Handle value_reg = ssa_emit_lvalue(builder, init_expr, scope);
                             ssa_emit_memcpy(builder, alloc_reg, value_reg, init_expr->resolved_type->bit_size);
                             break;
                         }
@@ -544,7 +547,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 case Type_Kind::INTEGER:
                 case Type_Kind::BOOLEAN:
                 case Type_Kind::POINTER: {
-                    u32 rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);
+                    SSA_Register_Handle rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);
                     auto lvalue = ssa_emit_lvalue(builder, stmt->assignment.lvalue, scope);
 
                     ssa_emit_store_ptr(builder, stmt->assignment.rvalue->resolved_type->bit_size, lvalue, rvalue);
@@ -555,8 +558,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 case Type_Kind::FUNCTION: assert(false); break;
 
                 case Type_Kind::STRUCT: {
-                    u32 rvalue = ssa_emit_lvalue(builder, stmt->assignment.rvalue, scope);
-                    u32 lvalue = ssa_emit_lvalue(builder, stmt->assignment.lvalue, scope);
+                    SSA_Register_Handle rvalue = ssa_emit_lvalue(builder, stmt->assignment.rvalue, scope);
+                    SSA_Register_Handle lvalue = ssa_emit_lvalue(builder, stmt->assignment.lvalue, scope);
                     ssa_emit_memcpy(builder, lvalue, rvalue, stmt->assignment.rvalue->resolved_type->bit_size);
                     break;
                 }
@@ -575,34 +578,34 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
             if (lvalue_expr->resolved_type->kind == Type_Kind::POINTER) {
                 assert(bit_size == 64); // pointer size
 
-                u32 lvalue = ssa_emit_lvalue(builder, stmt->arithmetic_assignment.lvalue, scope);
-                u32 left_reg = ssa_emit_load_ptr(builder, stmt->arithmetic_assignment.lvalue->resolved_type, lvalue);
-                u32 right_reg = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
+                SSA_Register_Handle lvalue = ssa_emit_lvalue(builder, stmt->arithmetic_assignment.lvalue, scope);
+                SSA_Register_Handle left_reg = ssa_emit_load_ptr(builder, stmt->arithmetic_assignment.lvalue->resolved_type, lvalue);
+                SSA_Register_Handle right_reg = ssa_emit_expression(builder, stmt->arithmetic_assignment.rvalue, scope);
 
                 assert(rvalue_expr->resolved_type->kind == Type_Kind::INTEGER);
 
                 if (op == '-') {
-                    u32 zero_reg = ssa_emit_load_immediate(builder, stmt->arithmetic_assignment.lvalue->resolved_type, 0);
-                    u32 new_right = ssa_register_create(builder, lvalue_expr->resolved_type);
+                    SSA_Register_Handle zero_reg = ssa_emit_load_immediate(builder, stmt->arithmetic_assignment.lvalue->resolved_type, 0);
+                    SSA_Register_Handle new_right = ssa_register_create(builder, lvalue_expr->resolved_type);
 
                     // TODO:  Negate op?
                     ssa_emit_op(builder, SSA_OP_SUB);
                     ssa_emit_8(builder, bit_size / 8);
-                    ssa_emit_32(builder, new_right);
-                    ssa_emit_32(builder, zero_reg);
-                    ssa_emit_32(builder, right_reg);
+                    ssa_emit_reg(builder, new_right);
+                    ssa_emit_reg(builder, zero_reg);
+                    ssa_emit_reg(builder, right_reg);
 
                     right_reg = new_right;
                 }
 
-                u32 new_ptr_reg = ssa_emit_pointer_offset(builder, lvalue_expr->resolved_type, left_reg, right_reg);
+                SSA_Register_Handle new_ptr_reg = ssa_emit_pointer_offset(builder, lvalue_expr->resolved_type, left_reg, right_reg);
                 ssa_emit_store_ptr(builder, bit_size, lvalue, new_ptr_reg);
 
 
             } else {
-                u32 lvalue = ssa_emit_lvalue(builder, lvalue_expr, scope);
-                u32 lhs = ssa_emit_load_ptr(builder, stmt->arithmetic_assignment.lvalue->resolved_type, lvalue);
-                u32 rhs = ssa_emit_expression(builder, rvalue_expr, scope);
+                SSA_Register_Handle lvalue = ssa_emit_lvalue(builder, lvalue_expr, scope);
+                SSA_Register_Handle lhs = ssa_emit_load_ptr(builder, stmt->arithmetic_assignment.lvalue->resolved_type, lvalue);
+                SSA_Register_Handle rhs = ssa_emit_expression(builder, rvalue_expr, scope);
 
                 switch (op) {
                     default: assert(false); break;
@@ -617,10 +620,10 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 assert(size >= 0 && size <= U8_MAX);
                 ssa_emit_8(builder, (u8)size);
 
-                u32 result = ssa_register_create(builder, lvalue_expr->resolved_type);
-                ssa_emit_32(builder, result);
-                ssa_emit_32(builder, lhs);
-                ssa_emit_32(builder, rhs);
+                SSA_Register_Handle result = ssa_register_create(builder, lvalue_expr->resolved_type);
+                ssa_emit_reg(builder, result);
+                ssa_emit_reg(builder, lhs);
+                ssa_emit_reg(builder, rhs);
 
                 ssa_emit_store_ptr(builder, bit_size, lvalue, result);
             }
@@ -636,18 +639,18 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
         case AST_Statement_Kind::RETURN: {
             if (stmt->return_expr) {
                 if (function->sret) {
-                    u32 src_ptr_reg = ssa_emit_lvalue(builder, stmt->return_expr, scope);
-                    u32 dest_ptr_reg = ssa_emit_load_param(builder, 0);
+                    SSA_Register_Handle src_ptr_reg = ssa_emit_lvalue(builder, stmt->return_expr, scope);
+                    SSA_Register_Handle dest_ptr_reg = ssa_emit_load_param(builder, 0);
                     ssa_emit_memcpy(builder, dest_ptr_reg, src_ptr_reg, stmt->return_expr->resolved_type->bit_size);
 
                     ssa_emit_op(builder, SSA_OP_RET);
-                    ssa_emit_32(builder, dest_ptr_reg);
+                    ssa_emit_reg(builder, dest_ptr_reg);
 
                 } else {
-                    u32 value_reg = ssa_emit_expression(builder, stmt->return_expr, scope);
+                    SSA_Register_Handle value_reg = ssa_emit_expression(builder, stmt->return_expr, scope);
 
                     ssa_emit_op(builder, SSA_OP_RET);
-                    ssa_emit_32(builder, value_reg);
+                    ssa_emit_reg(builder, value_reg);
                 }
 
             } else {
@@ -677,7 +680,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     false_block = else_block;
                 }
 
-                u32 cond_reg = ssa_emit_expression(builder, if_block.cond, scope);
+                SSA_Register_Handle cond_reg = ssa_emit_expression(builder, if_block.cond, scope);
 
                 assert(!ssa_block_exits(builder, builder->block_index));
                 ssa_emit_jmp_if(builder, cond_reg, true_block, false_block);
@@ -714,7 +717,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
             ssa_set_insert_point(builder, cond_block);
 
-            u32 cond_reg = ssa_emit_expression(builder, stmt->while_stmt.cond, scope);
+            SSA_Register_Handle cond_reg = ssa_emit_expression(builder, stmt->while_stmt.cond, scope);
             ssa_emit_jmp_if(builder, cond_reg, do_block, post_block);
 
             ssa_set_insert_point(builder, do_block);
@@ -740,7 +743,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
             ssa_emit_jmp(builder, cond_block);
 
             ssa_set_insert_point(builder, cond_block);
-            u32 cond = ssa_emit_expression(builder, stmt->for_stmt.cond, scope);
+            SSA_Register_Handle cond = ssa_emit_expression(builder, stmt->for_stmt.cond, scope);
             ssa_emit_jmp_if(builder, cond, do_block, post_block);
 
             ssa_set_insert_point(builder, do_block);
@@ -806,12 +809,12 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
         case AST_Statement_Kind::ASSERT: {
 
-            u32 cond_reg = ssa_emit_expression(builder, stmt->assert_stmt.cond, scope);
+            SSA_Register_Handle cond_reg = ssa_emit_expression(builder, stmt->assert_stmt.cond, scope);
 
-            u32 string_reg;
+            SSA_Register_Handle string_reg;
 
             if (stmt->assert_stmt.message) {
-                u32 str_ptr = ssa_emit_lvalue(builder, stmt->assert_stmt.message, scope);
+                SSA_Register_Handle str_ptr = ssa_emit_lvalue(builder, stmt->assert_stmt.message, scope);
                 string_reg = str_ptr;
             } else {
                 Type* string_pointer_type = pointer_type_get(builder->instance, builder->instance->type_string);
@@ -819,19 +822,19 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
             }
 
             u32 op_offset = ssa_emit_op(builder, SSA_OP_ASSERT);
-            ssa_emit_32(builder, cond_reg);
+            ssa_emit_reg(builder, cond_reg);
 
             Source_Pos pos = source_pos(builder->instance, stmt);
             hash_table_add(&builder->program->instruction_origin_positions, { op_offset, (u32)builder->function_index, (u32)builder->block_index }, pos);
 
 
-            ssa_emit_32(builder, string_reg);
+            ssa_emit_reg(builder, string_reg);
             break;
         }
     }
 }
 
-u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* scope)
+SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* scope)
 {
     SSA_Function* function = &builder->program->functions[builder->function_index];
 
@@ -888,7 +891,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
             } else {
 
-                u32 alloc_reg;
+                SSA_Register_Handle alloc_reg;
                 bool found = ssa_find_alloc(builder, decl, &alloc_reg);
                 assert(found);
 
@@ -909,7 +912,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
             Type *base_type = lvalue_expr->member.base->resolved_type;
             Type *struct_type = nullptr;
 
-            u32 base_lvalue;
+            SSA_Register_Handle base_lvalue;
 
             if (base_type->kind == Type_Kind::STRUCT) {
                 struct_type = base_type;
@@ -948,7 +951,7 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
             } else {
 
-                u32 compound_alloc_reg;
+                SSA_Register_Handle compound_alloc_reg;
                 bool found = ssa_find_alloc(builder, lvalue_expr, &compound_alloc_reg);
                 assert(found);
 
@@ -957,14 +960,14 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
                     AST_Expression* expr = lvalue_expr->compound.expressions[i];
                     bool member_is_aggregate = expr->resolved_type->kind == Type_Kind::STRUCT;
 
-                    u32 value_reg;
+                    SSA_Register_Handle value_reg;
                     if (member_is_aggregate) {
                         value_reg = ssa_emit_lvalue(builder, expr, scope);
                     } else {
                         value_reg = ssa_emit_expression(builder, expr, scope);
                     }
 
-                    u32 ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, lvalue_expr->resolved_type, i);
+                    SSA_Register_Handle ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, lvalue_expr->resolved_type, i);
 
                     if (member_is_aggregate) {
                         ssa_emit_memcpy(builder, ptr_reg, value_reg, expr->resolved_type->bit_size);
@@ -998,20 +1001,20 @@ u32 ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue_expr, Scope* sc
 
         case AST_Expression_Kind::STRING_LITERAL: {
             u32 string_data_const_index = ssa_emit_constant(builder->instance, builder->program, lvalue_expr);
-            u32 string_data_ptr = ssa_emit_load_constant(builder, string_data_const_index);
+            SSA_Register_Handle string_data_ptr = ssa_emit_load_constant(builder, string_data_const_index);
             return string_data_ptr;
         }
     }
 
     assert(false);
-    return false;
+    return {};
 }
 
-s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
+SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
 {
     SSA_Function* function = &builder->program->functions[builder->function_index];
 
-    s64 result_reg = -1;
+    SSA_Register_Handle result_reg;
 
     switch (expr->kind) {
 
@@ -1029,7 +1032,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
                         assert(decl->variable.index >= 0 && decl->variable.index < function->param_count);
 
-                        u32 alloc_reg;
+                        SSA_Register_Handle alloc_reg;
                         bool found = ssa_find_alloc(builder, decl, &alloc_reg);
                         assert(found);
 
@@ -1072,15 +1075,15 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                     auto size = expr->unary.operand->resolved_type->bit_size / 8;
                     assert(size >= 0 && size <= U8_MAX);
 
-                    u32 op_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
-                    u32 im_zero_reg = ssa_emit_load_immediate(builder, expr->unary.operand->resolved_type, 0);
+                    SSA_Register_Handle op_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
+                    SSA_Register_Handle im_zero_reg = ssa_emit_load_immediate(builder, expr->unary.operand->resolved_type, 0);
 
                     result_reg = ssa_register_create(builder, expr->resolved_type);
                     ssa_emit_op(builder, SSA_OP_SUB);
                     ssa_emit_8(builder, (u8)size);
-                    ssa_emit_32(builder, result_reg);
-                    ssa_emit_32(builder, im_zero_reg);
-                    ssa_emit_32(builder, op_reg);
+                    ssa_emit_reg(builder, result_reg);
+                    ssa_emit_reg(builder, im_zero_reg);
+                    ssa_emit_reg(builder, op_reg);
                     break;
                 }
             }
@@ -1092,8 +1095,8 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             Type* left_type = expr->binary.lhs->resolved_type;
             Type* right_type = expr->binary.rhs->resolved_type;
 
-            u32 left_reg = ssa_emit_expression(builder, expr->binary.lhs, scope);
-            u32 right_reg = ssa_emit_expression(builder, expr->binary.rhs, scope);
+            SSA_Register_Handle left_reg = ssa_emit_expression(builder, expr->binary.lhs, scope);
+            SSA_Register_Handle right_reg = ssa_emit_expression(builder, expr->binary.rhs, scope);
 
             assert(expr->binary.lhs->resolved_type->bit_size % 8 == 0);
             auto size = expr->binary.lhs->resolved_type->bit_size / 8;
@@ -1118,9 +1121,9 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 result_reg = ssa_register_create(builder, expr->resolved_type);
 
                 ssa_emit_8(builder, (u8)size);
-                ssa_emit_32(builder, result_reg);
-                ssa_emit_32(builder, left_reg);
-                ssa_emit_32(builder, right_reg);
+                ssa_emit_reg(builder, result_reg);
+                ssa_emit_reg(builder, left_reg);
+                ssa_emit_reg(builder, right_reg);
 
             } else {
 
@@ -1131,15 +1134,15 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
                     if (expr->binary.op == '-') {
 
-                        u32 zero_reg = ssa_emit_load_immediate(builder, expr->binary.rhs->resolved_type, 0);
-                        u32 new_right = ssa_register_create(builder, expr->resolved_type);
+                        SSA_Register_Handle zero_reg = ssa_emit_load_immediate(builder, expr->binary.rhs->resolved_type, 0);
+                        SSA_Register_Handle new_right = ssa_register_create(builder, expr->resolved_type);
 
                         // TODO:  Negate op?
                         ssa_emit_op(builder, SSA_OP_SUB);
                         ssa_emit_8(builder, size);
-                        ssa_emit_32(builder, new_right);
-                        ssa_emit_32(builder, zero_reg);
-                        ssa_emit_32(builder, right_reg);
+                        ssa_emit_reg(builder, new_right);
+                        ssa_emit_reg(builder, zero_reg);
+                        ssa_emit_reg(builder, right_reg);
 
                         right_reg = new_right;
                     }
@@ -1175,24 +1178,24 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
 
             SSA_Function *callee = &builder->program->functions[fn_index];
 
-            u32 sret_reg;
+            SSA_Register_Handle sret_reg;
             if (callee->sret) {
                 bool found = ssa_find_alloc(builder, expr, &sret_reg);
                 assert(found);
 
                 ssa_emit_op(builder, SSA_OP_PUSH);
-                ssa_emit_32(builder, sret_reg);
+                ssa_emit_reg(builder, sret_reg);
             }
 
             for (s64 i = 0; i < expr->call.args.count; i++) {
                 AST_Expression* arg_expr = expr->call.args[i];
-                u32 arg_reg;
+                SSA_Register_Handle arg_reg;
                 if (arg_expr->resolved_type->kind == Type_Kind::STRUCT) {
 
                     bool found = ssa_find_alloc(builder, arg_expr, &arg_reg);
                     assert(found);
 
-                    u32 src_ptr_reg = ssa_emit_lvalue(builder, arg_expr, scope);
+                    SSA_Register_Handle src_ptr_reg = ssa_emit_lvalue(builder, arg_expr, scope);
                     ssa_emit_memcpy(builder, arg_reg, src_ptr_reg, arg_expr->resolved_type->bit_size);
 
                 } else {
@@ -1201,7 +1204,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
                 }
 
                 ssa_emit_op(builder, SSA_OP_PUSH);
-                ssa_emit_32(builder, arg_reg);
+                ssa_emit_reg(builder, arg_reg);
             }
 
             if (callee->foreign) {
@@ -1211,7 +1214,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             }
 
             result_reg = ssa_register_create(builder, expr->resolved_type);
-            ssa_emit_32(builder, result_reg);
+            ssa_emit_32(builder, result_reg.index); // Don't use ssa_emit_reg because that'll mark this register as used
 
             ssa_emit_32(builder, fn_index);
 
@@ -1219,7 +1222,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             if (callee->sret) arg_pop_count++;
 
             if (callee->foreign) {
-                assert(!callee->sret); // Not sure how this should work yet..
+                assert(!callee->sret);
                 assert(arg_pop_count <= U16_MAX);
                 ssa_emit_16(builder, arg_pop_count);
             }
@@ -1246,7 +1249,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             if (operand_type->kind == Type_Kind::STRUCT) {
                 assert(false);
             } else {
-                u32 ptr_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
+                SSA_Register_Handle ptr_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
                 return ssa_emit_load_ptr(builder, expr->resolved_type, ptr_reg);
             }
 
@@ -1259,7 +1262,7 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
             Type* to_type = expr->cast.ts->resolved_type;
             Type* from_type = expr->cast.operand->resolved_type;
 
-            u32 operand_reg = ssa_emit_expression(builder, expr->cast.operand, scope);
+            SSA_Register_Handle operand_reg = ssa_emit_expression(builder, expr->cast.operand, scope);
             return ssa_emit_cast(builder, from_type, to_type, operand_reg);
             break;
         }
@@ -1342,36 +1345,36 @@ s64 ssa_emit_expression(SSA_Builder* builder, AST_Expression* expr, Scope* scope
     return result_reg;
 }
 
-u32 ssa_emit_global_pointer(SSA_Builder *builder, u32 global_index)
+SSA_Register_Handle ssa_emit_global_pointer(SSA_Builder *builder, u32 global_index)
 {
     assert(global_index >= 0 && global_index < builder->program->globals.count);
 
     Type* global_type = builder->program->globals[global_index].type;
     Type* pointer_type = pointer_type_get(builder->instance, global_type);
 
-    u32 result = ssa_register_create(builder, pointer_type);
+    SSA_Register_Handle result = ssa_register_create(builder, pointer_type);
     ssa_emit_op(builder, SSA_OP_GLOB_PTR);
-    ssa_emit_32(builder, result);
+    ssa_emit_reg(builder, result);
     ssa_emit_32(builder, global_index);
 
     return result;
 }
 
-u32 ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
+SSA_Register_Handle ssa_emit_bitcast(SSA_Builder* builder, Type* from_type, Type* to_type, SSA_Register_Handle operand_reg)
 {
     assert(from_type->bit_size == to_type->bit_size);
     assert(to_type->bit_size <= 64);
 
-    u32 result_reg = ssa_register_create(builder, to_type);
+    SSA_Register_Handle result_reg = ssa_register_create(builder, to_type);
 
     ssa_emit_op(builder, SSA_OP_BITCAST);
-    ssa_emit_32(builder, result_reg);
-    ssa_emit_32(builder, operand_reg);
+    ssa_emit_reg(builder, result_reg);
+    ssa_emit_reg(builder, operand_reg);
 
     return result_reg;
 }
 
-u32 ssa_emit_trunc(SSA_Builder* builder, Type* target_type, u32 operand_reg)
+SSA_Register_Handle ssa_emit_trunc(SSA_Builder* builder, Type* target_type, SSA_Register_Handle operand_reg)
 {
     assert(target_type->kind == Type_Kind::INTEGER);
     auto target_bit_size = target_type->bit_size;
@@ -1380,16 +1383,16 @@ u32 ssa_emit_trunc(SSA_Builder* builder, Type* target_type, u32 operand_reg)
     auto target_byte_size = target_bit_size / 8;
     assert(target_byte_size >= 0 && target_byte_size < U8_MAX);
 
-    u32 result_reg = ssa_register_create(builder, target_type);
+    SSA_Register_Handle result_reg = ssa_register_create(builder, target_type);
     ssa_emit_op(builder, SSA_OP_TRUNC);
     ssa_emit_8(builder, target_byte_size);
-    ssa_emit_32(builder, result_reg);
-    ssa_emit_32(builder, operand_reg);
+    ssa_emit_reg(builder, result_reg);
+    ssa_emit_reg(builder, operand_reg);
 
     return result_reg;
 }
 
-u32 ssa_emit_sext(SSA_Builder* builder, Type* target_type, s64 source_bit_size, u32 operand_reg)
+SSA_Register_Handle ssa_emit_sext(SSA_Builder* builder, Type* target_type, s64 source_bit_size, SSA_Register_Handle operand_reg)
 {
     assert(target_type->kind == Type_Kind::INTEGER);
     auto target_bit_size = target_type->bit_size;
@@ -1402,17 +1405,17 @@ u32 ssa_emit_sext(SSA_Builder* builder, Type* target_type, s64 source_bit_size, 
     auto source_byte_size = source_bit_size / 8;
     assert(source_byte_size >= 0 && source_byte_size < U8_MAX);
 
-    u32 result_reg = ssa_register_create(builder, target_type);
+    SSA_Register_Handle result_reg = ssa_register_create(builder, target_type);
     ssa_emit_op(builder, SSA_OP_SEXT);
     ssa_emit_8(builder, target_byte_size);
     ssa_emit_8(builder, source_byte_size);
-    ssa_emit_32(builder, result_reg);
-    ssa_emit_32(builder, operand_reg);
+    ssa_emit_reg(builder, result_reg);
+    ssa_emit_reg(builder, operand_reg);
 
     return result_reg;
 }
 
-u32 ssa_emit_zext(SSA_Builder* builder, Type* target_type, u32 operand_reg)
+SSA_Register_Handle ssa_emit_zext(SSA_Builder* builder, Type* target_type, SSA_Register_Handle operand_reg)
 {
     assert(target_type->kind == Type_Kind::INTEGER);
     auto target_bit_size = target_type->bit_size;
@@ -1421,46 +1424,46 @@ u32 ssa_emit_zext(SSA_Builder* builder, Type* target_type, u32 operand_reg)
     auto target_byte_size = target_bit_size / 8;
     assert(target_byte_size >= 0 && target_byte_size < U8_MAX);
 
-    u32 result_reg = ssa_register_create(builder, target_type);
+    SSA_Register_Handle result_reg = ssa_register_create(builder, target_type);
     ssa_emit_op(builder, SSA_OP_ZEXT);
     ssa_emit_8(builder, target_byte_size);
-    ssa_emit_32(builder, result_reg);
-    ssa_emit_32(builder, operand_reg);
+    ssa_emit_reg(builder, result_reg);
+    ssa_emit_reg(builder, operand_reg);
 
     return result_reg;
 }
 
-u32 ssa_emit_alloc(SSA_Builder* builder, Type* type)
+SSA_Register_Handle ssa_emit_alloc(SSA_Builder* builder, Type* type)
 {
     assert(type->bit_size >= 0);
     assert(type->bit_size % 8 == 0);
     s64 byte_size = type->bit_size / 8;
 
-    u32 alloc_reg = ssa_register_create(builder, type);
+    SSA_Register_Handle alloc_reg = ssa_register_create(builder, type);
     ssa_emit_op(builder, SSA_OP_ALLOC);
-    ssa_emit_32(builder, alloc_reg);
+    ssa_emit_reg(builder, alloc_reg);
     ssa_emit_64(builder, byte_size);
 
     builder->program->functions[builder->function_index].total_alloc_size += byte_size;
 
-    return alloc_reg;
+    return { alloc_reg };
 }
 
-void ssa_emit_memcpy(SSA_Builder* builder, u32 dest_ptr_reg, u32 src_ptr_reg, s64 bit_size)
+void ssa_emit_memcpy(SSA_Builder* builder, SSA_Register_Handle dest_ptr_reg, SSA_Register_Handle src_ptr_reg, s64 bit_size)
 {
     assert(bit_size >= 0);
     assert(bit_size % 8 == 0);
     s64 size = bit_size / 8;
 
-    if (dest_ptr_reg == src_ptr_reg) return;
+    if (dest_ptr_reg.index == src_ptr_reg.index) return;
 
     ssa_emit_op(builder, SSA_OP_MEMCPY);
-    ssa_emit_32(builder, dest_ptr_reg);
-    ssa_emit_32(builder, src_ptr_reg);
+    ssa_emit_reg(builder, dest_ptr_reg);
+    ssa_emit_reg(builder, src_ptr_reg);
     ssa_emit_64(builder, size);
 }
 
-NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, u32 dest_reg, u32 source_reg)
+void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, SSA_Register_Handle dest_reg, SSA_Register_Handle source_reg)
 {
     assert(bit_size % 8 == 0);
     auto size = bit_size / 8;
@@ -1469,11 +1472,11 @@ NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, u32 dest_reg, u
 
     ssa_emit_op(builder, SSA_OP_STORE_PTR);
     ssa_emit_8(builder, size);
-    ssa_emit_32(builder, dest_reg);
-    ssa_emit_32(builder, source_reg);
+    ssa_emit_reg(builder, dest_reg);
+    ssa_emit_reg(builder, source_reg);
 }
 
-u32 ssa_emit_load_immediate(SSA_Builder* builder, Type* type, u64 immediate_value)
+SSA_Register_Handle ssa_emit_load_immediate(SSA_Builder* builder, Type* type, u64 immediate_value)
 {
     assert(type->kind == Type_Kind::INTEGER || type->kind == Type_Kind::BOOLEAN || type->kind == Type_Kind::POINTER);
 
@@ -1483,8 +1486,8 @@ u32 ssa_emit_load_immediate(SSA_Builder* builder, Type* type, u64 immediate_valu
 
     ssa_emit_op(builder, SSA_OP_LOAD_IM);
     ssa_emit_8(builder, size);
-    u32 result = ssa_register_create(builder, type);
-    ssa_emit_32(builder, result);
+    SSA_Register_Handle result = ssa_register_create(builder, type);
+    ssa_emit_reg(builder, result);
 
     switch (size) {
         default: assert(false); break;
@@ -1497,7 +1500,7 @@ u32 ssa_emit_load_immediate(SSA_Builder* builder, Type* type, u64 immediate_valu
     return result;
 }
 
-u32 ssa_emit_load_param(SSA_Builder* builder, u32 param_index)
+SSA_Register_Handle ssa_emit_load_param(SSA_Builder* builder, u32 param_index)
 {
     SSA_Function* func = &builder->program->functions[builder->function_index];
     Type* param_type = nullptr;
@@ -1512,46 +1515,46 @@ u32 ssa_emit_load_param(SSA_Builder* builder, u32 param_index)
         param_type = func->type->function.param_types[param_index];
     }
 
-    u32 result = ssa_register_create(builder, param_type);
+    SSA_Register_Handle result = ssa_register_create(builder, param_type);
     ssa_emit_op(builder, SSA_OP_LOAD_PARAM);
-    ssa_emit_32(builder, result);
+    ssa_emit_reg(builder, result);
     ssa_emit_32(builder, param_index);
 
     return result;
 }
 
-u32 ssa_emit_load_ptr(SSA_Builder* builder, Type* type, u32 ptr_reg)
+SSA_Register_Handle ssa_emit_load_ptr(SSA_Builder* builder, Type* type, SSA_Register_Handle ptr_reg)
 {
     assert(type->bit_size % 8 == 0);
     auto size = type->bit_size / 8;
     assert(size > 0 && size < U8_MAX);
     assert(size <= 8);
 
-    u32 dest_reg = ssa_register_create(builder, type);
+    SSA_Register_Handle dest_reg = ssa_register_create(builder, type);
 
     ssa_emit_op(builder, SSA_OP_LOAD_PTR);
     ssa_emit_8(builder, size);
-    ssa_emit_32(builder, dest_reg);
-    ssa_emit_32(builder, ptr_reg);
+    ssa_emit_reg(builder, dest_reg);
+    ssa_emit_reg(builder, ptr_reg);
 
     return dest_reg;
 }
 
-u32 ssa_emit_load_constant(SSA_Builder *builder, u32 index)
+SSA_Register_Handle ssa_emit_load_constant(SSA_Builder *builder, u32 index)
 {
     Type* type = builder->program->constants[index].type;
-    u32 dest_reg = ssa_register_create(builder, type);
+    SSA_Register_Handle dest_reg = ssa_register_create(builder, type);
 
     assert(index < builder->program->constants.count);
 
     ssa_emit_op(builder, SSA_OP_LOAD_CONST);
-    ssa_emit_32(builder, dest_reg);
+    ssa_emit_reg(builder, dest_reg);
     ssa_emit_32(builder, builder->program->constants[index].offset);
 
     return dest_reg;
 }
 
-u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, Type* struct_type, s64 index)
+SSA_Register_Handle ssa_emit_struct_offset(SSA_Builder* builder, SSA_Register_Handle struct_ptr_reg, Type* struct_type, s64 index)
 {
     assert(struct_type->kind == Type_Kind::STRUCT);
     assert(index <= struct_type->structure.members.count);
@@ -1567,16 +1570,16 @@ u32 ssa_emit_struct_offset(SSA_Builder* builder, u32 struct_ptr_reg, Type* struc
     Type* result_type = pointer_type_get(builder->instance, member_type);
 
     ssa_emit_op(builder, SSA_OP_STRUCT_OFFSET);
-    u32 result = ssa_register_create(builder, result_type);
-    ssa_emit_32(builder, result);
-    ssa_emit_32(builder, struct_ptr_reg);
+    SSA_Register_Handle result = ssa_register_create(builder, result_type);
+    ssa_emit_reg(builder, result);
+    ssa_emit_reg(builder, struct_ptr_reg);
     ssa_emit_32(builder, (u32)offset);
     ssa_emit_16(builder, (u16)index);
 
     return result;
 }
 
-u32 ssa_emit_pointer_offset(SSA_Builder* builder, Type* pointer_type, u32 base_reg, u32 index_reg)
+SSA_Register_Handle ssa_emit_pointer_offset(SSA_Builder* builder, Type* pointer_type, SSA_Register_Handle base_reg, SSA_Register_Handle index_reg)
 {
     assert(pointer_type->kind == Type_Kind::POINTER);
     auto pointee_bit_size = pointer_type->pointer.base->bit_size;
@@ -1584,39 +1587,39 @@ u32 ssa_emit_pointer_offset(SSA_Builder* builder, Type* pointer_type, u32 base_r
     assert(pointee_bit_size % 8 == 0);
     s64 pointee_size = pointee_bit_size / 8;
 
-    u32 result = ssa_register_create(builder, pointer_type);
+    SSA_Register_Handle result = ssa_register_create(builder, pointer_type);
 
     ssa_emit_op(builder, SSA_OP_POINTER_OFFSET);
     ssa_emit_64(builder, pointee_size);
-    ssa_emit_32(builder, result);
-    ssa_emit_32(builder, base_reg);
-    ssa_emit_32(builder, index_reg);
+    ssa_emit_reg(builder, result);
+    ssa_emit_reg(builder, base_reg);
+    ssa_emit_reg(builder, index_reg);
 
     return result;
 }
 
-u32 ssa_emit_pointer_diff(SSA_Builder* builder, s64 pointee_bit_size, u32 left_reg, u32 right_reg)
+SSA_Register_Handle ssa_emit_pointer_diff(SSA_Builder* builder, s64 pointee_bit_size, SSA_Register_Handle left_reg, SSA_Register_Handle right_reg)
 {
     assert(pointee_bit_size % 8 == 0);
     s64 pointee_size = pointee_bit_size / 8;
 
-    u32 result = ssa_register_create(builder, builder->instance->builtin_type_int);
+    SSA_Register_Handle result = ssa_register_create(builder, builder->instance->builtin_type_int);
 
     ssa_emit_op(builder, SSA_OP_POINTER_DIFF);
     ssa_emit_64(builder, pointee_size);
-    ssa_emit_32(builder, result);
-    ssa_emit_32(builder, left_reg);
-    ssa_emit_32(builder, right_reg);
+    ssa_emit_reg(builder, result);
+    ssa_emit_reg(builder, left_reg);
+    ssa_emit_reg(builder, right_reg);
 
     return result;
 }
 
-void ssa_emit_jmp_if(SSA_Builder* builder, u32 cond_reg, u32 true_block, u32 false_block)
+void ssa_emit_jmp_if(SSA_Builder* builder, SSA_Register_Handle cond_reg, u32 true_block, u32 false_block)
 {
     assert(!ssa_block_exits(builder, builder->block_index));
 
     ssa_emit_op(builder, SSA_OP_JMP_IF);
-    ssa_emit_32(builder, cond_reg);
+    ssa_emit_reg(builder, cond_reg);
     ssa_emit_32(builder, true_block);
     ssa_emit_32(builder, false_block);
 
@@ -1634,7 +1637,7 @@ void ssa_emit_jmp(SSA_Builder* builder, u32 block)
     darray_append(&function->blocks[block].incoming, (u32)builder->block_index);
 }
 
-u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
+SSA_Register_Handle ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, SSA_Register_Handle operand_reg)
 {
     switch (from_type->kind) {
         case Type_Kind::INVALID: assert(false); break;
@@ -1680,10 +1683,10 @@ u32 ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 oper
     }
 
     assert(false);
-    return false;
+    return {};
 }
 
-u32 ssa_emit_integer_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, u32 operand_reg)
+SSA_Register_Handle ssa_emit_integer_integer_cast(SSA_Builder* builder, Type* from_type, Type* to_type, SSA_Register_Handle operand_reg)
 {
     assert(from_type->kind == Type_Kind::INTEGER);
     assert(to_type->kind == Type_Kind::INTEGER);
@@ -1724,6 +1727,17 @@ u32 ssa_emit_op(SSA_Builder* builder, SSA_Op op)
     u32 result = block->bytes.count;
     darray_append(&block->bytes, (u8)op);
     return result;
+}
+
+void ssa_emit_reg(SSA_Builder* builder, SSA_Register_Handle reg_handle)
+{
+    SSA_Function* function = &builder->program->functions[builder->function_index];
+
+    u32 index = reg_handle.index;
+    assert(index < function->registers.count);
+    function->registers[index].used = true;
+
+    ssa_emit_32(builder, index);
 }
 
 void ssa_emit_8(SSA_Builder* builder, u8 value)
@@ -1785,7 +1799,7 @@ void ssa_emit_64(DArray<u8> *bytes, u64 value)
     darray_append(bytes, (u8)((value >> 56) & 0xFF));
 }
 
-u32 ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
+SSA_Register_Handle ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope)
 {
     switch (expr->kind) {
         case AST_Expression_Kind::INVALID: assert(false); break;
@@ -1823,7 +1837,7 @@ u32 ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Sco
     }
 
     assert(false);
-    return 0;
+    return {};
 }
 
 u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes/*=nullptr*/)
@@ -2186,8 +2200,8 @@ s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* progr
             u32 source_reg = *(u32*)&bytes[ip];
             ip += sizeof(u32);
 
-            assert(fn->register_types.count >= dest_reg);
-            Type* target_type = fn->register_types[dest_reg];
+            assert(fn->registers.count >= dest_reg);
+            Type* target_type = fn->registers[dest_reg].type;
             assert(target_type);
 
             string_builder_append(sb, "  %%%u = BITCAST %%%u <%s>\n", dest_reg, source_reg,
