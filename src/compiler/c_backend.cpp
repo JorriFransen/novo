@@ -318,7 +318,8 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
     string_builder_append(sb, "\n");
 
-    for (s64 bi = 0; bi < func->blocks.count; bi++) {
+    s64 bi = 0;
+    while (bi >= 0 && bi < func->blocks.count) {
         SSA_Block* block = &func->blocks[bi];
 
         if (bi > 0) {
@@ -640,6 +641,8 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                 }
             }
         }
+
+        bi = block->next_index;
     }
 
     string_builder_append(sb, "}\n");
