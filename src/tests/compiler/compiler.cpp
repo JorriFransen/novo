@@ -22,7 +22,7 @@ struct Test_Case
 static Test_Case test_cases[] = {
     { .file_path = "tests/001_assert_false.no", .assert_fail = true },
     { .file_path = "tests/002_return.no" },
-    // { .file_path = "tests/003_call.no" },
+    { .file_path = "tests/003_call.no" },
     // { .file_path = "tests/004_structs.no" },
     // { .file_path = "tests/005_if.no" },
     //

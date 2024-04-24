@@ -1900,7 +1900,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
             String str = atom_string(const_expr->string_literal);
 
             NSTRING_ASSERT_ZERO_TERMINATION(str);
-            u32 str_index = ssa_emit_constant(program, Array_Ref((u8*)str.data, str.length + 1), nullptr);
+            u32 str_index = ssa_emit_constant(program, Array_Ref((u8*)str.data, str.length + 1), inst->builtin_type_cstring, nullptr);
 
             s64 padding = 8 - (program->constant_memory.count % 8);
             if (padding % 8 != 0) {
@@ -1923,7 +1923,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
     if (own_bytes) {
 
         s64 old_count = program->constants.count;
-        result = ssa_emit_constant(program, temp_bytes, const_expr);
+        result = ssa_emit_constant(program, temp_bytes, const_expr->resolved_type, const_expr);
         if (result >= old_count) {
             // Means this was the first occurance and actually emitted
 
@@ -1938,15 +1938,17 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
     return result;
 }
 
-u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, AST_Expression* const_expr)
+u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type, AST_Expression* const_expr)
 {
     u32 result = 0;
+
+    if (const_expr) assert(type == const_expr->resolved_type);
 
     bool match = false;
     for (s64 i = 0; i < program->constants.count; i++) {
         SSA_Constant constant = program->constants[i];
 
-        if (constant.type == const_expr->resolved_type) {
+        if (constant.type == type) {
             if (memcmp(&program->constant_memory[constant.offset], bytes.data, bytes.count) == 0) {
                 match = true;
                 result = i;
@@ -1965,7 +1967,6 @@ u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, AST_Expression*
         u32 offset = program->constant_memory.count;
         result = program->constants.count;
 
-        Type* type = const_expr ? const_expr->resolved_type : nullptr;
         darray_append(&program->constants, { type, offset, const_expr });
 
         darray_append_array(&program->constant_memory, Array_Ref<u8>(bytes));

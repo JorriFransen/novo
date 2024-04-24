@@ -70,8 +70,7 @@ typedef u64 p_uint_t;
 
         SSA_Constant const_info = inst->ssa_program->constants[i];
 
-        if (const_info.type == nullptr) {
-            assert(const_info.from_expression == nullptr);
+        if (const_info.from_expression == nullptr) {
             continue;
         }
 
@@ -345,10 +344,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 left_reg = FETCH32();
                     u32 right_reg = FETCH32();
 
-                    string_builder_append(sb, "    ");
-                    string_format(reg_name, "r%u", result_reg);
-                    c_backend_emit_c_type(inst, sb, func->register_types[result_reg], reg_name);
-                    string_builder_append(sb, " = r%u + r%u;\n", left_reg, right_reg);
+                    string_builder_append(sb, "    r%u = r%u + r%u;\n", result_reg, left_reg, right_reg);
                     break;
                 }
 
@@ -445,9 +441,6 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     u32 param_index = FETCH32();
 
-                    string_builder_append(sb, "    ");
-                    string_format(reg_name, "r%u", result_reg);
-                    Type *type = nullptr;
 
                     bool sret = false;
                     if (func->sret) {
@@ -455,7 +448,6 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         if (param_index == 0) {
 
                             // Loading return value
-                            type = pointer_type_get(inst, func->type->function.return_type);
                             sret = true;
 
                         } else {
@@ -463,17 +455,12 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         }
                     }
 
-                    if (!sret) {
-                        type = func->type->function.param_types[param_index];
-                    }
-
-                    c_backend_emit_c_type(inst, sb, type, reg_name);
-                    string_builder_append(sb, " = ");
+                    string_builder_append(sb, "    r%u = ", result_reg);
 
                     if (sret) {
                         string_builder_append(sb, "r0;\n");
                     } else {
-                        string_builder_append(sb, "a%u;\n", param_index);
+                        string_builder_append(sb, "p%u;\n", param_index);
                     }
                     break;
                 }

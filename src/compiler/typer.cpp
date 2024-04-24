@@ -719,7 +719,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
                 AST_Expression* arg_expr = expr->call.args[i];
 
-                if (param_type && !valid_implicit_type_conversion(inst, arg_expr->resolved_type, param_type)) {
+                if (param_type && arg_expr->resolved_type != param_type && !valid_implicit_type_conversion(inst, arg_expr->resolved_type, param_type)) {
 
                     Source_Pos pos = source_pos(inst, arg_expr);
 

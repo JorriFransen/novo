@@ -30,8 +30,10 @@ Vec2 :: struct {
 
 main :: () -> s64 {
 
-    if 1 != 1 {
-        printf("no equality!\n".data);
+    if (false) {
+        printf("true\n".data);
+    } else {
+        printf("false\n".data);
     }
 
     return 0;
