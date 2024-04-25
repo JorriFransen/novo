@@ -184,11 +184,11 @@ u32 ssa_block_create(SSA_Builder* builder, const char* name)
     return ssa_block_create(builder->program, function, name);
 }
 
-SSA_Register_Handle ssa_register_create(SSA_Builder* builder, Type* type)
+SSA_Register_Handle ssa_register_create(SSA_Builder* builder, Type* type, bool alloc_reg/*= false*/)
 {
     SSA_Function* function = &builder->program->functions[builder->function_index];
     assert(function->register_count != U32_MAX);
-    darray_append(&function->registers, { type, false });
+    darray_append(&function->registers, { type, false, alloc_reg });
     return { function->register_count++ };
 }
 
@@ -1439,7 +1439,7 @@ SSA_Register_Handle ssa_emit_alloc(SSA_Builder* builder, Type* type)
     assert(type->bit_size % 8 == 0);
     s64 byte_size = type->bit_size / 8;
 
-    SSA_Register_Handle alloc_reg = ssa_register_create(builder, type);
+    SSA_Register_Handle alloc_reg = ssa_register_create(builder, type, true);
     ssa_emit_op(builder, SSA_OP_ALLOC);
     ssa_emit_reg(builder, alloc_reg);
     ssa_emit_64(builder, byte_size);

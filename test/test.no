@@ -30,16 +30,13 @@ Vec2 :: struct {
 
 vec :: (x: s64, y: s64) -> Vec2 { return { x, y }; }
 
+
 main :: () -> s64 {
 
     v := vec(1, 2);
+    printf("{ %lld, %lld }\n".data, v.x, v.y);
 
-    if (v.x == 1) {
-        printf("x == 1\n".data);
-    } else {
-        printf("x != 1\n".data);
-    }
-    return v.y - (v.x * 2);
+    return 0;
 }
 
 

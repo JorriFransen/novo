@@ -99,7 +99,10 @@ struct SSA_Alloc
 struct SSA_Register
 {
     Type* type;
+
+    // TODO: flags
     bool used;
+    bool alloc_reg;
 };
 
 struct SSA_Function
@@ -192,7 +195,7 @@ NAPI void ssa_global_variable_init(SSA_Global* glob, Type* type, Atom name, u32 
 
 NAPI u32 ssa_block_create(SSA_Program* program, SSA_Function* function, const char* name);
 NAPI u32 ssa_block_create(SSA_Builder* builder, const char* name);
-NAPI SSA_Register_Handle ssa_register_create(SSA_Builder* builder, Type* type);
+NAPI SSA_Register_Handle ssa_register_create(SSA_Builder* builder, Type* type, bool alloc_reg = false);
 
 NAPI bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* decl);
 NAPI bool ssa_emit_global_variable(Instance* inst, SSA_Program* program, AST_Declaration* decl);

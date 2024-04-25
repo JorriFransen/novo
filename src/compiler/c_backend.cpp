@@ -326,8 +326,8 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
         string_builder_append(sb, "    ");
         string_format(reg_name, "r%u", i);
 
-        // Only allocs have aggregate types.
-        if (register_type->kind == Type_Kind::STRUCT) {
+        if (register_type->kind == Type_Kind::STRUCT ||
+            func->registers[i].alloc_reg) {
             register_type = pointer_type_get(inst, register_type);
         }
 
@@ -458,7 +458,6 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     u32 param_index = FETCH32();
 
-
                     bool sret = false;
                     if (func->sret) {
 
@@ -474,7 +473,11 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     }
 
                     if (!sret) {
-                        string_builder_append(sb, "    r%u = p%u;", result_reg, param_index);
+                        string_builder_append(sb, "    r%u = ", result_reg);
+                        if (func->type->function.param_types[param_index]->kind == Type_Kind::STRUCT) {
+                            string_builder_append(sb, "&");
+                        }
+                        string_builder_append(sb, "p%u;", param_index);
                     } else {
                         no_op = true;
                     }
@@ -570,7 +573,12 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         if (i > 0) string_builder_append(sb, ", ");
 
                         u32 arg_reg = stack_peek(arg_stack, arg_offset--);
-                        string_builder_append(sb, "r%u", arg_reg);
+                        Type* arg_type = func->registers[arg_reg].type;
+                        if (arg_type->kind == Type_Kind::STRUCT) {
+                            string_builder_append(sb, "*(r%u)", arg_reg);
+                        } else {
+                            string_builder_append(sb, "r%u", arg_reg);
+                        }
                     }
 
                     string_builder_append(sb, ");");
@@ -617,7 +625,15 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                         u32 arg_reg = stack_peek(arg_stack, arg_offset--);
 
-                        if (callee->type->function.param_types[i] == inst->builtin_type_cstring) {
+                        Type* arg_type = nullptr;
+                        if ((callee->type->flags & TYPE_FLAG_FOREIGN_VARARG) && i >= callee->type->function.param_types.count) {
+                            arg_type = func->registers[arg_reg].type;
+                        } else {
+                            arg_type = callee->type->function.param_types[i];
+                        }
+                        assert(arg_type);
+
+                        if (arg_type == inst->builtin_type_cstring) {
                             string_builder_append(sb, "(const char*) ");
                         }
                         string_builder_append(sb, "r%u", arg_reg);
