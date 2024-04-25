@@ -192,7 +192,10 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
 
     switch (type->kind) {
         case Type_Kind::INVALID: assert(false); break;
-        case Type_Kind::VOID: assert(false); break;
+
+        case Type_Kind::VOID: {
+            return string_format(ta, "void %.*s", (int)name.length, name.data);
+        }
 
         case Type_Kind::INTEGER: {
             return string_format(ta, "%c%lld %.*s", type->integer.sign ? 's' : 'u', type->bit_size, (int)name.length, name.data);
@@ -656,7 +659,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     break;
                 }
 
-                case SSA_OP_RET_VOID: assert(false); break;
+                case SSA_OP_RET_VOID: {
+                    string_builder_append(sb, "    return;");
+                    break;
+                }
 
                 case SSA_OP_JMP_IF: {
                     u32 cond_reg = FETCH32();
