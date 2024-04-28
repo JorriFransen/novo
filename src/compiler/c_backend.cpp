@@ -5,6 +5,8 @@
 #include "token.h"
 #include "type.h"
 
+// #include <bit>
+#include <cassert>
 #include <filesystem.h>
 #include <logger.h>
 #include <platform.h>
@@ -97,6 +99,7 @@ typedef u64 p_uint_t;
 
     Stack<u32> arg_stack;
     stack_init(c_allocator(), &arg_stack);
+
 
     // Function definitions
     string_builder_append(&sb, "/* Function definitions */\n");
@@ -577,7 +580,17 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                         u32 arg_reg = stack_peek(arg_stack, arg_offset--);
                         Type* arg_type = func->registers[arg_reg].type;
-                        if (arg_type->kind == Type_Kind::STRUCT) {
+
+                        Type* param_type = nullptr;
+                        if (i < callee->type->function.param_types.count) {
+                            param_type = callee->type->function.param_types[i];
+                        } else {
+                            param_type = arg_type;
+                        }
+                        assert(param_type);
+
+
+                        if (arg_type->kind == Type_Kind::STRUCT && param_type->kind == Type_Kind::STRUCT) {
                             string_builder_append(sb, "*(r%u)", arg_reg);
                         } else {
                             string_builder_append(sb, "r%u", arg_reg);

@@ -21,8 +21,8 @@ printf :: (format: cstring, ..) -> s32 #foreign;
 // free :: (ptr: *void) -> void #foreign;
 
 
-// ret_x :: (x: s64) -> int { return x; }
-// add :: (a: s64, b: s64) -> s64 { return a + b; }
+ret_x :: (x: s64) -> int { return x; }
+add :: (a: s64, b: s64) -> s64 { return a + b; }
 
 Vec2 :: struct {
     x: s64; y: s64;

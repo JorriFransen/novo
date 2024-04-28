@@ -35,7 +35,7 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/012_nested_struct_compound.no" },
     { .file_path = "tests/013_constant_struct_compound.no" },
     { .file_path = "tests/014_pointers.no" },
-    // { .file_path = "tests/015_struct_pointers.no" },
+    { .file_path = "tests/015_struct_pointers.no" },
     // { .file_path = "tests/016_foreign_functions.no" },
     //
     // { .file_path = "tests/017_trunc.no" },

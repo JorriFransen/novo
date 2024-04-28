@@ -1,13 +1,13 @@
 .cache/
 .vs/
 .vscode/
-.helix/
 
 build*/
 inserted_strings.no
 
 .nvim.lua
 .luarc.json
+.kakrc.kak
 
 c_backend_output.c
 a.out

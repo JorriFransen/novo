@@ -1,6 +1,7 @@
 
 #include <defines.h>
 #include <instance.h>
+#include <string_builder.h>
 
 #include "command_line_args.h"
 
