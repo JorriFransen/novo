@@ -75,10 +75,16 @@ void instance_init(Instance* inst, Options options)
         g_atoms_initialized = true;
     }
 
-    String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
-    log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
+    if (inst->options.exe_dir.length) {
+        assert(fs_is_realpath(inst->options.exe_dir));
+        inst->compiler_exe_dir = fs_realpath(inst->default_allocator, inst->options.exe_dir);
+    } else {
+        String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
+        log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
 
-    inst->compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
+        inst->compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
+    }
+
     assert(fs_is_directory(inst->compiler_exe_dir));
     log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
 

@@ -1,6 +1,8 @@
 
 #include <defines.h>
+#include <filesystem.h>
 #include <nstring.h>
+#include <platform.h>
 
 #include <instance.h>
 #include <options.h>
@@ -59,11 +61,8 @@ static Test_Case test_cases[] = {
     // { .file_path = "tests/031_constant_variables.no", .return_code = 66 },
 };
 
-static bool run_test_case(Test_Case* tc)
+static bool run_test_case(Test_Case* tc, Options options)
 {
-    Options options = default_options();
-    // options.print_ast = false;
-    // options.print_bytecode = true;
     options.input_file = tc->file_path;
 
     Instance inst;
@@ -100,13 +99,28 @@ static bool run_test_case(Test_Case* tc)
 
 int main(int argc, char* argv[]) {
 
+    Options options;
+
+    auto ca = c_allocator();
+
+    String exe_path = platform_exe_path(ca, argv[0]);
+    String exe_dir = fs_dirname(ca, exe_path);
+    String build_dir_ = string_format(ca, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
+    assert(fs_is_directory(build_dir_.data));
+
+    options.exe_dir = fs_realpath(ca, build_dir_);
+
+    free(ca, build_dir_.data);
+    free(ca, exe_dir.data);
+    free(ca, exe_path.data);
+
     s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
     s64 test_success_count = 0;
 
     for (s64 i = 0; i < test_count; i++) {
 
         auto tc = &test_cases[i];
-        bool result = run_test_case(tc);
+        bool result = run_test_case(tc, options);
 
         printf("Running: '%s'... %s\n", tc->file_path, result ? "OK" : "FAIL");
 
