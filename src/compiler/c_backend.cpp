@@ -135,7 +135,7 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     fs_write_entire_file("c_backend_output.c", str);
 
-    Command_Result c_res = platform_run_command(Array_Ref<String_Ref>({"clang", "-std=c99", "-g", "c_backend_output.c"}));
+    Command_Result c_res = platform_run_command(Array_Ref<String_Ref>({"clang", "-std=c99", "-g", "c_backend_output.c", inst->support_lib_s_path }), &inst->temp_allocator);
 
     if (!c_res.success) {
         log_error("C backend errors:\n%s\n", c_res.error_string.data);

@@ -2,6 +2,7 @@
 
 #include "logger.h"
 #include "memory/allocator.h"
+#include "src/compiler/ssa.h"
 #include "string_builder.h"
 
 #include <assert.h>
@@ -64,7 +65,7 @@ String platform_exe_path(Allocator* allocator, const char* argv_0)
     return string_copy(allocator, exe_path, exe_path_length);
 }
 
-Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
+Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
 {
     assert(command_line.count);
 
@@ -259,5 +260,28 @@ String platform_exe_path(Allocator* allocator, const char* argv_0)
 #else // NPLATFORM_LINUX
 static_assert(false, "Unsupported platform")
 #endif // NPLATFORM_LINUX
+
+Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Allocator* debug_allocator) {
+
+    if (debug_allocator) {
+        String_Builder sb;
+        string_builder_init(&sb, debug_allocator);
+
+        string_builder_append(&sb, "Executing external command: '");
+
+        for (s64 i = 0; i < command_line.count; i++) {
+            const char* fmt = i > 0 ? " %.*s" : "%.*s";
+            string_builder_append(&sb, fmt, (int)command_line[i].length, command_line[i].data);
+        }
+
+        string_builder_append(&sb, "'");
+
+        String msg = string_builder_to_string(&sb);
+
+        log_trace("%.*s", (int)msg.length, msg.data);
+    }
+
+    return _platform_run_command_(command_line);
+}
 
 }

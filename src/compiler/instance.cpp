@@ -75,6 +75,52 @@ void instance_init(Instance* inst, Options options)
         g_atoms_initialized = true;
     }
 
+    String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
+    log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
+
+    inst->compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
+    assert(fs_is_directory(inst->compiler_exe_dir));
+    log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
+
+    inst->support_lib_s_path = string_format(inst->default_allocator, "%.*s/libnovo_runtime_support.a",
+                                             (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
+    assert(fs_is_file(inst->support_lib_s_path));
+
+    inst->support_lib_d_path = string_format(inst->default_allocator, "%.*s/libnovo_runtime_support.so",
+                                             (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
+    assert(fs_is_file(inst->support_lib_d_path));
+
+    String current_search_dir = inst->compiler_exe_dir;
+    bool module_dir_found = false;
+    while (!module_dir_found) {
+        String parent_dir = platform_dirname(&inst->temp_allocator, current_search_dir);
+
+#if NPLATFORM_LINUX
+        if (parent_dir.length == 0 || string_equal(parent_dir, "/")) break;
+#elif NPLATFORM_WINDOWS
+        if (parent_dir.length <= 3) break;
+#endif // NPLATFORM_LINUX
+
+        String candidate = string_format(&inst->temp_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "modules", (int)parent_dir.length, parent_dir.data);
+
+        if (fs_is_directory(candidate)) {
+            module_dir_found = true;
+            inst->module_dir = string_copy(inst->default_allocator, candidate);
+            break;
+        }
+
+        current_search_dir = parent_dir;
+    }
+
+    if (!module_dir_found) log_fatal("Unable to find module diretory!");
+    log_trace("Module dir: '%s'", inst->module_dir.data);
+
+    inst->builtin_module_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
+    assert(fs_is_file(inst->builtin_module_path));
+    log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
+
+    inst->builtin_module_loaded = false;
+
     // TODO: Custom allocator
     inst->ssa_program = allocate<SSA_Program>(c_allocator());
     ssa_program_init(inst->ssa_program, c_allocator());
@@ -135,45 +181,6 @@ void instance_init(Instance* inst, Options options)
     auto cstring_decl = ast_builtin_type_decl(inst, inst->builtin_type_cstring, "cstring");
     scope_add_symbol(inst->global_scope, cstring_decl->ident->atom, cstring_decl);
 
-
-    String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
-    log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
-
-    inst->compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
-    assert(fs_is_directory(inst->compiler_exe_dir));
-    log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
-
-
-    String current_search_dir = inst->compiler_exe_dir;
-    bool module_dir_found = false;
-    while (!module_dir_found) {
-        String parent_dir = platform_dirname(&inst->temp_allocator, current_search_dir);
-
-#if NPLATFORM_LINUX
-        if (parent_dir.length == 0 || string_equal(parent_dir, "/")) break;
-#elif NPLATFORM_WINDOWS
-        if (parent_dir.length <= 3) break;
-#endif // NPLATFORM_LINUX
-
-        String candidate = string_format(&inst->temp_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "modules", (int)parent_dir.length, parent_dir.data);
-
-        if (fs_is_directory(candidate)) {
-            module_dir_found = true;
-            inst->module_dir = string_copy(inst->default_allocator, candidate);
-            break;
-        }
-
-        current_search_dir = parent_dir;
-    }
-
-    if (!module_dir_found) log_fatal("Unable to find module diretory!");
-    log_trace("Module dir: '%s'", inst->module_dir.data);
-
-    inst->builtin_module_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
-    assert(fs_is_file(inst->builtin_module_path));
-    log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
-
-    inst->builtin_module_loaded = false;
     inst->type_string = nullptr;
 
     // TODO: Dynamic allocator

@@ -28,7 +28,7 @@ struct Command_Result
     String error_string;
 };
 
-NAPI Command_Result platform_run_command(Array_Ref<String_Ref> command_line);
+NAPI Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Allocator* debug_allocator);
 NAPI void platform_free_command_result(Command_Result *cres);
 
 }

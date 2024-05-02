@@ -60,7 +60,6 @@ compiler_source = [
   'src/compiler/options.cpp', 'src/compiler/options.h',
   'src/compiler/parser.cpp', 'src/compiler/parser.h',
   'src/compiler/resolver.cpp', 'src/compiler/resolver.h',
-  'src/compiler/runtime_support.cpp', 'src/compiler/runtime_support.h',
   'src/compiler/scope.cpp', 'src/compiler/scope.h',
   'src/compiler/source_pos.cpp', 'src/compiler/source_pos.h',
   'src/compiler/ssa.cpp', 'src/compiler/ssa.h',
@@ -88,5 +87,19 @@ driver_source = [
 
 driver_libs = [ common_lib, compiler_lib ]
 driver_exe = executable('novo', sources: driver_source, include_directories: driver_includes, link_with: driver_libs)
+
+
+runtime_support_source = [
+  'src/compiler/runtime_support.cpp', 'src/compiler/runtime_support.h',
+]
+
+
+runtime_support_includes = [
+    include_directories(common_include_dirs, is_system: false),
+]
+
+support_lib_s = static_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes)
+support_lib_d = shared_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes)
+
 
 subdir('src/tests')

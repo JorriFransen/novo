@@ -152,6 +152,8 @@ const String string_format_va_list(Allocator* allocator, const String_Ref fmt, v
 
     assert(written_size <= size && "Written size does not match the expected size");
 
+    buf[size] = '\0';
+
     return string(buf, size);
 }
 

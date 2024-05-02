@@ -1,9 +1,11 @@
 #include "ffi.h"
 
+#include <containers/darray.h>
 #include <dyncall.h>
 #include <dynload.h>
 
 #include "atom.h"
+#include "instance.h"
 
 #include <nstring.h>
 
@@ -17,7 +19,7 @@ struct FFI_Lib
     DLLib* lib;
 };
 
-void ffi_init(FFI* ffi, Allocator* allocator)
+void ffi_init(Instance* inst, FFI* ffi, Allocator* allocator)
 {
     ffi->allocator = allocator;
 
@@ -28,6 +30,8 @@ void ffi_init(FFI* ffi, Allocator* allocator)
     darray_init(allocator, &ffi->libs);
     darray_init(allocator, &ffi->functions);
 
+    ffi_load_library(ffi, inst->support_lib_d_path);
+
 #if NPLATFORM_LINUX
 
     DLLib* this_lib = dlLoadLibrary(nullptr);
@@ -36,15 +40,17 @@ void ffi_init(FFI* ffi, Allocator* allocator)
 
 #elif NPLATFORM_WINDOWS
 
-    String_Ref novo_common_name = "novo_compiler.dll";
-    DLLib* novo_common_lib = dlLoadLibrary(novo_common_name.data);
-    assert(novo_common_lib);
-    darray_append(&ffi->libs, { atom_get(novo_common_name), novo_common_lib });
+    ffi_load_library(ffi, "novo_compiler.dll");
+    // String_Ref novo_common_name = "novo_compiler.dll";
+    // DLLib* novo_common_lib = dlLoadLibrary(novo_common_name.data);
+    // assert(novo_common_lib);
+    // darray_append(&ffi->libs, { atom_get(novo_common_name), novo_common_lib });
 
-    String_Ref msvcrt_name = "msvcrt.dll";
-    DLLib* msvcrt_lib = dlLoadLibrary(msvcrt_name.data);
-    assert(msvcrt_lib);
-    darray_append(&ffi->libs, { atom_get(msvcrt_name), msvcrt_lib });
+    ffi_load_library(ffi, "msvcrt.dll");
+    // String_Ref msvcrt_name = "msvcrt.dll";
+    // DLLib* msvcrt_lib = dlLoadLibrary(msvcrt_name.data);
+    // assert(msvcrt_lib);
+    // darray_append(&ffi->libs, { atom_get(msvcrt_name), msvcrt_lib });
 
 #endif // NPLATFORM_...
 }
@@ -75,6 +81,17 @@ s64 ffi_load_function(FFI* ffi, Atom name)
     }
 
     return -1;
+}
+
+bool ffi_load_library(FFI* ffi, String_Ref name)
+{
+    NSTRING_ASSERT_ZERO_TERMINATION(name);
+
+    DLLib* lib = dlLoadLibrary(name.data);
+    if (!lib) return false;
+
+    darray_append(&ffi->libs, { atom_get(name.data), lib });
+    return true;
 }
 
 }

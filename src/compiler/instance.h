@@ -91,6 +91,8 @@ struct Instance
     Type* builtin_type_cstring;
 
     String compiler_exe_dir;
+    String support_lib_s_path;
+    String support_lib_d_path;
     String module_dir;
 
     String builtin_module_path;
