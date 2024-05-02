@@ -201,7 +201,11 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
         }
 
         case Type_Kind::INTEGER: {
-            return string_format(ta, "%c%lld %.*s", type->integer.sign ? 's' : 'u', type->bit_size, (int)name.length, name.data);
+            return string_format(ta,
+                                 name.length ? "%c%lld %.*s" : "%c%lld%.*s",
+                                 type->integer.sign ? 's' : 'u',
+                                 type->bit_size,
+                                 (int)name.length, name.data);
         }
 
         case Type_Kind::BOOLEAN: {
@@ -402,10 +406,47 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                 CMP_BINOP(LTEQ);
                 CMP_BINOP(GTEQ);
 
-                case SSA_OP_BITCAST: assert(false); break;
-                case SSA_OP_TRUNC: assert(false); break;
-                case SSA_OP_SEXT: assert(false); break;
-                case SSA_OP_ZEXT: assert(false); break;
+                case SSA_OP_BITCAST: {
+                    // u32 result_reg = FETCH32();
+                    // u32 operand_reg = FETCH32();
+                    assert(false);
+                    break;
+                }
+
+                case SSA_OP_TRUNC: {
+                    /*u8 size =*/ FETCH();
+                    u32 result_reg = FETCH32();
+                    u32 operand_reg = FETCH32();
+
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    c_backend_emit_c_type(inst, sb, func->registers[result_reg].type, "");
+                    string_builder_append(sb, ")r%u;", operand_reg);
+                    break;
+                }
+
+                case SSA_OP_SEXT: {
+                    /*u8 dest_size =*/ FETCH();
+                    /*u8 src_size =*/ FETCH();
+                    u32 result_reg = FETCH32();
+                    u32 operand_reg = FETCH32();
+
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    c_backend_emit_c_type(inst, sb, func->registers[result_reg].type, "");
+                    string_builder_append(sb, ")r%u;", operand_reg);
+                    break;
+                }
+
+                case SSA_OP_ZEXT: {
+                    /*u8 dest_size =*/ FETCH();
+                    u32 result_reg = FETCH32();
+                    u32 operand_reg = FETCH32();
+
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    c_backend_emit_c_type(inst, sb, func->registers[result_reg].type, "");
+                    string_builder_append(sb, ")r%u;", operand_reg);
+                    break;
+                }
+
 
                 case SSA_OP_ALLOC: {
                     u32 result_reg = FETCH32();

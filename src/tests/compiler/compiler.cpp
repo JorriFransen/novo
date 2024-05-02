@@ -38,12 +38,12 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/013_constant_struct_compound.no" },
     { .file_path = "tests/014_pointers.no" },
     { .file_path = "tests/015_struct_pointers.no" },
-    // { .file_path = "tests/016_foreign_functions.no" },
-    //
-    // { .file_path = "tests/017_trunc.no" },
-    // { .file_path = "tests/018_sext.no" },
-    // { .file_path = "tests/019_zext.no" },
-    //
+    { .file_path = "tests/016_foreign_functions.no" },
+
+    { .file_path = "tests/017_trunc.no" },
+    { .file_path = "tests/018_sext.no" },
+    { .file_path = "tests/019_zext.no" },
+
     // { .file_path = "tests/020_pointer_math.no" },
     // { .file_path = "tests/021_struct_align.no" },
     //
@@ -120,9 +120,14 @@ int main(int argc, char* argv[]) {
     for (s64 i = 0; i < test_count; i++) {
 
         auto tc = &test_cases[i];
+
+        printf("Running: '%s'...", tc->file_path);
+        fflush(stdout);
+
         bool result = run_test_case(tc, options);
 
-        printf("Running: '%s'... %s\n", tc->file_path, result ? "OK" : "FAIL");
+        printf("%s\n", result ? "OK" : "FAIL");
+        fflush(stdout);
 
         if (result) test_success_count++;
     }
