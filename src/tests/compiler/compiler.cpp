@@ -62,7 +62,6 @@ static Test_Case test_cases[] = {
 static bool run_test_case(Test_Case* tc)
 {
     Options options = default_options();
-    options.install_dir = "../../../";
     // options.print_ast = false;
     // options.print_bytecode = true;
     options.input_file = tc->file_path;

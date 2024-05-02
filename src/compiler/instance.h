@@ -90,7 +90,7 @@ struct Instance
     Type* builtin_type_cchar;
     Type* builtin_type_cstring;
 
-    String compiler_install_dir;
+    String compiler_exe_dir;
     String module_dir;
 
     String builtin_module_path;

@@ -20,7 +20,6 @@ int main(int argc, char* argv[])
 {
     Instance instance;
     Options options = default_options();
-    options.install_dir = "../../../";
     instance_init(&instance, options);
 
     Imported_File imported_file = {

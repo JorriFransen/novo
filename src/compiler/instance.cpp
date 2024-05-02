@@ -4,6 +4,7 @@
 #include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
+#include <nstring.h>
 #include <platform.h>
 
 #include "ast.h"
@@ -134,33 +135,41 @@ void instance_init(Instance* inst, Options options)
     auto cstring_decl = ast_builtin_type_decl(inst, inst->builtin_type_cstring, "cstring");
     scope_add_symbol(inst->global_scope, cstring_decl->ident->atom, cstring_decl);
 
-    if (fs_is_directory(options.install_dir)) {
 
-        assert(fs_is_directory(options.install_dir));
-        if (fs_is_realpath(options.install_dir)) {
-            inst->compiler_install_dir = string_copy(inst->default_allocator, options.install_dir);
-        } else {
-            inst->compiler_install_dir = fs_realpath(inst->default_allocator, options.install_dir);
+    String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
+    log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
+
+    inst->compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
+    assert(fs_is_directory(inst->compiler_exe_dir));
+    log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
+
+
+    String current_search_dir = inst->compiler_exe_dir;
+    bool module_dir_found = false;
+    while (!module_dir_found) {
+        String parent_dir = platform_dirname(&inst->temp_allocator, current_search_dir);
+
+#if NPLATFORM_LINUX
+        if (parent_dir.length == 0 || string_equal(parent_dir, "/")) break;
+#elif NPLATFORM_WINDOWS
+        if (parent_dir.length <= 3) break;
+#endif // NPLATFORM_LINUX
+
+        String candidate = string_format(&inst->temp_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "modules", (int)parent_dir.length, parent_dir.data);
+
+        if (fs_is_directory(candidate)) {
+            module_dir_found = true;
+            inst->module_dir = string_copy(inst->default_allocator, candidate);
+            break;
         }
 
-    } else {
-        String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
-        log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
-
-        String compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
-        assert(fs_is_directory(compiler_exe_dir));
-        log_trace("Compiler exe dir: '%s'", compiler_exe_dir.data);
-
-        inst->compiler_install_dir = platform_dirname(inst->default_allocator, compiler_exe_dir);
-        assert(fs_is_directory(inst->compiler_install_dir));
+        current_search_dir = parent_dir;
     }
-    log_trace("Compiler install dir: '%s'", inst->compiler_install_dir.data);
 
-    inst->module_dir = string_format(inst->default_allocator, "%s" NPLATFORM_PATH_SEPARATOR "%s", inst->compiler_install_dir.data, "modules");
-    assert(fs_is_directory(inst->module_dir));
+    if (!module_dir_found) log_fatal("Unable to find module diretory!");
     log_trace("Module dir: '%s'", inst->module_dir.data);
 
-    inst->builtin_module_path = string_format(inst->default_allocator, "%s" NPLATFORM_PATH_SEPARATOR "%s", inst->module_dir.data, "builtin.no");
+    inst->builtin_module_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
     assert(fs_is_file(inst->builtin_module_path));
     log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
 
