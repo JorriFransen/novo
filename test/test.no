@@ -41,7 +41,7 @@
 //  }
 
 
-#run main();
+//  #run main();
 
 putchar :: (char: s32) -> s32 #foreign;
 foreign_add :: (a: s64, b: s64) -> s32 #foreign;
