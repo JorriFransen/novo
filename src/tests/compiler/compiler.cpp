@@ -45,9 +45,9 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/019_zext.no" },
 
     { .file_path = "tests/020_pointer_math.no" },
-    // { .file_path = "tests/021_struct_align.no" },
-    //
-    // { .file_path = "tests/022_run_expression_trivial.no" },
+    { .file_path = "tests/021_struct_align.no" },
+
+    { .file_path = "tests/022_run_expression_trivial.no" },
     // { .file_path = "tests/023_run_expression_trivial_multiple.no" },
     // { .file_path = "tests/024_run_expression_aggregate.no" },
     // { .file_path = "tests/025_run_expression_aggregate_nested.no" },

@@ -113,6 +113,7 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
     if (sret) func->param_count++;
 
     func->foreign = foreign;
+    func->run_wrapper = false;
     func->source_pos = source_pos;
 }
 
@@ -366,6 +367,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
     SSA_Function local_func;
     s64 fn_index = program->functions.count;
     ssa_function_init(inst, program, &local_func, wrapper_fn_type, name, false, pos);
+    local_func.run_wrapper = true;
 
     darray_append(&program->functions, local_func);
     SSA_Function* func = &program->functions[fn_index];

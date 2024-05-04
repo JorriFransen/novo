@@ -121,8 +121,10 @@ struct SSA_Function
 
     DArray<SSA_Register> registers;
 
+    // TODO: flags
     bool sret;
     bool foreign;
+    bool run_wrapper;
 
     u32 ffi_index;
     Source_Pos source_pos;

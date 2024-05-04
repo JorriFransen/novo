@@ -92,7 +92,11 @@ typedef u64 p_uint_t;
     string_builder_append(&sb, "/* Function declarations */\n");
     for (s64 i = 0; i < program->functions.count; i++) {
 
-        c_backend_emit_function_decl(inst, &sb, &program->functions[i]);
+        SSA_Function* func = &program->functions[i];
+
+        if (func->run_wrapper) continue;
+
+        c_backend_emit_function_decl(inst, &sb, func);
         string_builder_append(&sb, ";\n");
     }
     string_builder_append(&sb, "/* End function declarations */\n\n");
@@ -111,7 +115,7 @@ typedef u64 p_uint_t;
 
         SSA_Function *func = &program->functions[i];
 
-        if (func->foreign) continue;
+        if (func->foreign || func->run_wrapper) continue;
 
         c_backend_emit_function_decl(inst, &sb, func);
         string_builder_append(&sb, "\n");
