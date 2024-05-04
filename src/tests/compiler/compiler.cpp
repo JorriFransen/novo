@@ -44,7 +44,7 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/018_sext.no" },
     { .file_path = "tests/019_zext.no" },
 
-    // { .file_path = "tests/020_pointer_math.no" },
+    { .file_path = "tests/020_pointer_math.no" },
     // { .file_path = "tests/021_struct_align.no" },
     //
     // { .file_path = "tests/022_run_expression_trivial.no" },

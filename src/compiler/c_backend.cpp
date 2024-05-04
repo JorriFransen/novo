@@ -9,6 +9,7 @@
 #include <cassert>
 #include <filesystem.h>
 #include <logger.h>
+#include <nstring.h>
 #include <platform.h>
 #include <string_builder.h>
 
@@ -39,7 +40,6 @@ typedef u64 p_uint_t;
 
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 
@@ -135,7 +135,9 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     fs_write_entire_file("c_backend_output.c", str);
 
-    Command_Result c_res = platform_run_command(Array_Ref<String_Ref>({"clang", "-std=c99", "-g", "c_backend_output.c", inst->support_lib_s_path }), &inst->temp_allocator);
+    Array_Ref<String_Ref> commands({"clang", "-std=c99", "-g", "c_backend_output.c", inst->support_lib_s_path, "-Wno-incompatible-library-redeclaration" });
+
+    Command_Result c_res = platform_run_command(commands, &inst->temp_allocator);
 
     if (!c_res.success) {
         log_error("C backend errors:\n%s\n", c_res.error_string.data);
@@ -216,7 +218,8 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
             if (type == inst->builtin_type_cstring) {
                 return string_format(ta, "const char (*%.*s)", (int)name.length, name.data);
             } else {
-                return c_backend_emit_c_type(inst, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
+                if (name.length) return c_backend_emit_c_type(inst, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
+                else             return c_backend_emit_c_type(inst, type->pointer.base, "*");
             }
         }
 
@@ -407,9 +410,15 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                 CMP_BINOP(GTEQ);
 
                 case SSA_OP_BITCAST: {
-                    // u32 result_reg = FETCH32();
-                    // u32 operand_reg = FETCH32();
-                    assert(false);
+                    u32 result_reg = FETCH32();
+                    u32 operand_reg = FETCH32();
+
+                    Type* target_type = func->registers[result_reg].type;
+                    assert(target_type->kind == Type_Kind::POINTER);
+
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    c_backend_emit_c_type(inst, sb, target_type, "");
+                    string_builder_append(sb, ")r%u;", operand_reg);
                     break;
                 }
 
@@ -564,8 +573,39 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     break;
                 }
 
-                case SSA_OP_POINTER_OFFSET: assert(false); break;
-                case SSA_OP_POINTER_DIFF: assert(false); break;
+                case SSA_OP_POINTER_OFFSET: {
+                    u64 size = FETCH64();
+                    u32 result_reg = FETCH32();
+                    u32 base_ptr_reg = FETCH32();
+                    u32 index_reg = FETCH32();
+
+                    Type* base_ptr_type = func->registers[base_ptr_reg].type;
+                    assert(base_ptr_type->kind == Type_Kind::POINTER);
+                    Type* base_pointee_type = base_ptr_type->pointer.base;
+                    assert(base_pointee_type->bit_size / 8 == size);
+
+                    assert(func->registers[result_reg].type == base_ptr_type);
+
+                    string_builder_append(sb, "    r%u = r%u + r%u;", result_reg, base_ptr_reg, index_reg);
+
+                    break;
+                }
+
+                case SSA_OP_POINTER_DIFF: {
+                    u64 size = FETCH64();
+                    u32 result_reg = FETCH32();
+                    u32 left_reg = FETCH32();
+                    u32 right_reg = FETCH32();
+
+                    Type* pointer_type = func->registers[left_reg].type;
+                    assert(pointer_type->kind == Type_Kind::POINTER);
+
+                    assert(pointer_type == func->registers[right_reg].type);
+                    assert(pointer_type->pointer.base->bit_size / 8 == size);
+
+                    string_builder_append(sb, "    r%u = r%u - r%u;", result_reg, left_reg, right_reg);
+                    break;
+                }
 
                 case SSA_OP_PUSH: {
                     no_print = true;

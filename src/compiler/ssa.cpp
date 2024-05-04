@@ -585,8 +585,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                 assert(rvalue_expr->resolved_type->kind == Type_Kind::INTEGER);
 
                 if (op == '-') {
-                    SSA_Register_Handle zero_reg = ssa_emit_load_immediate(builder, stmt->arithmetic_assignment.lvalue->resolved_type, 0);
-                    SSA_Register_Handle new_right = ssa_register_create(builder, lvalue_expr->resolved_type);
+                    SSA_Register_Handle zero_reg = ssa_emit_load_immediate(builder, rvalue_expr->resolved_type, 0);
+                    SSA_Register_Handle new_right = ssa_register_create(builder, rvalue_expr->resolved_type);
 
                     // TODO:  Negate op?
                     ssa_emit_op(builder, SSA_OP_SUB);
@@ -1135,7 +1135,7 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                     if (expr->binary.op == '-') {
 
                         SSA_Register_Handle zero_reg = ssa_emit_load_immediate(builder, expr->binary.rhs->resolved_type, 0);
-                        SSA_Register_Handle new_right = ssa_register_create(builder, expr->resolved_type);
+                        SSA_Register_Handle new_right = ssa_register_create(builder, expr->binary.rhs->resolved_type);
 
                         // TODO:  Negate op?
                         ssa_emit_op(builder, SSA_OP_SUB);
