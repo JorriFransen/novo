@@ -88,6 +88,18 @@ typedef u64 p_uint_t;
     }
     string_builder_append(&sb, "/* End constants*/\n\n");
 
+    // Globals
+    string_builder_append(&sb, "/* Global declarations */\n");
+    for (s64 i = 0; i < inst->ssa_program->globals.count; i++) {
+        SSA_Global* global = &inst->ssa_program->globals[i];
+
+        char cname[32];
+        string_format(cname, "g%u", i);
+        c_backend_emit_c_type(inst, &sb, global->type, cname);
+        string_builder_append(&sb, " = c%u;\n", inst->ssa_program->constants[global->initializer_constant_index].offset);
+    }
+    string_builder_append(&sb, "/* End global declarations */\n\n");
+
     // Function declarations
     string_builder_append(&sb, "/* Function declarations */\n");
     for (s64 i = 0; i < program->functions.count; i++) {
@@ -472,7 +484,13 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     break;
                 }
 
-                case SSA_OP_GLOB_PTR: assert(false); break;
+                case SSA_OP_GLOB_PTR: {
+                    u32 result_reg = FETCH32();
+                    u32 glob_idx = FETCH32();
+
+                    string_builder_append(sb, "    r%u = &(g%u);", result_reg, glob_idx);
+                    break;
+                }
 
                 case SSA_OP_MEMCPY: {
                     u32 dest_ptr_reg = FETCH32();

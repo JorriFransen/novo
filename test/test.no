@@ -43,44 +43,23 @@ printf :: (format: cstring, ..) -> s32 #foreign;
 
 //  #run main();
 
-//  putchar :: (char: s32) -> s32 #foreign;
-//  foreign_add :: (a: s64, b: s64) -> s32 #foreign;
+putchar :: (char: s32) -> s32 #foreign;
+foreign_add :: (a: s64, b: s64) -> s32 #foreign;
 
-//  main :: () -> s64 {
-
-//      c : s32 = 'H';
-
-
-//      c = putchar(c);
-//      c2 := putchar('I');
-//      putchar('!');
-//      putchar('\n');
-
-//      assert(c + c2 + foreign_add(1, 2) == 148);
-
-//      return 0;
-//  }
-
-Vec2 :: struct { x: s64; y: s64; }
-
-//  ret_v :: () -> Vec2 {
-//      return { 11, 22 };
-//  }
-
-add :: (x: s64, y: s64) -> s64 { return x + y; }
-
-make_v :: (x: s64, y: s64) -> Vec2 {
-    return { x, y };
-}
-
-ret_str :: () -> string {
-    return "This is a string literal...";
-}
+glob_1 := 1;
+glob_2 : u32 = 2;
 
 main :: () -> s64 {
 
-    str : string = "Hello, Novo!\n";
-    printf(str.data);
+    c : s32 = 'H';
+
+
+    c = putchar(c);
+    c2 := putchar('I');
+    putchar('!');
+    putchar('\n');
+
+    assert(c + c2 + foreign_add(glob_1, cast(s64, glob_2)) == 148);
 
     return 0;
 }
