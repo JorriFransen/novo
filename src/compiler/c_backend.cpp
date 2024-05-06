@@ -315,11 +315,15 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     assert(fn_index < inst->ssa_program->functions.count);
     SSA_Function* func = &inst->ssa_program->functions[fn_index];
 
-    s64 sret_double_index = -1;
-
     string_builder_append(sb, "{\n");
 
     char reg_name[32];
+
+    if (func->sret) {
+        string_builder_append(sb, "    ");
+        c_backend_emit_c_type(inst, sb, func->type->function.return_type, "retval");
+        string_builder_append(sb, " = {};\n");
+    }
 
     for (s64 i = 0; i < func->allocs.count; i++) {
         string_builder_append(sb, "    ");
@@ -332,7 +336,6 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     }
 
     s64 register_count = func->registers.count;
-    if (func->sret) register_count--; // Used in bytecode to copy struct back to caller, not used in c backend
 
     for (s64 i = 0; i < register_count; i++) {
 
@@ -343,8 +346,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
         string_builder_append(sb, "    ");
         string_format(reg_name, "r%u", i);
 
-        if (register_type->kind == Type_Kind::STRUCT ||
-            func->registers[i].alloc_reg) {
+        if (register_type->kind == Type_Kind::STRUCT || func->registers[i].alloc_reg) {
             register_type = pointer_type_get(inst, register_type);
         }
 
@@ -477,14 +479,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 source_ptr_reg = FETCH32();
                     u64 byte_count = FETCH64();
 
-                    if (dest_ptr_reg != sret_double_index) {
-                        string_format(reg_name, "r%u", dest_ptr_reg);
-                        string_builder_append(sb, "    memcpy(%s, ", reg_name);
-                        string_format(reg_name, "r%u", source_ptr_reg);
-                        string_builder_append(sb, "%s, %llu);", reg_name, byte_count);
-                    } else {
-                        no_op = true;
-                    }
+                    string_format(reg_name, "r%u", dest_ptr_reg);
+                    string_builder_append(sb, "    memcpy(%s, ", reg_name);
+                    string_format(reg_name, "r%u", source_ptr_reg);
+                    string_builder_append(sb, "%s, %llu);", reg_name, byte_count);
                     break;
                 }
 
@@ -520,26 +518,23 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
                     bool sret = false;
                     if (func->sret) {
-
                         if (param_index == 0) {
-
                             // Loading return value
                             sret = true;
-                            sret_double_index = result_reg;
-
                         } else {
+                            // Skip return value
                             param_index--;
                         }
                     }
 
-                    if (!sret) {
-                        string_builder_append(sb, "    r%u = ", result_reg);
+                    string_builder_append(sb, "    r%u = ", result_reg);
+                    if (sret) {
+                        string_builder_append(sb, "&retval;");
+                    } else {
                         if (func->type->function.param_types[param_index]->kind == Type_Kind::STRUCT) {
                             string_builder_append(sb, "&");
                         }
                         string_builder_append(sb, "p%u;", param_index);
-                    } else {
-                        no_op = true;
                     }
 
                     break;
@@ -749,8 +744,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 value_reg = FETCH32();
 
                     if (func->sret) {
-                        assert(value_reg == sret_double_index);
-                        string_builder_append(sb, "    return alloc_r0;");
+                        string_builder_append(sb, "    return *r%u;", value_reg);
                     } else {
                         string_builder_append(sb, "    return r%u;", value_reg);
                     }
