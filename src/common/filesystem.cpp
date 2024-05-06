@@ -83,7 +83,7 @@ bool fs_write_entire_file(const String_Ref path, const String_Ref content)
     u64 written;
     bool write_result = fs_write(&file, content.length, (u8*)content.data, &written);
     assert(write_result);
-    assert(written == content.length);
+    assert(written == (u64)content.length);
 
     fs_close(&file);
 
