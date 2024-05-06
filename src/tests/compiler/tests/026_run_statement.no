@@ -1,7 +1,7 @@
 
 #run msg(1);
 
-printf :: (format: *u8, ..) -> s32 #foreign;
+printf :: (format: cstring, ..) -> s32 #foreign;
 
 main :: () -> int {
 

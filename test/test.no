@@ -1,5 +1,3 @@
-// TODO:
-
 //  - // AST_DECL_FLAG_STORAGE_REQUIRED is only used for arguments/parameters?
 
 //  - Constant variables (aggregates, dissallow modification...)
@@ -18,25 +16,50 @@
 // putchar :: (char: s32) -> s32 #foreign;
 // puts :: (str: *u8) -> s32 #foreign;
 // foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-// printf :: (format: *u8, ..) -> s32 #foreign;
+printf :: (format: cstring, ..) -> s32 #foreign;
 // malloc :: (size: s64) -> *void #foreign;
-// free :: (ptr: *void) -> void #foreign;
+// free :: (ptr: *void) -> void #foreign
 
-Vec2 :: struct {
-    x: s64;
-    y: s64;
-}
 
-make_vec :: (x: s64, y: s64) -> Vec2 {
-    return { x, y };
-}
+//  ret_x :: (x: s64) -> int { return x; }
+//  add :: (a: s64, b: s64) -> s64 { return a + b; }
+
+//  Vec2 :: struct {
+//      x: s64; y: s64;
+//  }
+
+//  vec :: (x: s64, y: s64) -> Vec2 { return { x, y }; }
+
+//  main :: () -> s64 {
+
+//      x := 0;
+//      x += 1;
+//      v := vec(1, 2);
+//      printf("{ %lld, %lld }\n".data, v.x, v.y);
+
+//      return 0;
+//  }
+
+
+//  #run main();
+
+putchar :: (char: s32) -> s32 #foreign;
+foreign_add :: (a: s64, b: s64) -> s32 #foreign;
+
+glob_1 := 1;
+glob_2 : u32 = 2;
 
 main :: () -> s64 {
 
-    p := make_vec(1, 2);
+    c : s32 = 'H';
+
+
+    c = putchar(c);
+    c2 := putchar('I');
+    putchar('!');
+    putchar('\n');
+
+    assert(c + c2 + foreign_add(glob_1, cast(s64, glob_2)) == 148);
+
     return 0;
 }
-
-
-// #run main();
-

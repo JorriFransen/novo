@@ -20,7 +20,14 @@ enum Token_Kind : u32
     TOK_LPAREN = '(', // 40
     TOK_RPAREN = ')', // 41
     TOK_STAR   = '*', // 42
+    TOK_MUL    = TOK_STAR,
+    TOK_ADD    = '+', // 43
+    TOK_SUB    = '-', // 45
     TOK_DOT    = '.', // 46
+    TOK_FSLASH = '/', // 47
+    TOK_DIV    = TOK_FSLASH,
+    TOK_LT     = '<', // 60
+    TOK_GT     = '>', // 62
     TOK_LBRACK = '[', // 91
     TOK_RBRACK = ']', // 93
 

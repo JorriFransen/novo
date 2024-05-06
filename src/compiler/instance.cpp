@@ -4,11 +4,13 @@
 #include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
+#include <nstring.h>
 #include <platform.h>
 
 #include "ast.h"
 #include "ast_print.h"
 #include "atom.h"
+#include "backend.h"
 #include "keywords.h"
 #include "parser.h"
 #include "resolver.h"
@@ -63,6 +65,7 @@ void instance_init(Instance* inst, Options options)
     }
 
     darray_init(&inst->ast_allocator, &inst->function_types);
+    darray_init(&inst->ast_allocator, &inst->struct_types);
 
     inst->fatal_error = false;
 
@@ -71,6 +74,58 @@ void instance_init(Instance* inst, Options options)
         initialize_keywords();
         g_atoms_initialized = true;
     }
+
+    if (inst->options.exe_dir.length) {
+        assert(fs_is_realpath(inst->options.exe_dir));
+        inst->compiler_exe_dir = fs_realpath(inst->default_allocator, inst->options.exe_dir);
+    } else {
+        String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
+        log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
+
+        inst->compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
+    }
+
+    assert(fs_is_directory(inst->compiler_exe_dir));
+    log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
+
+    inst->support_lib_s_path = string_format(inst->default_allocator, "%.*s/libnovo_runtime_support.a",
+                                             (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
+    assert(fs_is_file(inst->support_lib_s_path));
+
+    inst->support_lib_d_path = string_format(inst->default_allocator, "%.*s/libnovo_runtime_support.so",
+                                             (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
+    assert(fs_is_file(inst->support_lib_d_path));
+
+    String current_search_dir = inst->compiler_exe_dir;
+    bool module_dir_found = false;
+    while (!module_dir_found) {
+        String parent_dir = platform_dirname(&inst->temp_allocator, current_search_dir);
+
+#if NPLATFORM_LINUX
+        if (parent_dir.length == 0 || string_equal(parent_dir, "/")) break;
+#elif NPLATFORM_WINDOWS
+        if (parent_dir.length <= 3) break;
+#endif // NPLATFORM_LINUX
+
+        String candidate = string_format(&inst->temp_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "modules", (int)parent_dir.length, parent_dir.data);
+
+        if (fs_is_directory(candidate)) {
+            module_dir_found = true;
+            inst->module_dir = string_copy(inst->default_allocator, candidate);
+            break;
+        }
+
+        current_search_dir = parent_dir;
+    }
+
+    if (!module_dir_found) log_fatal("Unable to find module diretory!");
+    log_trace("Module dir: '%s'", inst->module_dir.data);
+
+    inst->builtin_module_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
+    assert(fs_is_file(inst->builtin_module_path));
+    log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
+
+    inst->builtin_module_loaded = false;
 
     // TODO: Custom allocator
     inst->ssa_program = allocate<SSA_Program>(c_allocator());
@@ -126,37 +181,12 @@ void instance_init(Instance* inst, Options options)
     auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
 
-    if (fs_is_directory(options.install_dir)) {
+    inst->builtin_type_cchar = integer_type_new(inst, false, 8);
 
-        assert(fs_is_directory(options.install_dir));
-        if (fs_is_realpath(options.install_dir)) {
-            inst->compiler_install_dir = string_copy(inst->default_allocator, options.install_dir);
-        } else {
-            inst->compiler_install_dir = fs_realpath(inst->default_allocator, options.install_dir);
-        }
+    inst->builtin_type_cstring = pointer_type_new(inst, inst->builtin_type_cchar);
+    auto cstring_decl = ast_builtin_type_decl(inst, inst->builtin_type_cstring, "cstring");
+    scope_add_symbol(inst->global_scope, cstring_decl->ident->atom, cstring_decl);
 
-    } else {
-        String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
-        log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
-
-        String compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
-        assert(fs_is_directory(compiler_exe_dir));
-        log_trace("Compiler exe dir: '%s'", compiler_exe_dir.data);
-
-        inst->compiler_install_dir = platform_dirname(inst->default_allocator, compiler_exe_dir);
-        assert(fs_is_directory(inst->compiler_install_dir));
-    }
-    log_trace("Compiler install dir: '%s'", inst->compiler_install_dir.data);
-
-    inst->module_dir = string_format(inst->default_allocator, "%s" NPLATFORM_PATH_SEPARATOR "%s", inst->compiler_install_dir.data, "modules");
-    assert(fs_is_directory(inst->module_dir));
-    log_trace("Module dir: '%s'", inst->module_dir.data);
-
-    inst->builtin_module_path = string_format(inst->default_allocator, "%s" NPLATFORM_PATH_SEPARATOR "%s", inst->module_dir.data, "builtin.no");
-    assert(fs_is_file(inst->builtin_module_path));
-    log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
-
-    inst->builtin_module_loaded = false;
     inst->type_string = nullptr;
 
     // TODO: Dynamic allocator
@@ -179,6 +209,7 @@ void instance_free(Instance* inst)
 
     darray_free(&inst->imported_files);
     darray_free(&inst->function_types);
+    darray_free(&inst->struct_types);
 
     ssa_program_free(inst->ssa_program);
     vm_free(&inst->vm);
@@ -397,7 +428,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             } else if (task.kind == SSA_Task_Kind::CONSTANT) {
 
                 u32 const_index = ssa_emit_constant(inst, inst->ssa_program, task.node.declaration->constant.value);
-                darray_append(&inst->ssa_program->const_decls, { task.node.declaration, const_index });
+                darray_append(&inst->ssa_program->constant_references, { task.node, const_index });
                 success = true;
 
             } else {
@@ -538,7 +569,11 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         log_debug("Bytecode vm returned: %llu", inst->entry_run_result.return_value);
     }
 
-    return true;
+    if (builtin_module) {
+        return true;
+    } else {
+        return backend_emit(inst);
+    }
 }
 
 u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)

@@ -15,7 +15,7 @@ Options default_options()
 #undef NOVO_BOOL_OPTION
 #undef NOVO_STRING_OPTION
 
-    result.install_dir = {};
+    result.exe_dir = {};
 
     return result;
 }

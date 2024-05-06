@@ -24,7 +24,7 @@ ALL_NOVO_OPTIONS_X
 #undef NOVO_BOOL_OPTION
 #undef NOVO_STRING_OPTION
 
-    String_Ref install_dir;
+    String_Ref exe_dir;
 
 };
 

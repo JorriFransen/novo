@@ -65,6 +65,7 @@ struct Instance
     String_Ref inserted_strings_path;
 
     DArray<Type*> function_types;
+    DArray<Type*> struct_types;
 
     bool fatal_error;
 
@@ -86,7 +87,12 @@ struct Instance
     Type* builtin_type_int;
     Type* builtin_type_bool;
 
-    String compiler_install_dir;
+    Type* builtin_type_cchar;
+    Type* builtin_type_cstring;
+
+    String compiler_exe_dir;
+    String support_lib_s_path;
+    String support_lib_d_path;
     String module_dir;
 
     String builtin_module_path;

@@ -11,6 +11,7 @@ namespace Novo {
 
 struct Allocator;
 struct FFI_Lib;
+struct Instance;
 
 struct FFI_Function
 {
@@ -29,10 +30,10 @@ struct FFI
 };
 
 
-NAPI void ffi_init(FFI* ffi, Allocator* allocator);
+NAPI void ffi_init(Instance *inst, FFI* ffi, Allocator* allocator);
 NAPI void ffi_free(FFI* ffi);
 
 NAPI s64 ffi_load_function(FFI* ffi, Atom name);
-
+NAPI bool ffi_load_library(FFI* ffi, String_Ref name);
 
 }

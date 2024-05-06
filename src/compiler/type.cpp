@@ -91,6 +91,9 @@ Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, 
     result->structure.name = name;
     result->structure.members = members;
     result->structure.scope = scope;
+
+    darray_append(&inst->struct_types, result);
+
     return result;
 }
 
@@ -167,17 +170,29 @@ bool is_pointer_or_parent_of_pointer(Type* type)
     assert(false);
 }
 
+bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to)
+{
+    // Implicit conversion to cstring
+    if ((from == pointer_type_get(inst, inst->builtin_type_u8) || from == pointer_type_get(inst, inst->builtin_type_s8)) &&
+        to == inst->builtin_type_cstring) {
+
+        return true;
+
+    }
+    return false;
+}
+
 String temp_type_string(Instance* inst, Type* type)
 {
     String_Builder sb;
     string_builder_init(&sb, &inst->temp_allocator, 64);
 
-    type_to_string(&sb, type);
+    type_to_string(inst, &sb, type);
 
     return string_builder_to_string(&sb);
 }
 
-void type_to_string(String_Builder* sb, Type* type)
+void type_to_string(Instance* instance, String_Builder* sb, Type* type)
 {
     switch (type->kind) {
 
@@ -196,8 +211,12 @@ void type_to_string(String_Builder* sb, Type* type)
         }
 
         case Type_Kind::POINTER: {
-            string_builder_append(sb, "*");
-            type_to_string(sb, type->pointer.base);
+            if (type == instance->builtin_type_cstring) {
+                string_builder_append(sb, "cstring");
+            } else {
+                string_builder_append(sb, "*");
+                type_to_string(instance, sb, type->pointer.base);
+            }
             break;
         }
 

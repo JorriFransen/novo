@@ -55,7 +55,8 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
     vm->global_memory_size = 0;
     vm->global_memory = nullptr;
 
-    ffi_init(&vm->ffi, allocator);
+    ffi_init(inst, &vm->ffi, allocator);
+
 }
 
 void vm_free(VM* vm)

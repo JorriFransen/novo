@@ -3,6 +3,7 @@
 #include "defines.h"
 
 #include <cassert>
+#include <containers/darray.h>
 #include <cstdarg>
 
 namespace Novo {
@@ -61,6 +62,27 @@ NINLINE String string_append(Allocator* allocator, const String a, const String 
 NINLINE String string_append(Allocator* allocator, const String_Ref a, const String_Ref b)
 {
     return string_append_internal(allocator, a.data, a.length, b.data, b.length);
+}
+
+NINLINE String string_append(Allocator* allocator, Array_Ref<String_Ref> strings)
+{
+    s64 length = 0;
+    for (s64 i = 0; i < strings.count; i++) length += strings[i].length;
+    assert(length);
+
+    String result;
+    result.data = allocate_array<char>(allocator, length + 1);
+    result.length = length;
+
+    s64 offset = 0;
+    for (s64 i = 0; i < strings.count; i++) {
+        memcpy(result.data + offset, strings[i].data, strings[i].length);
+        offset += strings[i].length;
+    }
+
+    result.data[length] = '\0';
+
+    return result;
 }
 
 NAPI String string_format(Allocator* allocator, const String_Ref fmt, ...);

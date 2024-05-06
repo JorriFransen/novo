@@ -1,6 +1,8 @@
 
+
 #include <containers/darray.h>
 #include <defines.h>
+#include <filesystem.h>
 #include <memory/allocator.h>
 #include <nstring.h>
 
@@ -13,6 +15,7 @@
 #include <cstdio>
 #include <cassert>
 #include <cstring>
+#include <platform.h>
 
 using namespace Novo;
 
@@ -20,7 +23,20 @@ int main(int argc, char* argv[])
 {
     Instance instance;
     Options options = default_options();
-    options.install_dir = "../../../";
+
+    auto ca = c_allocator();
+
+    String exe_path = platform_exe_path(ca, argv[0]);
+    String exe_dir = fs_dirname(ca, exe_path);
+    String build_dir_ = string_format(ca, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
+    assert(fs_is_directory(build_dir_.data));
+
+    options.exe_dir = fs_realpath(ca, build_dir_);
+
+    free(ca, build_dir_.data);
+    free(ca, exe_dir.data);
+    free(ca, exe_path.data);
+
     instance_init(&instance, options);
 
     Imported_File imported_file = {
