@@ -325,9 +325,9 @@ static void command_line_help(FILE *file, Cmd_Opt_Parser *cop)
         auto &info = option_infos[i];
         char short_name = info.short_name;
         if (!short_name) {
-            fprintf(file, "      --%-24s", info.arg_info);
+            fprintf(file, "      --%-32s", info.arg_info);
         } else {
-            fprintf(file, "  -%c, --%-24s", short_name, info.arg_info);
+            fprintf(file, "  -%c, --%-32s", short_name, info.arg_info);
         }
 
 

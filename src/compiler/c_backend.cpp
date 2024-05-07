@@ -146,12 +146,16 @@ R"POSTAMBLE(int main(int argc, char** argv) {
     string_builder_append(&sb, "%s\n", postamble);
     string_builder_append(&sb, "/* End postamble */\n");
 
-    String str = string_builder_to_string(&sb);
-    // printf("%.*s\n", (int)str.length, str.data);
+    String c_str = string_builder_to_string(&sb);
 
-    fs_write_entire_file("c_backend_output.c", str);
+    assert(inst->options.output);
 
-    Array_Ref<String_Ref> commands({"clang", "-std=c99", "-g", "c_backend_output.c", inst->support_lib_s_path, "-Wno-incompatible-library-redeclaration" });
+    String c_filename = string_format(&inst->temp_allocator, "%s_cback.c", inst->options.output);
+    fs_write_entire_file(c_filename, c_str);
+
+    Array_Ref<String_Ref> commands({"clang", "-std=c99", "-g", "-Wno-incompatible-library-redeclaration",
+                                    c_filename, "-o", inst->options.output,
+                                    inst->support_lib_s_path });
 
     Command_Result c_res = platform_run_command(commands, &inst->temp_allocator);
 
@@ -161,6 +165,10 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     if (c_res.result_string.length) {
         log_info("C backend: %s\n", c_res.result_string.data);
+    }
+
+    if (c_res.success && !inst->options.keep_c_backend_output) {
+        fs_remove(c_filename);
     }
 
     platform_free_command_result(&c_res);
