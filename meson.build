@@ -98,8 +98,8 @@ runtime_support_includes = [
     include_directories(common_include_dirs, is_system: false),
 ]
 
-support_lib_s = static_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes)
-support_lib_d = shared_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes)
+support_lib_s = static_library('novo_runtime_supports', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT')
+support_lib_d = shared_library('novo_runtime_supportd', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT')
 
 
 subdir('src/tests')

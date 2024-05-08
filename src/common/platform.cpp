@@ -9,12 +9,13 @@
 
 #if NPLATFORM_LINUX
 
-#include <limits.h> // IWYU pragma: keep
-#include <libgen.h>
-#include <unistd.h>
 #include <cstdlib>
+#include <libgen.h>
+#include <limits.h> // IWYU pragma: keep
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #elif NPLATFORM_WINDOWS
 #include <windows.h>
@@ -79,6 +80,11 @@ String platform_exe_path(Allocator* allocator, const char* argv_0)
     assert(exe_path_length != -1);
 
     return string_copy(allocator, exe_path, exe_path_length);
+}
+
+void platform_mkdir(const String_Ref path)
+{
+    mkdir(path.data, 0700);
 }
 
 Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
@@ -255,6 +261,22 @@ String platform_dirname(Allocator* allocator, String_Ref path)
     return string_copy(allocator, path);
 }
 
+String platform_filename(Allocator* allocator, String_Ref path)
+{
+    char fname[_MAX_FNAME];
+    char ext[_MAX_EXT];
+
+    errno_t result = _splitpath_s(path.data,
+                                  nullptr, 0, // drive
+                                  nullptr, 0, // dir
+                                  fname, _MAX_FNAME,
+                                  ext, _MAX_EXT); // ext
+
+    assert(result == 0);
+
+    return string_append(allocator, fname, ext);
+}
+
 String platform_exe_path(Allocator* allocator, const char* argv_0)
 {
     const size_t buf_length = 2048;
@@ -278,11 +300,17 @@ String platform_exe_path(Allocator* allocator, const char* argv_0)
     return {};
 }
 
-Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
+void platform_mkdir(const String_Ref path)
+{
+    CreateDirectoryA(path.data, nullptr);
+}
+
+Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
 {
     assert(command_line.count);
 
     auto ca = c_allocator();
+    auto ta = temp_allocator();
 
     // Used for the pipes
     SECURITY_ATTRIBUTES sec_attr;
@@ -296,19 +324,19 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
     HANDLE stderr_write_handle = nullptr;
 
     if (!CreatePipe(&stdout_read_handle, &stdout_write_handle, &sec_attr, 0)) {
-        ZFATAL("[platform_execute_process] Failed to create stdout pipe")
+        log_fatal("[platform_execute_process] Failed to create stdout pipe");
     }
 
     if (!SetHandleInformation(stdout_read_handle, HANDLE_FLAG_INHERIT, 0)) {
-        ZFATAL("[platform_execute_process] SetHandleInformation failed for stdout pipe")
+        log_fatal("[platform_execute_process] SetHandleInformation failed for stdout pipe");
     }
 
     if (!CreatePipe(&stderr_read_handle, &stderr_write_handle, &sec_attr, 0)) {
-        ZFATAL("[platform_execute_process] Failed to create stderr pipe")
+        log_fatal("[platform_execute_process] Failed to create stderr pipe");
     }
 
     if (!SetHandleInformation(stderr_read_handle, HANDLE_FLAG_INHERIT, 0)) {
-        ZFATAL("[platform_execute_process] SetHandleInformation failed for stderr pipe")
+        log_fatal("[platform_execute_process] SetHandleInformation failed for stderr pipe");
     }
 
     PROCESS_INFORMATION process_info;
@@ -329,7 +357,7 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
         nullptr, nullptr, true, 0, nullptr,
         nullptr, &startup_info, &process_info);
 
-    Commanad_Result result = {};
+    Command_Result result = {};
     if (!proc_res) {
         auto err = GetLastError();
         LPSTR message_buf = nullptr;
@@ -344,7 +372,7 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
         LocalFree(message_buf);
 
         result.success = false;
-        ZERROR("CreateProcessW failed with commandline: '%.*s", (int)arg_str.length, arg_str.data);
+        log_error("CreateProcessW failed with commandline: '%.*s", (int)arg_str_.length, arg_str_.data);
     }
     else {
         WaitForSingleObject(process_info.hProcess, INFINITE);
@@ -353,10 +381,10 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
         CloseHandle(stderr_write_handle);
 
         String_Builder stdout_sb;
-        string_builder_create(&stdout_sb, ta);
+        string_builder_init(&stdout_sb, ta);
 
         String_Builder stderr_sb;
-        string_builder_create(&stderr_sb, ta);
+        string_builder_init(&stderr_sb, ta);
 
         for (;;) {
             const int buf_size = 1024;
@@ -393,12 +421,50 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line)
         result.exit_code = exit_code;
         result.success = result.exit_code == 0;
 
-        if (stdout_sb.total_size) result.result_string = string_builder_to_string(ca, &stdout_sb);
-        if (stderr_sb.total_size) result.error_string = string_builder_to_string(ca, &stderr_sb);
+        result.result_string = string_builder_to_string(&stdout_sb, ca);
+        result.error_string = string_builder_to_string(&stderr_sb, ca);
 
     }
 
     return result;
+}
+
+String platform_windows_normalize_line_endings(Allocator* allocator, const String_Ref str)
+{
+    s64 cr_count = 0;
+    for (s64 i = 0; i < str.length - 1; i++) {
+        if (str[i] == '\r' && str[i + 1] == '\n') {
+            cr_count += 1;
+        }
+    }
+
+    if (!cr_count) {
+        return string_copy(allocator, str);
+    }
+
+    auto new_length = str.length - cr_count;
+    auto buf = allocate_array<char>(allocator, new_length + 1);
+
+    s64 read_index = 0;
+    s64 copy_length = 0;
+    char *write_cursor = buf;
+
+    for (s64 i = 0; i < str.length; i++) {
+        if (i < str.length - 1 && str[i] == '\r' && str[i + 1] == '\n') {
+            memcpy(write_cursor, &str[read_index], copy_length);
+            write_cursor += copy_length;
+            copy_length = 0;
+            read_index = i + 1;
+        } else {
+            copy_length += 1;
+        }
+    }
+
+    if (copy_length) {
+        memcpy(write_cursor, &str[read_index], copy_length);
+    }
+
+    return string(buf, new_length);
 }
 
 #else // NPLATFORM_LINUX

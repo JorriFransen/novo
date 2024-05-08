@@ -324,4 +324,26 @@ u64 hash_string(const char* cstr)
     return hash_string(cstr, strlen(cstr));
 }
 
+#if NPLATFORM_WINDOWS
+Wide_String::Wide_String(Allocator* allocator, const String_Ref ref) {
+    if (ref.length == 0) {
+        assert(ref.data == nullptr);
+        this->data = nullptr;
+        this->length = 0;
+        return;
+    }
+
+    int size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, ref.data, (int)ref.length + 1, nullptr, 0);
+    assert(size > 0);
+
+    LPWSTR buf = allocate_array<wchar_t>(allocator, size);
+    int written_size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, ref.data, (int)ref.length + 1, buf, size);
+    assert(written_size == size);
+
+    this->data = buf;
+    this->length = written_size - 1;
+}
+
+#endif // NPLATFORM_WINDOWS
+
 }

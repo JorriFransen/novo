@@ -218,7 +218,7 @@ bool fs_remove(const String_Ref path)
 void fs_mkdir(const String_Ref path)
 {
     NSTRING_ASSERT_ZERO_TERMINATION(path);
-    mkdir(path.data, 0700);
+    platform_mkdir(path);
 }
 
 void fs_chdir(const String_Ref path)

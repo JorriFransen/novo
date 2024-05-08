@@ -6,6 +6,10 @@
 #include <containers/darray.h>
 #include <cstdarg>
 
+#if NPLATFORM_WINDOWS
+#include <windows.h>
+#endif // NPLATFORM_WINDOWS
+
 namespace Novo {
 
 struct Allocator;
@@ -65,10 +69,13 @@ NINLINE String string_append(Allocator* allocator, const String_Ref a, const Str
     return string_append_internal(allocator, a.data, a.length, b.data, b.length);
 }
 
-NINLINE String string_append(Allocator* allocator, Array_Ref<String_Ref> strings)
+NINLINE String string_append(Allocator* allocator, Array_Ref<String_Ref> strings, String_Ref separator = "")
 {
+    assert(strings.count >= 1);
+
     s64 length = 0;
     for (s64 i = 0; i < strings.count; i++) length += strings[i].length;
+    length += separator.length * strings.count - 1;
     assert(length);
 
     String result;
@@ -79,6 +86,8 @@ NINLINE String string_append(Allocator* allocator, Array_Ref<String_Ref> strings
     for (s64 i = 0; i < strings.count; i++) {
         memcpy(result.data + offset, strings[i].data, strings[i].length);
         offset += strings[i].length;
+        memcpy(result.data + offset, separator.data, separator.length);
+        offset += separator.length;
     }
 
     result.data[length] = '\0';
@@ -105,5 +114,22 @@ NAPI u64 hash_string(const char* cstr, u64 length);
 NAPI u64 hash_string(const char* cstr);
 
 #define NSTRING_ASSERT_ZERO_TERMINATION(str) assert((str).data[(str).length] == '\0')
+
+#if NPLATFORM_WINDOWS
+
+struct Wide_String
+{
+    wchar_t* data;
+    s64 length;
+
+    NAPI Wide_String(Allocator* allocator, const String_Ref ref);
+
+    NAPI wchar_t &operator[](s64 index)
+    {
+        assert(index >= 0 && index < this->length);
+        return data[index];
+    }
+};
+#endif //NPLATFORM_WINDOWS
 
 }

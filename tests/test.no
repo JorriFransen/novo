@@ -51,6 +51,8 @@ glob_2 : u32 = 2;
 
 main :: () -> s64 {
 
+    printf("Hello, World!\n".data);
+
     c : s32 = 'H';
 
 

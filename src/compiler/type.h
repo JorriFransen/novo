@@ -10,6 +10,8 @@ namespace Novo {
 struct Instance;
 struct String_Builder;
 
+#undef VOID // windows...
+
 enum class Type_Kind : u32
 {
     INVALID,

@@ -164,7 +164,8 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     Array_Ref<String_Ref> commands({"clang", "-std=c99", "-g", "-Wno-incompatible-library-redeclaration",
                                     c_filename, "-o", inst->options.output,
-                                    inst->support_lib_s_path });
+                                    inst->support_lib_s_path
+                                  });
 
     Command_Result c_res = platform_run_command(commands, &inst->temp_allocator);
 
@@ -237,7 +238,7 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
 
         case Type_Kind::INTEGER: {
             return string_format(ta,
-                                 name.length ? "%c%lld %.*s" : "%c%lld%.*s",
+                                 name.length ? "%c%ld %.*s" : "%c%ld%.*s",
                                  type->integer.sign ? 's' : 'u',
                                  type->bit_size,
                                  (int)name.length, name.data);

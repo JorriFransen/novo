@@ -28,6 +28,8 @@ static void command_line_help(FILE *file, Cmd_Opt_Parser *cop);
 typedef OPTION_CALLBACK_FN(Option_Callback_FN);
 static OPTION_CALLBACK_FN(command_line_help_callback);
 
+#undef CALLBACK // windows...
+
 enum class Option_Type
 {
     BOOL,

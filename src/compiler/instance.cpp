@@ -88,11 +88,11 @@ void instance_init(Instance* inst, Options options)
     assert(fs_is_directory(inst->compiler_exe_dir));
     log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
 
-    inst->support_lib_s_path = string_format(inst->default_allocator, "%.*s/libnovo_runtime_support.a",
+    inst->support_lib_s_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_LIB_PREFIX "novo_runtime_supports" NPLATFORM_STATIC_LIB_EXTENSION,
                                              (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
     assert(fs_is_file(inst->support_lib_s_path));
 
-    inst->support_lib_d_path = string_format(inst->default_allocator, "%.*s/libnovo_runtime_support.so",
+    inst->support_lib_d_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_LIB_PREFIX "novo_runtime_supportd" NPLATFORM_DYNAMIC_LIB_EXTENSION,
                                              (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
     assert(fs_is_file(inst->support_lib_d_path));
 
