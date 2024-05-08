@@ -17,6 +17,7 @@ namespace Novo {
 struct Allocator;
 
 NAPI String platform_dirname(Allocator* allocator, String_Ref path);
+NAPI String platform_filename(Allocator* allocator, String_Ref path);
 NAPI String platform_exe_path(Allocator* allocator, const char* argv_0);
 
 struct Command_Result

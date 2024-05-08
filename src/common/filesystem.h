@@ -41,5 +41,6 @@ NAPI bool fs_is_directory(const String_Ref path);
 NAPI bool fs_is_file(const String_Ref path);
 
 NAPI String fs_dirname(Allocator* allocator, const String_Ref path);
+NAPI String fs_filename(Allocator* allocator, const String_Ref path);
 
 }

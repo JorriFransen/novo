@@ -288,5 +288,10 @@ String fs_dirname(Allocator* allocator, const String_Ref path)
     return platform_dirname(allocator, path);
 }
 
+String fs_filename(Allocator* allocator, const String_Ref path)
+{
+    return platform_filename(allocator, path);
+}
+
 }
 

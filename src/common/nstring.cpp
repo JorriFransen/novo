@@ -74,6 +74,14 @@ bool string_contains(const String_Ref &str, char c)
     return false;
 }
 
+s64 string_last_index_of(const String_Ref &str, char c)
+{
+    for (s64 i = str.length - 1; i >= 0; i--) {
+        if (str[i] == c) return i;
+    }
+    return -1;
+}
+
 bool string_starts_with(const String_Ref &str, const String_Ref &start)
 {
     if (start.length > str.length) return false;
