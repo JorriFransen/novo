@@ -104,9 +104,14 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
 
     int pipes[NUM_PIPES][2];
 
-    pipe(pipes[STDIN_PIPE]);
-    pipe(pipes[STDOUT_PIPE]);
-    pipe(pipes[STDERR_PIPE]);
+    int pres = 0;
+
+    pres = pipe(pipes[STDIN_PIPE]);
+    assert(pres == 0);
+    pres = pipe(pipes[STDOUT_PIPE]);
+    assert(pres == 0);
+    pres = pipe(pipes[STDERR_PIPE]);
+    assert(pres == 0);
 
     pid_t pid;
 

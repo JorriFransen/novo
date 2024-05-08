@@ -2,6 +2,7 @@
 
 #include "logger.h"
 #include "memory/allocator.h"
+#include "nstring.h"
 #include "platform.h"
 
 #include <cassert>
@@ -214,6 +215,12 @@ bool fs_remove(const String_Ref path)
     return res == 0;
 }
 
+void fs_mkdir(const String_Ref path)
+{
+    NSTRING_ASSERT_ZERO_TERMINATION(path);
+    mkdir(path.data, 0700);
+}
+
 void fs_chdir(const String_Ref path)
 {
     assert(path.length);
@@ -291,6 +298,20 @@ String fs_dirname(Allocator* allocator, const String_Ref path)
 String fs_filename(Allocator* allocator, const String_Ref path)
 {
     return platform_filename(allocator, path);
+}
+
+String fs_filename_strip_extension(Allocator* allocator, const String_Ref path)
+{
+    String filename = fs_filename(allocator, path);
+    String result = filename;
+
+    s64 last_dot_idx = string_last_index_of(filename, '.');
+    if (last_dot_idx > 0) {
+        result.length -= result.length - last_dot_idx;
+        result.data[result.length] = '\0';
+    }
+
+    return result;
 }
 
 }

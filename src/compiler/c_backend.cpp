@@ -96,7 +96,16 @@ typedef u64 p_uint_t;
         char cname[32];
         string_format(cname, "g%u", i);
         c_backend_emit_c_type(inst, &sb, global->type, cname);
-        string_builder_append(&sb, " = c%u;\n", inst->ssa_program->constants[global->initializer_constant_index].offset);
+
+        string_builder_append(&sb, " = ");
+
+        if (global->type->kind == Type_Kind::STRUCT) {
+            SSA_Constant const_info = inst->ssa_program->constants[global->initializer_constant_index];
+            c_backend_emit_constant_expression(inst, &sb, const_info.from_expression);
+        } else {
+            string_builder_append(&sb, "c%u", inst->ssa_program->constants[global->initializer_constant_index].offset);
+        }
+        string_builder_append(&sb, ";\n");
     }
     string_builder_append(&sb, "/* End global declarations */\n\n");
 
@@ -379,6 +388,11 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     s64 bi = 0;
     while (bi >= 0 && bi < func->blocks.count) {
         SSA_Block* block = &func->blocks[bi];
+
+        if (block->bytes.count == 0) {
+            bi = block->next_index;
+            continue;
+        }
 
         if (bi > 0) {
             string_builder_append(sb, "b%u:\n", bi);
@@ -863,7 +877,7 @@ void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_
             assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
             assert(const_expr->compound.expressions.count == const_expr->resolved_type->structure.members.count);
 
-            string_builder_append(sb, " { ");
+            string_builder_append(sb, "{ ");
 
             for (s64 i = 0; i < const_expr->compound.expressions.count; i++) {
                 if (i > 0) string_builder_append(sb, ", ");

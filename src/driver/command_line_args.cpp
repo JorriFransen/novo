@@ -131,15 +131,7 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
     }
 
     if (!cop.result.output) {
-        String in_filename = fs_filename(c_allocator(), cop.result.input_file);
-        String out_filename = in_filename;
-
-        s64 dot_idx = string_last_index_of(out_filename, '.');
-        if (dot_idx > 0) {
-            out_filename.length -= out_filename.length - dot_idx;
-            out_filename.data[out_filename.length] = '\0';
-        }
-
+        String out_filename = fs_filename_strip_extension(c_allocator(), cop.result.input_file);
         NSTRING_ASSERT_ZERO_TERMINATION(out_filename);
 
         cop.result.output = out_filename.data;
