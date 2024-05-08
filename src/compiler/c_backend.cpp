@@ -339,6 +339,13 @@ void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Functi
     temp_allocator_reset(&inst->temp_allocator_data, mark);
 }
 
+template <typename T>
+static T _fetch_(SSA_Block* block, s64* offset) {
+    T result = *(T*)&block->bytes[*offset];
+    *offset += sizeof(T);
+    return result;
+}
+
 void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack)
 {
     assert(fn_index < inst->ssa_program->functions.count);
@@ -398,10 +405,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
             string_builder_append(sb, "b%u:\n", bi);
         }
 
-#define FETCH() (block->bytes[instruction_offset++])
-#define FETCH16() ({u16 r = *(u16*)&block->bytes[instruction_offset]; instruction_offset += 2; r;})
-#define FETCH32() ({u32 r = *(u32*)&block->bytes[instruction_offset]; instruction_offset += 4; r;})
-#define FETCH64() ({u64 r = *(u64*)&block->bytes[instruction_offset]; instruction_offset += 8; r;})
+#define FETCH() (_fetch_<u8>(block, &instruction_offset))
+#define FETCH16() (_fetch_<u16>(block, &instruction_offset))
+#define FETCH32() (_fetch_<u32>(block, &instruction_offset))
+#define FETCH64() (_fetch_<u64>(block, &instruction_offset))
 
         s64 instruction_offset = 0;
         while (instruction_offset < block->bytes.count) {
