@@ -83,7 +83,7 @@ bool fs_write_entire_file(const String_Ref path, const String_Ref content)
     u64 written;
     bool write_result = fs_write(&file, content.length, (u8*)content.data, &written);
     assert(write_result);
-    assert(written == content.length);
+    assert(written == (u64)content.length);
 
     fs_close(&file);
 
@@ -286,6 +286,11 @@ bool fs_is_file(const String_Ref path)
 String fs_dirname(Allocator* allocator, const String_Ref path)
 {
     return platform_dirname(allocator, path);
+}
+
+String fs_filename(Allocator* allocator, const String_Ref path)
+{
+    return platform_filename(allocator, path);
 }
 
 }

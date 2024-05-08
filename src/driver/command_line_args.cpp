@@ -1,6 +1,9 @@
 #include "command_line_args.h"
 
 #include <defines.h>
+#include <filesystem.h>
+#include <logger.h>
+#include <memory/allocator.h>
 #include <nstring.h>
 
 #include <cassert>
@@ -120,6 +123,26 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
 
     if (!cop.result.input_file) {
         command_line_error(&cop, "Expected input file");
+    }
+
+    if (!fs_is_file(cop.result.input_file)) {
+        fprintf(stderr, "Invalid file path: %s\n", cop.result.input_file);
+        exit(1);
+    }
+
+    if (!cop.result.output) {
+        String in_filename = fs_filename(c_allocator(), cop.result.input_file);
+        String out_filename = in_filename;
+
+        s64 dot_idx = string_last_index_of(out_filename, '.');
+        if (dot_idx > 0) {
+            out_filename.length -= out_filename.length - dot_idx;
+            out_filename.data[out_filename.length] = '\0';
+        }
+
+        NSTRING_ASSERT_ZERO_TERMINATION(out_filename);
+
+        cop.result.output = out_filename.data;
     }
 
     return cop.result;
@@ -325,9 +348,9 @@ static void command_line_help(FILE *file, Cmd_Opt_Parser *cop)
         auto &info = option_infos[i];
         char short_name = info.short_name;
         if (!short_name) {
-            fprintf(file, "      --%-24s", info.arg_info);
+            fprintf(file, "      --%-32s", info.arg_info);
         } else {
-            fprintf(file, "  -%c, --%-24s", short_name, info.arg_info);
+            fprintf(file, "  -%c, --%-32s", short_name, info.arg_info);
         }
 
 

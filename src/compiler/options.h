@@ -5,12 +5,13 @@
 
 namespace Novo {
 
-#define ALL_NOVO_OPTIONS_X                                                    \
-    NOVO_BOOL_OPTION('v', verbose, false, "Enable debug output", "[VALUE]")   \
-    NOVO_BOOL_OPTION('t', trace, false, "Enable trace output", "[VALUE]")     \
-    NOVO_BOOL_OPTION('p', print_ast, false, "Print ast", "[VALUE]")           \
-    NOVO_BOOL_OPTION('b', print_bytecode, false, "Print bytecode", "[VALUE]") \
-    NOVO_STRING_OPTION('o', output, "", "Output file name", "FILENAME")       \
+#define ALL_NOVO_OPTIONS_X                                                                  \
+    NOVO_BOOL_OPTION('v', verbose, false, "Enable debug output", "[VALUE]")                 \
+    NOVO_BOOL_OPTION('t', trace, false, "Enable trace output", "[VALUE]")                   \
+    NOVO_BOOL_OPTION('p', print_ast, false, "Print ast", "[VALUE]")                         \
+    NOVO_BOOL_OPTION('b', print_bytecode, false, "Print bytecode", "[VALUE]")               \
+    NOVO_STRING_OPTION('o', output, nullptr, "Output file name", "FILENAME")                \
+    NOVO_BOOL_OPTION('k', keep_c_backend_output, false, "Keep c backend output", "[VALUE]") \
 
 
 struct Options  {

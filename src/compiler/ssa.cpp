@@ -1016,7 +1016,7 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
 {
     SSA_Function* function = &builder->program->functions[builder->function_index];
 
-    SSA_Register_Handle result_reg;
+    SSA_Register_Handle result_reg = {};
 
     switch (expr->kind) {
 
@@ -1265,12 +1265,12 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
             Type* from_type = expr->cast.operand->resolved_type;
 
             SSA_Register_Handle operand_reg = ssa_emit_expression(builder, expr->cast.operand, scope);
-            return ssa_emit_cast(builder, from_type, to_type, operand_reg);
+            result_reg = ssa_emit_cast(builder, from_type, to_type, operand_reg);
             break;
         }
 
         case AST_Expression_Kind::COMPOUND: {
-            return ssa_emit_lvalue(builder, expr, scope);
+            result_reg = ssa_emit_lvalue(builder, expr, scope);
             break;
         }
 
