@@ -5,6 +5,7 @@
 #include <logger.h>
 #include <memory/allocator.h>
 #include <nstring.h>
+#include <platform.h>
 
 #include <cassert>
 #include <cctype>
