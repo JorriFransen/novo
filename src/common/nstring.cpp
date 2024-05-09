@@ -14,12 +14,14 @@ static char  g_special_characters_array[] = {
     '\n',
     '\t',
     '\"',
+    '\\',
 };
 
 static char g_escape_characters_array[] = {
     'n',
     't',
     '"',
+    '\\',
 };
 
 
@@ -231,7 +233,6 @@ String convert_special_characters_to_escape_characters(Allocator* allocator, con
 
         if (is_special_character(c) != -1) {
             special_count += 1;
-            break;
         }
     }
 
@@ -266,16 +267,17 @@ String convert_escape_characters_to_special_characters(Allocator* allocator, con
         auto c = str[i];
 
         if (c == '\\') {
-            assert(i + 1 < str.length);
 
-            if (is_escape_character(str[i + 1]) == -1) {
+            if (i + 1 >= str.length || is_escape_character(str[i + 1]) == -1) {
                 if (err_char) {
                     *err_char = &str[i + 1];
+                    return {};
                 } else {
                     assert(false && "Invalid escape character!");
                 }
             }
 
+            i++;
             escape_count += 1;
         }
     }
