@@ -72,4 +72,14 @@ Allocator* temp_allocator()
     return &g_temp_allocator;
 }
 
+Temp_Allocator_Mark temp_allocator_get_mark()
+{
+    return temp_allocator_get_mark(&g_temp_allocator_data);
+}
+
+void temp_allocator_reset(Temp_Allocator_Mark mark)
+{
+    temp_allocator_reset(&g_temp_allocator_data, mark);
+}
+
 }

@@ -30,6 +30,8 @@ NAPI String platform_dirname(Allocator* allocator, String_Ref path);
 NAPI String platform_filename(Allocator* allocator, String_Ref path);
 NAPI String platform_exe_path(Allocator* allocator, const char* argv_0);
 
+NAPI bool platform_is_realpath(const String_Ref path);
+
 NAPI void platform_mkdir(const String_Ref path);
 
 struct Command_Result

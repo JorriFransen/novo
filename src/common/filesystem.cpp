@@ -234,18 +234,7 @@ void fs_chdir(const String_Ref path)
 
 bool fs_is_realpath(const String_Ref path)
 {
-    if (path.length <= 0) return false;;
-
-    NSTRING_ASSERT_ZERO_TERMINATION(path);
-
-    if (path.length <= 0) return false;
-
-    if (path[0] == '/') {
-        struct stat sb;
-        return stat(path.data, &sb) == 0;
-    }
-
-    return false;
+    return platform_is_realpath(path);
 }
 
 String fs_realpath(Allocator* allocator, const String_Ref path)
