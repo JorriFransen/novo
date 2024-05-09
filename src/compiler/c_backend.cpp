@@ -172,7 +172,7 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 #endif // NPLATFORM_WINDOWS
 
     Array_Ref<String_Ref> commands({clang_path, "-std=c99", "-g",
-                                    "-Wno-incompatible-library-redeclaration -Wno-format-security",
+                                    "-Wno-incompatible-library-redeclaration", "-Wno-format-security",
                                     c_filename, "-o", inst->options.output,
                                     inst->support_lib_s_path,
                                     link_flags,

@@ -49,25 +49,26 @@ foreign_add :: (a: s64, b: s64) -> s32 #foreign;
 glob_1 := 1;
 glob_2 : u32 = 2;
 
-// main :: () -> s64 {
-//
-//     assert(true);
-//     printf("Hello, World!\n".data);
-//
-//     c : s32 = 'H';
-//
-//
-//     c = putchar(c);
-//     c2 := putchar('I');
-//     putchar('!');
-//     putchar('\n');
-//
-//     assert(c + c2 + foreign_add(glob_1, cast(s64, glob_2)) == 148);
-//
-//     return 0;
-// }
+main :: () -> s64 {
 
-main :: () -> int {
+    assert(true);
+    printf("Hello, World!\n".data);
+
+    c : s32 = 'H';
+
+    c = putchar(c);
+    c2 := putchar('I');
+    putchar('!');
+    putchar('\n');
+
+    assert(c + c2 + foreign_add(glob_1, cast(s64, glob_2)) == 148);
+
+    cast_test();
+
+    return 0;
+}
+
+cast_test :: () -> int {
 
     // unsigned -> unsigned
     assert(cast(u8,  cast(u64, 0x0101010101010111)) == 0x11);
