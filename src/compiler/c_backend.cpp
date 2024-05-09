@@ -162,19 +162,25 @@ R"POSTAMBLE(int main(int argc, char** argv) {
     String c_filename = string_format(&inst->temp_allocator, "%s_cback.c", inst->options.output);
     fs_write_entire_file(c_filename, c_str);
 
-    Array_Ref<String_Ref> commands({"clang", "-std=c99", "-g", "-Wno-incompatible-library-redeclaration",
+    Array_Ref<String_Ref> commands({"clang", "-std=c99", "-g",
+                                    "-Wno-incompatible-library-redeclaration -Wno-format-security",
                                     c_filename, "-o", inst->options.output,
-                                    inst->support_lib_s_path
+                                    inst->support_lib_s_path,
+#if NPLATFORM_WINDOWS
+                                    "-Xlinker /nodefaultlib:libcmt"
+#endif // NPLATFORM_WINDOWS
                                   });
 
     Command_Result c_res = platform_run_command(commands, &inst->temp_allocator);
 
     if (!c_res.success) {
-        log_error("C backend errors:\n%s\n", c_res.error_string.data);
+        log_error("C backend errors:\n%s", c_res.error_string.data);
     }
 
-    if (c_res.result_string.length) {
-        log_info("C backend: %s\n", c_res.result_string.data);
+    if (inst->options.verbose && c_res.result_string.length) {
+        String_Ref str = c_res.result_string;
+        if (str[str.length - 1] == '\n') str.length -= 1;
+        log_info("C backend: %.*s", (int) str.length, str.data);
     }
 
     if (c_res.success && !inst->options.keep_c_backend_output) {

@@ -85,6 +85,8 @@ struct Cmd_Opt_Parser
 
 Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullptr*/)
 {
+    Allocator* ta = temp_allocator();
+
     const char *prog_name = argv[0];
 
     // Skip program name
@@ -132,12 +134,17 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
         exit(1);
     }
 
-    if (!cop.result.output) {
-        String out_filename = fs_filename_strip_extension(c_allocator(), cop.result.input_file);
-        NSTRING_ASSERT_ZERO_TERMINATION(out_filename);
-
-        cop.result.output = out_filename.data;
+    String_Ref out_file_name = cop.result.output;
+    if (!out_file_name.length) {
+        out_file_name = fs_filename_strip_extension(ta, cop.result.input_file);
+        NSTRING_ASSERT_ZERO_TERMINATION(out_file_name);
     }
+
+    if (!string_ends_with(out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION)) {
+        out_file_name = string_append(ta, out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION);
+    }
+
+    cop.result.output = string_copy(c_allocator(), out_file_name).data;
 
     return cop.result;
 }
