@@ -12,7 +12,7 @@ link_args = []
 if compiler_id == 'clang-cl'
   add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')
 elif compiler_id == 'msvc'
-  link_args = [ '-nodefaultlib:libcmt']
+  link_args = [ '-nodefaultlib:libcmt', '-nodefaultlib:libcmtd', '-nodefaultlib:msvcrt' ]
 endif
 
 dyncall_proj = subproject('dyncall')
@@ -38,7 +38,7 @@ common_source = [
 
 common_include_dirs = ['src/common/']
 common_includes = include_directories(common_include_dirs)
-common_lib = library('novo_common', sources: common_source, include_directories: common_includes, cpp_args: '-DNEXPORT')
+common_lib = library('novo_common', sources: common_source, include_directories: common_includes, cpp_args: '-DNEXPORT', link_args: link_args)
 
 
 compiler_include_dirs = ['src/compiler']
@@ -98,8 +98,8 @@ runtime_support_includes = [
     include_directories(common_include_dirs, is_system: false),
 ]
 
-support_lib_s = static_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT')
-support_lib_d = shared_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT')
+support_lib_s = static_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT', link_args: link_args)
+support_lib_d = shared_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT', link_args: link_args)
 
 
 subdir('src/tests')

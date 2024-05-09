@@ -162,19 +162,29 @@ R"POSTAMBLE(int main(int argc, char** argv) {
     String c_filename = string_format(&inst->temp_allocator, "%s_cback.c", inst->options.output);
     fs_write_entire_file(c_filename, c_str);
 
-    Array_Ref<String_Ref> commands({"clang", "-std=c99", "-g",
+#if NPLATFORM_WINDOWS
+    // TODO: Use microsoft craziness to find this..
+    String_Ref clang_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe";
+    String_Ref link_flags = "-lmsvcrtd -Wl,-nodefaultlib:libcmt,-nodefaultlib:libcmtd,-nodefaultlib:libmsvcrt";
+#else
+    String_Ref clang_path = "clang";
+    String_Ref link_flags = "";
+#endif // NPLATFORM_WINDOWS
+
+    Array_Ref<String_Ref> commands({clang_path, "-std=c99", "-g",
                                     "-Wno-incompatible-library-redeclaration -Wno-format-security",
                                     c_filename, "-o", inst->options.output,
                                     inst->support_lib_s_path,
-#if NPLATFORM_WINDOWS
-                                    "-Xlinker /nodefaultlib:libcmt"
-#endif // NPLATFORM_WINDOWS
+                                    link_flags,
                                   });
+
 
     Command_Result c_res = platform_run_command(commands, &inst->temp_allocator);
 
     if (!c_res.success) {
         log_error("C backend errors:\n%s", c_res.error_string.data);
+    } else if (inst->options.verbose && c_res.error_string.length) {
+        log_warn("C backend warnings:\n%s", c_res.error_string.data);
     }
 
     if (inst->options.verbose && c_res.result_string.length) {

@@ -1,6 +1,7 @@
 
 #include <defines.h>
 #include <filesystem.h>
+#include <logger.h>
 #include <memory/temp_allocator.h>
 #include <nstring.h>
 #include <platform.h>
@@ -70,11 +71,13 @@ static bool run_test_case(Test_Case* tc, Options options)
 {
     options.keep_c_backend_output = true;
     options.input_file = tc->file_path;
+    options.verbose = true;
+    options.trace = true;
 
     fs_mkdir("build");
 
     String filename = fs_filename_strip_extension(ta, tc->file_path);
-    options.output = string_append(ta, "build/", filename).data;
+    options.output = string_format(ta, "build" NPLATFORM_PATH_SEPARATOR "%.*s" NPLATFORM_DEFAULT_EXE_EXTENSION, (int)filename.length, filename.data).data;
 
     Instance inst;
     instance_init(&inst, options);
