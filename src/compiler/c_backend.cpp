@@ -368,6 +368,9 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     assert(fn_index < inst->ssa_program->functions.count);
     SSA_Function* func = &inst->ssa_program->functions[fn_index];
 
+    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+    auto ta = &inst->temp_allocator;
+
     string_builder_append(sb, "{\n");
 
     char reg_name[32];
@@ -572,7 +575,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         case 8: value = FETCH64(); break;
                     }
 
-                    string_builder_append(sb, "    r%u = %llu;", result_reg, value);
+                    string_builder_append(sb, "    r%u = 0x%x;", result_reg, value);
                     break;
                 }
 
@@ -851,8 +854,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     String file_name = atom_string(file.name);
                     Line_Info li = line_info(file.newline_offsets, pos.offset);
 
+                    String escaped_fname = convert_special_characters_to_escape_characters(ta, file_name);
+
                     string_builder_append(sb, "    novo_c_assert(r%u, r%u, \"%.*s\", %u, %u);", cond_reg, string_reg,
-                                          (int)file_name.length, file_name.data, li.line, li.offset);
+                                          (int)escaped_fname.length, escaped_fname.data, li.line, li.offset);
                     break;
                 }
             }
@@ -873,6 +878,8 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
     }
 
     string_builder_append(sb, "}\n");
+
+    temp_allocator_reset(&inst->temp_allocator_data, mark);
 
 #undef FETCH
 #undef FETCH16
@@ -921,13 +928,7 @@ void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_
         case AST_Expression_Kind::TYPE: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
-
-            if (const_expr->resolved_type->integer.sign) {
-                string_builder_append(sb, "%lld", const_expr->integer_literal);
-            } else {
-                string_builder_append(sb, "%llu", const_expr->integer_literal);
-            }
-
+            string_builder_append(sb, "0x%x", const_expr->integer_literal);
             break;
         }
 
