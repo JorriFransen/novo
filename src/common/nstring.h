@@ -123,6 +123,7 @@ struct Wide_String
     s64 length;
 
     NAPI Wide_String(Allocator* allocator, const String_Ref ref);
+    NAPI Wide_String(wchar_t* wstr);
 
     NAPI wchar_t &operator[](s64 index)
     {
@@ -130,6 +131,9 @@ struct Wide_String
         return data[index];
     }
 };
+
+NAPI String wide_string_to_regular(Allocator* allocator, const Wide_String wstring);
+
 #endif //NPLATFORM_WINDOWS
 
 }

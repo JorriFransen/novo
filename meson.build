@@ -68,6 +68,8 @@ compiler_source = [
   'src/compiler/type.cpp', 'src/compiler/type.h',
   'src/compiler/typer.cpp', 'src/compiler/typer.h',
   'src/compiler/vm.cpp', 'src/compiler/vm.h',
+
+  'src/compiler/microsoft_craziness.cpp', 'src/compiler/microsoft_craziness.h'
 ]
 
 compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT', link_args: link_args, dependencies: [dyncall_dep])

@@ -13,10 +13,44 @@
 #include <platform.h>
 #include <string_builder.h>
 
+#if NPLATFORM_WINDOWS
+#include "microsoft_craziness.h"
+#endif // NPLATFORM_WINDOWS
+
 namespace Novo {
+
+struct C_Backend {
+
+    Instance* inst;
+
+#if NPLATFORM_WINDOWS
+    Windows_SDK_Info wsdk_info;
+#endif // NPLATFORM_WINDOWS
+
+    String clang_path;
+};
 
 bool c_backend_emit(Instance* inst)
 {
+    C_Backend cb_data;
+    cb_data.inst = inst;
+
+#if NPLATFORM_WINDOWS
+    cb_data.wsdk_info = find_visual_studio_and_windows_sdk();
+    assert(cb_data.wsdk_info.windows_sdk_version);
+
+    String_Ref tools_path = wide_string_to_regular(temp_allocator(), cb_data.wsdk_info.vs_tools_path);
+
+    cb_data.clang_path = string_format(inst->default_allocator, "%.*s\\Llvm\\x64\\bin\\clang.exe",
+                            (int)tools_path.length, tools_path.data);
+    assert(fs_is_file(cb_data.clang_path));
+
+#else
+    cb_data.clang_path = string_copy(inst->default_allocator, "clang");
+#endif // NPLATFORM_WINDOWS
+
+    C_Backend* cb = &cb_data;
+
     SSA_Program* program = inst->ssa_program;
 
     String_Builder sb;
@@ -61,7 +95,7 @@ typedef u64 p_uint_t;
     // Type declarations
     string_builder_append(&sb, "/* Type declarations */\n");
     for (s64 i = 0; i < inst->struct_types.count; i++) {
-        c_backend_emit_struct_declaration(inst, &sb, inst->struct_types[i]);
+        c_backend_emit_struct_declaration(cb, &sb, inst->struct_types[i]);
         string_builder_append(&sb, "\n");
     }
     string_builder_append(&sb, "/* End type declarations */\n\n");
@@ -78,11 +112,11 @@ typedef u64 p_uint_t;
 
         char cname[32];
         string_format(cname, "const c%lld", const_info.offset);
-        c_backend_emit_c_type(inst, &sb, const_info.type, cname);
+        c_backend_emit_c_type(cb, &sb, const_info.type, cname);
 
         string_builder_append(&sb, " = ");
 
-        c_backend_emit_constant_expression(inst, &sb, const_info.from_expression);
+        c_backend_emit_constant_expression(cb, &sb, const_info.from_expression);
 
         string_builder_append(&sb, ";\n");
     }
@@ -95,13 +129,13 @@ typedef u64 p_uint_t;
 
         char cname[32];
         string_format(cname, "g%u", i);
-        c_backend_emit_c_type(inst, &sb, global->type, cname);
+        c_backend_emit_c_type(cb, &sb, global->type, cname);
 
         string_builder_append(&sb, " = ");
 
         if (global->type->kind == Type_Kind::STRUCT) {
             SSA_Constant const_info = inst->ssa_program->constants[global->initializer_constant_index];
-            c_backend_emit_constant_expression(inst, &sb, const_info.from_expression);
+            c_backend_emit_constant_expression(cb, &sb, const_info.from_expression);
         } else {
             string_builder_append(&sb, "c%u", inst->ssa_program->constants[global->initializer_constant_index].offset);
         }
@@ -117,7 +151,7 @@ typedef u64 p_uint_t;
 
         if (func->run_wrapper) continue;
 
-        c_backend_emit_function_decl(inst, &sb, func);
+        c_backend_emit_function_decl(cb, &sb, func);
         string_builder_append(&sb, ";\n");
     }
     string_builder_append(&sb, "/* End function declarations */\n\n");
@@ -138,9 +172,9 @@ typedef u64 p_uint_t;
 
         if (func->foreign || func->run_wrapper) continue;
 
-        c_backend_emit_function_decl(inst, &sb, func);
+        c_backend_emit_function_decl(cb, &sb, func);
         string_builder_append(&sb, "\n");
-        c_backend_emit_function_body(inst, &sb, i, &arg_stack);
+        c_backend_emit_function_body(cb, &sb, i, &arg_stack);
     }
     string_builder_append(&sb, "/* End function definitions */\n\n");
 
@@ -163,15 +197,12 @@ R"POSTAMBLE(int main(int argc, char** argv) {
     fs_write_entire_file(c_filename, c_str);
 
 #if NPLATFORM_WINDOWS
-    // TODO: Use microsoft craziness to find this..
-    String_Ref clang_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe";
     String_Ref link_flags = "-lmsvcrtd -Wl,-nodefaultlib:libcmt,-nodefaultlib:libcmtd,-nodefaultlib:libmsvcrt";
 #else
-    String_Ref clang_path = "clang";
     String_Ref link_flags = "";
 #endif // NPLATFORM_WINDOWS
 
-    Array_Ref<String_Ref> commands({clang_path, "-std=c99", "-g",
+    Array_Ref<String_Ref> commands({cb->clang_path, "-std=c99", "-g",
                                     "-Wno-incompatible-library-redeclaration", "-Wno-format-security",
                                     c_filename, "-o", inst->options.output,
                                     inst->support_lib_s_path,
@@ -199,10 +230,16 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     platform_free_command_result(&c_res);
 
+
+#if NPLATFORM_WINDOWS
+    free_resources(&cb->wsdk_info);
+#endif // NPLATFORM_WINDOWS
+    free(inst->default_allocator, cb->clang_path.data);
+
     return c_res.success;
 }
 
-void c_backend_emit_struct_declaration(Instance* inst, String_Builder* sb, Type *type)
+void c_backend_emit_struct_declaration(C_Backend* cb, String_Builder* sb, Type *type)
 {
     assert(type->kind == Type_Kind::STRUCT);
 
@@ -218,24 +255,24 @@ void c_backend_emit_struct_declaration(Instance* inst, String_Builder* sb, Type 
 
         string_builder_append(sb, "    ");
         string_format(member_name, "m%d", i);
-        c_backend_emit_c_type(inst, sb, member.type, member_name);
+        c_backend_emit_c_type(cb, sb, member.type, member_name);
         string_builder_append(sb, ";\n");
     }
 
     string_builder_append(sb, "} %.*s;\n", (int)name.length, name.data);
 }
 
-void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, String_Ref name)
+void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name)
 {
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+    auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
 
-    String result = c_backend_emit_c_type(inst, type, name);
+    String result = c_backend_emit_c_type(cb, type, name);
     string_builder_append(sb, "%.*s", (int)result.length, result.data);
 
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
+    temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
 }
 
-String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
+String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
 {
     if (string_equal(name, "main")) {
         assert(type->kind == Type_Kind::FUNCTION);
@@ -243,7 +280,7 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
         name = "novo_main";
     }
 
-    Allocator* ta = &inst->temp_allocator;
+    Allocator* ta = &cb->inst->temp_allocator;
 
     switch (type->kind) {
         case Type_Kind::INVALID: assert(false); break;
@@ -265,11 +302,11 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
         }
 
         case Type_Kind::POINTER: {
-            if (type == inst->builtin_type_cstring) {
+            if (type == cb->inst->builtin_type_cstring) {
                 return string_format(ta, "const char (*%.*s)", (int)name.length, name.data);
             } else {
-                if (name.length) return c_backend_emit_c_type(inst, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
-                else             return c_backend_emit_c_type(inst, type->pointer.base, "*");
+                if (name.length) return c_backend_emit_c_type(cb, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
+                else             return c_backend_emit_c_type(cb, type->pointer.base, "*");
             }
         }
 
@@ -282,7 +319,7 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
 
             if (type->function.param_types.count) {
                 for (s64 i = 0; i < type->function.param_types.count; i++) {
-                    string_builder_append(&sb, "%s%s", i == 0 ? "" : ", ", c_backend_emit_c_type(inst, type->function.param_types[i], ""));
+                    string_builder_append(&sb, "%s%s", i == 0 ? "" : ", ", c_backend_emit_c_type(cb, type->function.param_types[i], ""));
                 }
             }
 
@@ -295,7 +332,7 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
 
             String result = string_builder_to_string(&sb);
 
-            return c_backend_emit_c_type(inst, type->function.return_type, result);
+            return c_backend_emit_c_type(cb, type->function.return_type, result);
         }
 
         case Type_Kind::STRUCT: {
@@ -316,10 +353,10 @@ String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name)
     return {};
 }
 
-void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Function* func)
+void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Function* func)
 {
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-    auto ta = &inst->temp_allocator;
+    auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
+    auto ta = &cb->inst->temp_allocator;
 
     String_Builder local_sb;
     string_builder_init(&local_sb, ta);
@@ -340,7 +377,7 @@ void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Functi
             char param_name[32];
             string_format(param_name, "p%lld", i);
 
-            c_backend_emit_c_type(inst, &local_sb, param_type, param_name);
+            c_backend_emit_c_type(cb, &local_sb, param_type, param_name);
         }
     }
 
@@ -351,9 +388,9 @@ void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Functi
     string_builder_append(&local_sb, ")");
 
     String result = string_builder_to_string(&local_sb);
-    c_backend_emit_c_type(inst, sb, func->type->function.return_type, result);
+    c_backend_emit_c_type(cb, sb, func->type->function.return_type, result);
 
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
+    temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
 }
 
 template <typename T>
@@ -363,13 +400,13 @@ static T _fetch_(SSA_Block* block, s64* offset) {
     return result;
 }
 
-void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack)
+void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack)
 {
-    assert(fn_index < inst->ssa_program->functions.count);
-    SSA_Function* func = &inst->ssa_program->functions[fn_index];
+    assert(fn_index < cb->inst->ssa_program->functions.count);
+    SSA_Function* func = &cb->inst->ssa_program->functions[fn_index];
 
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-    auto ta = &inst->temp_allocator;
+    auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
+    auto ta = &cb->inst->temp_allocator;
 
     string_builder_append(sb, "{\n");
 
@@ -377,7 +414,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
     if (func->sret) {
         string_builder_append(sb, "    ");
-        c_backend_emit_c_type(inst, sb, func->type->function.return_type, "retval");
+        c_backend_emit_c_type(cb, sb, func->type->function.return_type, "retval");
         string_builder_append(sb, " = {};\n");
     }
 
@@ -387,7 +424,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
         SSA_Register_Handle reg = func->allocs[i].alloc_reg;
 
-        c_backend_emit_c_type(inst, sb, func->registers[reg.index].type, reg_name);
+        c_backend_emit_c_type(cb, sb, func->registers[reg.index].type, reg_name);
         string_builder_append(sb, ";\n");
     }
 
@@ -403,10 +440,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
         string_format(reg_name, "r%u", i);
 
         if (register_type->kind == Type_Kind::STRUCT || func->registers[i].alloc_reg) {
-            register_type = pointer_type_get(inst, register_type);
+            register_type = pointer_type_get(cb->inst, register_type);
         }
 
-        c_backend_emit_c_type(inst, sb, register_type, reg_name);
+        c_backend_emit_c_type(cb, sb, register_type, reg_name);
         string_builder_append(sb, ";\n");
     }
 
@@ -484,7 +521,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     assert(target_type->kind == Type_Kind::POINTER);
 
                     string_builder_append(sb, "    r%u = (", result_reg);
-                    c_backend_emit_c_type(inst, sb, target_type, "");
+                    c_backend_emit_c_type(cb, sb, target_type, "");
                     string_builder_append(sb, ")r%u;", operand_reg);
                     break;
                 }
@@ -495,7 +532,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 operand_reg = FETCH32();
 
                     string_builder_append(sb, "    r%u = (", result_reg);
-                    c_backend_emit_c_type(inst, sb, func->registers[result_reg].type, "");
+                    c_backend_emit_c_type(cb, sb, func->registers[result_reg].type, "");
                     string_builder_append(sb, ")r%u;", operand_reg);
                     break;
                 }
@@ -507,7 +544,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 operand_reg = FETCH32();
 
                     string_builder_append(sb, "    r%u = (", result_reg);
-                    c_backend_emit_c_type(inst, sb, func->registers[result_reg].type, "");
+                    c_backend_emit_c_type(cb, sb, func->registers[result_reg].type, "");
                     string_builder_append(sb, ")r%u;", operand_reg);
                     break;
                 }
@@ -518,7 +555,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 operand_reg = FETCH32();
 
                     string_builder_append(sb, "    r%u = (", result_reg);
-                    c_backend_emit_c_type(inst, sb, func->registers[result_reg].type, "");
+                    c_backend_emit_c_type(cb, sb, func->registers[result_reg].type, "");
                     string_builder_append(sb, ")r%u;", operand_reg);
                     break;
                 }
@@ -620,10 +657,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     u32 offset = FETCH32();
 
-                    Type* pointer_type = pointer_type_get(inst, func->registers[result_reg].type);
+                    Type* pointer_type = pointer_type_get(cb->inst, func->registers[result_reg].type);
 
                     string_builder_append(sb, "    r%u = (", result_reg);
-                    c_backend_emit_c_type(inst, sb, pointer_type, "");
+                    c_backend_emit_c_type(cb, sb, pointer_type, "");
                     string_builder_append(sb, ")&c%lld;", offset);
 
                     break;
@@ -691,7 +728,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 result_reg = FETCH32();
                     u32 fn_index = FETCH32();
 
-                    SSA_Function* callee = &inst->ssa_program->functions[fn_index];
+                    SSA_Function* callee = &cb->inst->ssa_program->functions[fn_index];
                     String callee_name = atom_string(callee->name);
 
                     assert(!callee->foreign);
@@ -753,7 +790,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 fn_index = FETCH32();
                     u16 arg_count = FETCH16();
 
-                    SSA_Function* callee = &inst->ssa_program->functions[fn_index];
+                    SSA_Function* callee = &cb->inst->ssa_program->functions[fn_index];
                     assert(callee->foreign);
 
                     String callee_name = atom_string(callee->name);
@@ -796,7 +833,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                         }
                         assert(arg_type);
 
-                        if (arg_type == inst->builtin_type_cstring) {
+                        if (arg_type == cb->inst->builtin_type_cstring) {
                             string_builder_append(sb, "(const char*) ");
                         }
                         string_builder_append(sb, "r%u", arg_reg);
@@ -847,10 +884,10 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
                     u32 string_reg = FETCH32();
 
                     Source_Pos pos;
-                    bool found = hash_table_find(&inst->ssa_program->instruction_origin_positions, { offset, fn_index, (u32)bi }, &pos);
+                    bool found = hash_table_find(&cb->inst->ssa_program->instruction_origin_positions, { offset, fn_index, (u32)bi }, &pos);
                     assert(found);
 
-                    Imported_File file = inst->imported_files[pos.file_index];
+                    Imported_File file = cb->inst->imported_files[pos.file_index];
                     String file_name = atom_string(file.name);
                     Line_Info li = line_info(file.newline_offsets, pos.offset);
 
@@ -866,7 +903,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
             if (!no_print)  {
                 if (no_op) string_builder_append(sb, "    // ");
                 else string_builder_append(sb, " // ");
-                ssa_print_instruction(inst, sb, inst->ssa_program, func, ip, block->bytes);
+                ssa_print_instruction(cb->inst, sb, cb->inst->ssa_program, func, ip, block->bytes);
             }
 #else // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
             if (!no_print && !no_op) string_builder_append(sb, "\n");
@@ -879,7 +916,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 
     string_builder_append(sb, "}\n");
 
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
+    temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
 
 #undef FETCH
 #undef FETCH16
@@ -889,7 +926,7 @@ void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_ind
 #undef CMP_BINOP
 }
 
-void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_Expression* const_expr)
+void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_Expression* const_expr)
 {
     assert(const_expr->flags & AST_EXPR_FLAG_CONST);
 
@@ -913,7 +950,7 @@ void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_
             for (s64 i = 0; i < const_expr->compound.expressions.count; i++) {
                 if (i > 0) string_builder_append(sb, ", ");
 
-                c_backend_emit_constant_expression(inst, sb, const_expr->compound.expressions[i]);
+                c_backend_emit_constant_expression(cb, sb, const_expr->compound.expressions[i]);
             }
 
             string_builder_append(sb, " }");
@@ -942,9 +979,9 @@ void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_
 
             String _str = atom_string(const_expr->string_literal);
 
-            auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-            String str = convert_special_characters_to_escape_characters(&inst->temp_allocator, _str);
-            temp_allocator_reset(&inst->temp_allocator_data, mark);
+            auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
+            String str = convert_special_characters_to_escape_characters(&cb->inst->temp_allocator, _str);
+            temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
 
             string_builder_append(sb, "(u8*) \"%.*s\"", (int)str.length, str.data);
             string_builder_append(sb, ", %lld }", _str.length);

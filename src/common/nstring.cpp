@@ -327,7 +327,8 @@ u64 hash_string(const char* cstr)
 }
 
 #if NPLATFORM_WINDOWS
-Wide_String::Wide_String(Allocator* allocator, const String_Ref ref) {
+Wide_String::Wide_String(Allocator* allocator, const String_Ref ref)
+{
     if (ref.length == 0) {
         assert(ref.data == nullptr);
         this->data = nullptr;
@@ -344,6 +345,22 @@ Wide_String::Wide_String(Allocator* allocator, const String_Ref ref) {
 
     this->data = buf;
     this->length = written_size - 1;
+}
+
+Wide_String::Wide_String(wchar_t* wstr) : data(wstr), length(wcslen(wstr)) { }
+
+String wide_string_to_regular(Allocator* allocator, const Wide_String wstring)
+{
+    int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wstring.data, (int)wstring.length, nullptr, 0, nullptr, nullptr);
+
+    char* data = allocate_array<char>(allocator, size + 1);
+
+    int actual_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wstring.data, (int)wstring.length, data, size + 1, nullptr, nullptr);
+
+    assert(size == actual_size);
+    data[size] = '\0';
+
+    return string(data, size);
 }
 
 #endif // NPLATFORM_WINDOWS
