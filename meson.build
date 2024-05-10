@@ -103,5 +103,8 @@ runtime_support_includes = [
 support_lib_s = static_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT', link_args: link_args)
 support_lib_d = shared_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT', link_args: link_args)
 
+test_deps = [
+  support_lib_s, support_lib_d,
+]
 
 subdir('src/tests')
