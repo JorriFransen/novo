@@ -199,6 +199,11 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
                 return false;
             }
 
+            if (lvalue->flags & AST_EXPR_FLAG_CONST) {
+                Source_Pos pos = source_pos(inst, lvalue); // TODO: Report position of '='
+                instance_fatal_error(inst, pos, "Attempting to assign to a constant");
+            }
+
             if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
                 lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE &&
                 lvalue->identifier->decl->flags & AST_DECL_FLAG_PARAM) {
@@ -220,9 +225,15 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
                 return false;
             }
 
+            if (lvalue->flags & AST_EXPR_FLAG_CONST) {
+                Source_Pos pos = source_pos(inst, lvalue); // TODO: Report position of operator
+                instance_fatal_error(inst, pos, "Attempting to assign to a constant");
+            }
+
             if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
                 lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE &&
                 lvalue->identifier->decl->flags & AST_DECL_FLAG_PARAM) {
+
                 lvalue->identifier->decl->flags |= AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED;
             }
 
@@ -417,12 +428,18 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 return false;
             }
 
-            // TODO: Mark constant when referring to constant declarations
             assert(expr->identifier->decl);
+            if (expr->identifier->decl->kind == AST_Declaration_Kind::CONSTANT) {
+                expr->flags |= AST_EXPR_FLAG_CONST;
+            }
 
             if (expr->identifier->decl->flags & AST_DECL_FLAG_GLOBAL) {
                 assert(task->bytecode_deps);
                 darray_append_unique(task->bytecode_deps, ast_node(expr->identifier->decl));
+            }
+
+            if (expr->identifier->decl->kind == AST_Declaration_Kind::VARIABLE) {
+                expr->flags |= AST_EXPR_FLAG_LVALUE;
             }
 
             break;
@@ -492,9 +509,10 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 return false;
             }
 
-            if (expr->member.base->kind == AST_Expression_Kind::STRING_LITERAL) {
-                assert(expr->member.base->flags & AST_EXPR_FLAG_CONST);
+            if (expr->member.base->flags & AST_EXPR_FLAG_CONST) {
                 expr->flags |= AST_EXPR_FLAG_CONST;
+            } else {
+                expr->flags |= AST_EXPR_FLAG_LVALUE;
             }
 
             break;

@@ -531,10 +531,6 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 return false;
             }
 
-            if (decl->kind == AST_Declaration_Kind::VARIABLE) {
-                expr->flags |= AST_EXPR_FLAG_LVALUE;
-            }
-
             expr->resolved_type = decl->resolved_type;
 
             if (decl->kind == AST_Declaration_Kind::CONSTANT &&
@@ -675,7 +671,6 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             Type* mem_type = struct_type->structure.members[index].type;
 
-            expr->flags |= AST_EXPR_FLAG_LVALUE;
             expr->resolved_type = mem_type;
             break;
         }

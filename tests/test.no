@@ -23,83 +23,24 @@ printf :: (format: cstring, ..) -> s32 #foreign;
 //  ret_x :: (x: s64) -> int { return x; }
 //  add :: (a: s64, b: s64) -> s64 { return a + b; }
 
-//  Vec2 :: struct {
-//      x: s64; y: s64;
-//  }
+Vec2 :: struct {
+    x: s64; y: s64;
+}
 
-//  vec :: (x: s64, y: s64) -> Vec2 { return { x, y }; }
+vec :: (x: s64, y: s64) -> Vec2 { return { x, y }; }
 
-//  main :: () -> s64 {
-
-//      x := 0;
-//      x += 1;
-//      v := vec(1, 2);
-//      printf("{ %lld, %lld }\n".data, v.x, v.y);
-
-//      return 0;
-//  }
-
-
-//  #run main();
-
-putchar :: (char: s32) -> s32 #foreign;
-foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-
-glob_1 := 1;
-glob_2 : u32 = 2;
+P : Vec2 : { 1, 2 };
+X : s64 : 32;
 
 main :: () -> s64 {
 
-    assert(true);
-    printf("Hello, World!\n".data);
+    x := 0;
+    x += 1;
+    v := vec(1, 2);
+    printf("{ %lld, %lld }\n".data, v.x, v.y);
+    //  P.y = 4;
 
-    c : s32 = 'H';
 
-    c = putchar(c);
-    c2 := putchar('I');
-    putchar('!');
-    putchar('\n');
 
-    assert(c + c2 + foreign_add(glob_1, cast(s64, glob_2)) == 148);
-
-    cast_test();
-
-    return 0;
-}
-
-cast_test :: () -> int {
-
-    // unsigned -> unsigned
-    assert(cast(u8,  cast(u64, 0x0101010101010111)) == 0x11);
-    assert(cast(u16, cast(u64, 0x0101010101011001)) == 0x1001);
-    assert(cast(u32, cast(u64, 0x0000000110000001)) == 0x10000001);
-    assert(cast(u8,  cast(u32, 0x0101010101010111)) == 0x11);
-    assert(cast(u16, cast(u32, 0x0101010101011001)) == 0x1001);
-    assert(cast(u8,  cast(u16, 0x0101010101010111)) == 0x11);
-
-    // signed -> unsigned
-    assert(cast(u8,            0x0101010101010111)  == 0x11);
-    assert(cast(u16,           0x0101010101011001)  == 0x1001);
-    assert(cast(u32,           0x0000000110000001)  == 0x10000001);
-    assert(cast(u8,  cast(s32, 0x0101010101010111)) == 0x11);
-    assert(cast(u16, cast(s32, 0x0101010101011001)) == 0x1001);
-    assert(cast(u8,  cast(s16, 0x0101010101010111)) == 0x11);
-
-    // unsigned -> signed
-    assert(cast(s8,  cast(u64, 0xfefefefefefefefe)) == 0xfe);
-    assert(cast(s16, cast(u64, 0xfefefefefefefefe)) == 0xfefe);
-    assert(cast(s32, cast(u64, 0xfefefefefefefefe)) == 0xfefefefe);
-    assert(cast(s8,  cast(u32, 0xfefefefefefefefe)) == 0xfe);
-    assert(cast(s16, cast(u32, 0xfefefefefefefefe)) == 0xfefe);
-    assert(cast(s8,  cast(u16, 0xfefefefefefefefe)) == 0xfe);
-
-    // signed -> signed
-    assert(cast(s8,  cast(s64, 0xfefefefefefefefe)) == 0xfe);
-    assert(cast(s16, cast(s64, 0xfefefefefefefefe)) == 0xfefe);
-    assert(cast(s32, cast(s64, 0xfefefefefefefefe)) == 0xfefefefe);
-    assert(cast(s8,  cast(s32, 0xfefefefefefefefe)) == 0xfe);
-    assert(cast(s16, cast(s32, 0xfefefefefefefefe)) == 0xfefe);
-    assert(cast(s8,  cast(s16, 0xfefefefefefefefe)) == 0xfe);
-
-    return 0;
+    return X;
 }
