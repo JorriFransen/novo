@@ -1,4 +1,3 @@
-//  - // AST_DECL_FLAG_STORAGE_REQUIRED is only used for arguments/parameters?
 
 //  - Constant variables (aggregates, dissallow modification...)
 //  - Basic control flow

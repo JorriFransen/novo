@@ -59,17 +59,17 @@ enum class AST_Declaration_Kind : u32
 typedef u32 AST_Declaration_Flags;
 enum AST_Declaration_Flag : AST_Declaration_Flags
 {
-    AST_DECL_FLAG_NONE              = 0x000,
-    AST_DECL_FLAG_PARAM             = 0x001,
-    AST_DECL_FLAG_GLOBAL            = 0x002,
+    AST_DECL_FLAG_NONE                       = 0x000,
+    AST_DECL_FLAG_PARAM                      = 0x001,
+    AST_DECL_FLAG_GLOBAL                     = 0x002,
 
-    AST_DECL_FLAG_RESOLVED          = 0x004,
-    AST_DECL_FLAG_TYPED             = 0x008,
+    AST_DECL_FLAG_RESOLVED                   = 0x004,
+    AST_DECL_FLAG_TYPED                      = 0x008,
 
-    AST_DECL_FLAG_STORAGE_REQUIRED  = 0x010,
-    AST_DECL_FLAG_FOREIGN           = 0x020,
-    AST_DECL_FLAG_FOREIGN_VARARG    = 0x040,
-    // Last = 0x80000000
+    AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED = 0x010,
+    AST_DECL_FLAG_FOREIGN                    = 0x020,
+    AST_DECL_FLAG_FOREIGN_VARARG             = 0x040,
+    // Last                                  = 0x80000000
 };
 
 struct AST_Declaration

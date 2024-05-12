@@ -240,7 +240,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
 
         auto param_decl = decl->function.params[i];
 
-        if (param_decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
+        if (param_decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED) {
 
             SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, param_decl->resolved_type);
             darray_append(&func->allocs, { ast_node(param_decl), alloc_reg });
@@ -272,7 +272,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     for (s64 i = 0; i < decl->function.params.count; i++) {
         AST_Declaration* param_decl = decl->function.params[i];
 
-        if (param_decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
+        if (param_decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED) {
 
             u32 param_index = i;
             if (sret) param_index++;
@@ -873,7 +873,7 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
             bool is_param = decl->flags & AST_DECL_FLAG_PARAM;
 
             if (is_param) {
-                assert(decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED || is_struct);
+                assert(decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED || is_struct);
             }
 
             if (is_param && is_struct) {
@@ -1030,7 +1030,7 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
 
                 if (decl->flags & AST_DECL_FLAG_PARAM) {
 
-                    if (decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED) {
+                    if (decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED) {
 
                         assert(decl->variable.index >= 0 && decl->variable.index < function->param_count);
 
@@ -1060,7 +1060,7 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
 
             } else {
                 assert(decl->kind == AST_Declaration_Kind::CONSTANT);
-                assert(!(decl->flags & AST_DECL_FLAG_STORAGE_REQUIRED));
+                assert(!(decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED));
 
                 result_reg = ssa_emit_load_constant_value(builder, expr, scope);
             }

@@ -200,8 +200,9 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             }
 
             if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
-                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE) {
-                lvalue->identifier->decl->flags |= AST_DECL_FLAG_STORAGE_REQUIRED;
+                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE &&
+                lvalue->identifier->decl->flags & AST_DECL_FLAG_PARAM) {
+                lvalue->identifier->decl->flags |= AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED;
             }
 
             if (!resolve_expression(inst, task, stmt->assignment.rvalue, scope)) {
@@ -220,8 +221,9 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             }
 
             if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
-                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE) {
-                lvalue->identifier->decl->flags |= AST_DECL_FLAG_STORAGE_REQUIRED;
+                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE &&
+                lvalue->identifier->decl->flags & AST_DECL_FLAG_PARAM) {
+                lvalue->identifier->decl->flags |= AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED;
             }
 
             assert(is_binary_arithmetic_op(stmt->arithmetic_assignment.op));
