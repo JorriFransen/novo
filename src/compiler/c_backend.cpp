@@ -5,9 +5,7 @@
 #include "token.h"
 #include "type.h"
 
-// #include <bit>
 #include <cassert>
-#include <cstdlib>
 #include <filesystem.h>
 #include <logger.h>
 #include <nstring.h>
@@ -459,7 +457,8 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
         }
 
         if (bi > 0) {
-            string_builder_append(sb, "b%u:\n", bi);
+            String_Ref block_name = c_backend_block_name(cb, func, bi);
+            string_builder_append(sb, "%.*s:\n", (int)block_name.length, block_name.data);
         }
 
 #define FETCH() (_fetch_<u8>(block, &instruction_offset))
@@ -865,8 +864,11 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 true_block = FETCH32();
                     u32 false_block = FETCH32();
 
-                    string_builder_append(sb, "    if (r%u) goto b%u;\n", cond_reg, true_block);
-                    string_builder_append(sb, "    else goto b%u;", false_block);
+                    String_Ref tname = c_backend_block_name(cb, func, true_block);
+                    String_Ref fname = c_backend_block_name(cb, func, false_block);
+
+                    string_builder_append(sb, "    if (r%u) goto %.*s;\n", cond_reg, (int)tname.length, tname.data);
+                    string_builder_append(sb, "    else goto %.*s;", (int)fname.length, fname.data);
 
                     break;
                 }
@@ -874,7 +876,9 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                 case SSA_OP_JMP: {
                     u32 target_block = FETCH32();
 
-                    string_builder_append(sb, "    goto b%u;", target_block);
+                    String_Ref tname = c_backend_block_name(cb, func, target_block);
+
+                    string_builder_append(sb, "    goto %.*s;", (int)tname.length, tname.data);
                     break;
                 }
 
@@ -989,6 +993,19 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
         }
 
     }
+}
+
+String_Ref c_backend_block_name(C_Backend* cb, SSA_Function* func, s64 block_index)
+{
+    assert(block_index >= 0 && block_index < func->blocks.count);
+
+    String result = string_copy(&cb->inst->temp_allocator, atom_string(func->blocks[block_index].name));
+
+    for (s64 i = 0; i < result.length; i++) {
+        if (result[i] == '.') result[i] = '_';
+    }
+
+    return result;
 }
 
 }
