@@ -1,6 +1,8 @@
 
 #include <defines.h>
 #include <filesystem.h>
+#include <logger.h>
+#include <memory/temp_allocator.h>
 #include <nstring.h>
 #include <platform.h>
 
@@ -13,6 +15,10 @@
 #include <stdio.h>
 
 using namespace Novo;
+
+static Temp_Allocator ta_data;
+static Allocator ta_;
+static Allocator* ta = &ta_;
 
 struct Test_Case
 {
@@ -63,7 +69,15 @@ static Test_Case test_cases[] = {
 
 static bool run_test_case(Test_Case* tc, Options options)
 {
+    options.keep_c_backend_output = true;
     options.input_file = tc->file_path;
+    options.verbose = true;
+    options.trace = true;
+
+    fs_mkdir("build");
+
+    String filename = fs_filename_strip_extension(ta, tc->file_path);
+    options.output = string_format(ta, "build" NPLATFORM_PATH_SEPARATOR "%.*s" NPLATFORM_DEFAULT_EXE_EXTENSION, (int)filename.length, filename.data).data;
 
     Instance inst;
     instance_init(&inst, options);
@@ -99,9 +113,10 @@ static bool run_test_case(Test_Case* tc, Options options)
 
 int main(int argc, char* argv[]) {
 
-    Options options;
-
     auto ca = c_allocator();
+    ta_ = temp_allocator_create(&ta_data, ca, KIBIBYTE(1));
+
+    Options options;
 
     String exe_path = platform_exe_path(ca, argv[0]);
     String exe_dir = fs_dirname(ca, exe_path);
@@ -117,6 +132,8 @@ int main(int argc, char* argv[]) {
     s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
     s64 test_success_count = 0;
 
+    auto mark = temp_allocator_get_mark(&ta_data);
+
     for (s64 i = 0; i < test_count; i++) {
 
         auto tc = &test_cases[i];
@@ -130,6 +147,8 @@ int main(int argc, char* argv[]) {
         fflush(stdout);
 
         if (result) test_success_count++;
+
+        temp_allocator_reset(&ta_data, mark);
     }
 
     printf("\n%lld/%lld tests successful\n", test_success_count, test_count);

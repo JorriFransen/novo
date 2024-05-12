@@ -16,17 +16,19 @@ struct SSA_Function;
 struct String_Builder;
 struct Type;
 
+struct C_Backend;
+
 NAPI bool c_backend_emit(Instance* inst);
 
-NAPI void c_backend_emit_struct_declaration(Instance* inst, String_Builder* sb, Type *type);
+NAPI void c_backend_emit_struct_declaration(C_Backend* cb, String_Builder* sb, Type *type);
 
-NAPI void c_backend_emit_c_type(Instance* inst, String_Builder* sb, Type* type, String_Ref name);
-NAPI String c_backend_emit_c_type(Instance* inst, Type* type, String_Ref name);
+NAPI void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name);
+NAPI String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name);
 
-NAPI void c_backend_emit_function_decl(Instance* inst, String_Builder* sb, SSA_Function* func);
-NAPI void c_backend_emit_function_body(Instance* inst, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack);
+NAPI void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Function* func);
+NAPI void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack);
 
-NAPI void c_backend_emit_constant_expression(Instance* inst, String_Builder* sb, AST_Expression* const_expr);
+NAPI void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_Expression* const_expr);
 
 
 }

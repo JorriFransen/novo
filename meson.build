@@ -12,7 +12,7 @@ link_args = []
 if compiler_id == 'clang-cl'
   add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')
 elif compiler_id == 'msvc'
-  link_args = [ '-nodefaultlib:libcmt']
+  link_args = [ '-nodefaultlib:libcmt', '-nodefaultlib:libcmtd', '-nodefaultlib:msvcrt' ]
 endif
 
 dyncall_proj = subproject('dyncall')
@@ -38,7 +38,7 @@ common_source = [
 
 common_include_dirs = ['src/common/']
 common_includes = include_directories(common_include_dirs)
-common_lib = library('novo_common', sources: common_source, include_directories: common_includes, cpp_args: '-DNEXPORT')
+common_lib = library('novo_common', sources: common_source, include_directories: common_includes, cpp_args: '-DNEXPORT', link_args: link_args)
 
 
 compiler_include_dirs = ['src/compiler']
@@ -68,6 +68,8 @@ compiler_source = [
   'src/compiler/type.cpp', 'src/compiler/type.h',
   'src/compiler/typer.cpp', 'src/compiler/typer.h',
   'src/compiler/vm.cpp', 'src/compiler/vm.h',
+
+  'src/compiler/microsoft_craziness.cpp', 'src/compiler/microsoft_craziness.h'
 ]
 
 compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT', link_args: link_args, dependencies: [dyncall_dep])
@@ -98,8 +100,11 @@ runtime_support_includes = [
     include_directories(common_include_dirs, is_system: false),
 ]
 
-support_lib_s = static_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes)
-support_lib_d = shared_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes)
+support_lib_s = static_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT', link_args: link_args)
+support_lib_d = shared_library('novo_runtime_support', sources: runtime_support_source, include_directories: runtime_support_includes, cpp_args: '-DNEXPORT', link_args: link_args)
 
+test_deps = [
+  support_lib_s, support_lib_d,
+]
 
 subdir('src/tests')

@@ -1,0 +1,7 @@
+
+printf :: (format: cstring, ..) -> s32 #foreign;
+
+main :: () -> s64 {
+    printf("some\\path\n".data);
+    return 0;
+}

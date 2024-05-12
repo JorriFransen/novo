@@ -20,4 +20,8 @@ NAPI void temp_allocator_reset(Temp_Allocator* ta, Temp_Allocator_Mark mark = {}
 
 NAPI FN_ALLOCATOR(temp_allocator_fn);
 
+NAPI Allocator* temp_allocator();
+NAPI Temp_Allocator_Mark temp_allocator_get_mark();
+NAPI void temp_allocator_reset(Temp_Allocator_Mark mark);
+
 }

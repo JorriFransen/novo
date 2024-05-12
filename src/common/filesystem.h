@@ -32,7 +32,7 @@ NAPI bool fs_append(File_Handle* handle, u64 size, u8* bytes, u64* out_written);
 NAPI bool fs_append(File_Handle* handle, const String_Ref str);
 
 NAPI bool fs_remove(const String_Ref path);
-
+NAPI void fs_mkdir(const String_Ref path);
 
 NAPI void fs_chdir(const String_Ref path);
 NAPI bool fs_is_realpath(const String_Ref path);
@@ -42,5 +42,6 @@ NAPI bool fs_is_file(const String_Ref path);
 
 NAPI String fs_dirname(Allocator* allocator, const String_Ref path);
 NAPI String fs_filename(Allocator* allocator, const String_Ref path);
+NAPI String fs_filename_strip_extension(Allocator* allocator, const String_Ref path);
 
 }

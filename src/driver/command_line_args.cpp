@@ -5,6 +5,7 @@
 #include <logger.h>
 #include <memory/allocator.h>
 #include <nstring.h>
+#include <platform.h>
 
 #include <cassert>
 #include <cctype>
@@ -27,6 +28,8 @@ static void command_line_help(FILE *file, Cmd_Opt_Parser *cop);
 #define OPTION_CALLBACK_FN(n) void (n)(Cmd_Opt_Parser *cop)
 typedef OPTION_CALLBACK_FN(Option_Callback_FN);
 static OPTION_CALLBACK_FN(command_line_help_callback);
+
+#undef CALLBACK // windows...
 
 enum class Option_Type
 {
@@ -83,6 +86,8 @@ struct Cmd_Opt_Parser
 
 Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullptr*/)
 {
+    Allocator* ta = temp_allocator();
+
     const char *prog_name = argv[0];
 
     // Skip program name
@@ -130,20 +135,17 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
         exit(1);
     }
 
-    if (!cop.result.output) {
-        String in_filename = fs_filename(c_allocator(), cop.result.input_file);
-        String out_filename = in_filename;
-
-        s64 dot_idx = string_last_index_of(out_filename, '.');
-        if (dot_idx > 0) {
-            out_filename.length -= out_filename.length - dot_idx;
-            out_filename.data[out_filename.length] = '\0';
-        }
-
-        NSTRING_ASSERT_ZERO_TERMINATION(out_filename);
-
-        cop.result.output = out_filename.data;
+    String_Ref out_file_name = cop.result.output;
+    if (!out_file_name.length) {
+        out_file_name = fs_filename_strip_extension(ta, cop.result.input_file);
+        NSTRING_ASSERT_ZERO_TERMINATION(out_file_name);
     }
+
+    if (!string_ends_with(out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION)) {
+        out_file_name = string_append(ta, out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION);
+    }
+
+    cop.result.output = string_copy(c_allocator(), out_file_name).data;
 
     return cop.result;
 }

@@ -23,6 +23,8 @@ int main(int argc, char* argv[])
 {
     Instance instance;
     Options options = default_options();
+    options.trace = true;
+    options.verbose = true;
 
     auto ca = c_allocator();
 

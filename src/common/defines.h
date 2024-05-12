@@ -30,8 +30,6 @@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
 #define NPLATFORM_WINDOWS 1
-#undef NPLATFORM_DEFAULT_EXE_EXTENSION
-#define NPLATFORM_DEFAULT_EXE_EXTENSION ".exe"
 #ifndef _WIN64
 #error "64-bit is required on Windows!"
 #endif // _WIN64

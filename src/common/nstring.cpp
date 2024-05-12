@@ -14,12 +14,14 @@ static char  g_special_characters_array[] = {
     '\n',
     '\t',
     '\"',
+    '\\',
 };
 
 static char g_escape_characters_array[] = {
     'n',
     't',
     '"',
+    '\\',
 };
 
 
@@ -231,7 +233,6 @@ String convert_special_characters_to_escape_characters(Allocator* allocator, con
 
         if (is_special_character(c) != -1) {
             special_count += 1;
-            break;
         }
     }
 
@@ -266,16 +267,17 @@ String convert_escape_characters_to_special_characters(Allocator* allocator, con
         auto c = str[i];
 
         if (c == '\\') {
-            assert(i + 1 < str.length);
 
-            if (is_escape_character(str[i + 1]) == -1) {
+            if (i + 1 >= str.length || is_escape_character(str[i + 1]) == -1) {
                 if (err_char) {
                     *err_char = &str[i + 1];
+                    return {};
                 } else {
                     assert(false && "Invalid escape character!");
                 }
             }
 
+            i++;
             escape_count += 1;
         }
     }
@@ -323,5 +325,44 @@ u64 hash_string(const char* cstr)
 {
     return hash_string(cstr, strlen(cstr));
 }
+
+#if NPLATFORM_WINDOWS
+Wide_String::Wide_String(Allocator* allocator, const String_Ref ref)
+{
+    if (ref.length == 0) {
+        assert(ref.data == nullptr);
+        this->data = nullptr;
+        this->length = 0;
+        return;
+    }
+
+    int size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, ref.data, (int)ref.length + 1, nullptr, 0);
+    assert(size > 0);
+
+    LPWSTR buf = allocate_array<wchar_t>(allocator, size);
+    int written_size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, ref.data, (int)ref.length + 1, buf, size);
+    assert(written_size == size);
+
+    this->data = buf;
+    this->length = written_size - 1;
+}
+
+Wide_String::Wide_String(wchar_t* wstr) : data(wstr), length(wcslen(wstr)) { }
+
+String wide_string_to_regular(Allocator* allocator, const Wide_String wstring)
+{
+    int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wstring.data, (int)wstring.length, nullptr, 0, nullptr, nullptr);
+
+    char* data = allocate_array<char>(allocator, size + 1);
+
+    int actual_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wstring.data, (int)wstring.length, data, size + 1, nullptr, nullptr);
+
+    assert(size == actual_size);
+    data[size] = '\0';
+
+    return string(data, size);
+}
+
+#endif // NPLATFORM_WINDOWS
 
 }

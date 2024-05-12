@@ -146,6 +146,8 @@ String string_builder_to_string(String_Builder* sb, Allocator* allocator)
         block = next;
     }
 
+    if (size <= 0) return {};
+
     String result = {
         allocate_array<char>(allocator, size + 1),
         size,
