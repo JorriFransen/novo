@@ -534,8 +534,10 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Allocato
         string_builder_append(&sb, "Executing external command: '");
 
         for (s64 i = 0; i < command_line.count; i++) {
-            const char* fmt = i > 0 ? " %.*s" : "%.*s";
-            string_builder_append(&sb, fmt, (int)command_line[i].length, command_line[i].data);
+            if (command_line[i].length) {
+                const char* fmt = i > 0 ? " %.*s" : "%.*s";
+                string_builder_append(&sb, fmt, (int)command_line[i].length, command_line[i].data);
+            }
         }
 
         string_builder_append(&sb, "'");
