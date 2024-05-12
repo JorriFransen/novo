@@ -60,18 +60,19 @@ Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_
     return result;
 }
 
-Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, Scope* scope)
+Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type_Struct_Member> members, Scope* scope)
 {
-    DArray<Type_Struct_Member> members;
-    darray_init(&inst->ast_allocator, &members, member_types.count);
+    DArray<Type_Struct_Member_Resolved> resolved_members;
+    darray_init(&inst->ast_allocator, &resolved_members, members.count);
 
     s64 total_size = 0;
     u32 max_alignment = 1;
 
-    for (s64 i = 0; i < member_types.count; i++) {
+    for (s64 i = 0; i < members.count; i++) {
 
-        Type_Struct_Member member;
-        Type* member_type = member_types[i];
+        Type_Struct_Member_Resolved member;
+        Type* member_type = members[i].type;
+        member.name = members[i].name;
         member.type = member_type;
 
         s64 member_size = member_type->bit_size;
@@ -82,14 +83,14 @@ Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, 
 
         member.offset = total_size;
 
-        darray_append(&members, member);
+        darray_append(&resolved_members, member);
 
         total_size += member_size;
     }
 
     auto result = type_new(inst, Type_Kind::STRUCT, TYPE_FLAG_NONE, total_size, max_alignment);
     result->structure.name = name;
-    result->structure.members = members;
+    result->structure.members = resolved_members;
     result->structure.scope = scope;
 
     darray_append(&inst->struct_types, result);

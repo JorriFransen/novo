@@ -1,5 +1,6 @@
 #include "c_backend.h"
 
+#include "atom.h"
 #include "instance.h"
 #include "ssa.h"
 #include "token.h"
@@ -79,7 +80,7 @@ typedef u64 p_uint_t;
 #define novo_c_assert(cond, msg_ptr, file, line, col) { \
     if (!cond) { \
         fprintf(stderr, "%s:%u:%u: Assertion failed", file, line, col); \
-        if (msg_ptr) fprintf(stderr, ": \"%.*s\"\n", (int)msg_ptr->m1, msg_ptr->m0); \
+        if (msg_ptr) fprintf(stderr, ": \"%.*s\"\n", (int)msg_ptr->length, msg_ptr->data); \
         else fprintf(stderr, "!\n"); \
         raise(SIGABRT); \
     }  \
@@ -246,13 +247,11 @@ void c_backend_emit_struct_declaration(C_Backend* cb, String_Builder* sb, Type *
     string_builder_append(sb, "typedef struct %.*s\n", (int)name.length, name.data);
     string_builder_append(sb, "{\n");
 
-    char member_name[32];
-
     for (s64 i = 0; i < type->structure.members.count; i++) {
-        Type_Struct_Member member = type->structure.members[i];
+        Type_Struct_Member_Resolved member = type->structure.members[i];
 
         string_builder_append(sb, "    ");
-        string_format(member_name, "m%d", i);
+        String_Ref member_name = atom_string(member.name);
         c_backend_emit_c_type(cb, sb, member.type, member_name);
         string_builder_append(sb, ";\n");
     }
@@ -668,10 +667,20 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                 case SSA_OP_STRUCT_OFFSET: {
                     u32 result_reg = FETCH32();
                     u32 base_ptr_reg = FETCH32();
-                    /*u32 offset =*/ FETCH32();
+                    u32 offset = FETCH32();
                     u16 index = FETCH16();
 
-                    string_builder_append(sb, "    r%u = &(r%u)->m%u;", result_reg, base_ptr_reg, index);
+                    Type* struct_type = func->registers[base_ptr_reg].type;
+                    if (struct_type->kind == Type_Kind::POINTER) {
+                        struct_type = struct_type->pointer.base;
+                    }
+                    assert(struct_type->kind == Type_Kind::STRUCT);
+
+                    Type_Struct_Member_Resolved member = struct_type->structure.members[index];
+                    assert(member.offset / 8 == offset);
+                    String_Ref member_name = atom_string(member.name);
+
+                    string_builder_append(sb, "    r%u = &(r%u)->%.*s;", result_reg, base_ptr_reg, (int)member_name.length, member_name.data);
                     break;
                 }
 

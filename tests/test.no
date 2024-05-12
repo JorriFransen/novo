@@ -42,5 +42,8 @@ main :: () -> s64 {
         printf("i: %lld\n".data, i);
     }
 
+
+    assert(true);
+
     return X;
 }

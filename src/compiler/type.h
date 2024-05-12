@@ -29,8 +29,17 @@ enum class Type_Kind : u32
 struct Scope;
 struct Type;
 
+// Used when creating new struct types
 struct Type_Struct_Member
 {
+    Atom name;
+    Type* type;
+};
+
+// Stored in the final struct type
+struct Type_Struct_Member_Resolved
+{
+    Atom name;
     Type* type;
     u32 offset;
 };
@@ -67,7 +76,7 @@ struct Type
 
         struct {
             Atom name;
-            DArray<Type_Struct_Member> members;
+            DArray<Type_Struct_Member_Resolved> members;
             Scope* scope;
         } structure;
     };
@@ -79,7 +88,7 @@ NAPI Type* integer_type_new(Instance* inst, bool sign, u32 bit_size);
 NAPI Type* boolean_type_new(Instance* inst, u32 bit_size);
 NAPI Type* pointer_type_new(Instance* inst, Type* base);
 NAPI Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type, Type_Flags flags);
-NAPI Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type*> member_types, Scope* scope);
+NAPI Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type_Struct_Member> members, Scope* scope);
 
 NAPI Type* pointer_type_get(Instance *inst, Type* base);
 NAPI Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type, Type_Flags flags);

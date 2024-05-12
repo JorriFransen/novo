@@ -136,11 +136,16 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
             }
 
-            auto member_types = temp_array_create<Type*>(&inst->temp_allocator, fields.count);
+            auto member_types = temp_array_create<Type_Struct_Member>(&inst->temp_allocator, fields.count);
 
             for (s64 i = 0; i < fields.count; i++) {
                 auto field = fields[i];
-                darray_append(&member_types, field->resolved_type);
+                assert(field->ident);
+
+                Type_Struct_Member member;
+                member.name = field->ident->atom;
+                member.type = field->resolved_type;
+                darray_append(&member_types, member);
             }
 
             decl->resolved_type = struct_type_new(inst, decl->ident->atom, member_types, struct_scope);

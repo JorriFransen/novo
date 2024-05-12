@@ -915,7 +915,7 @@ AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem)
                 darray_init(&inst->ast_allocator, &expressions, type->structure.members.count);
 
                 for (s64 i = 0; i < type->structure.members.count; i++) {
-                    Type_Struct_Member member = type->structure.members[i];
+                    Type_Struct_Member_Resolved member = type->structure.members[i];
 
                     assert(member.offset % 8 == 0);
                     AST_Expression* mem_expr = vm_const_expr_from_memory(inst, member.type, mem + (member.offset / 8));
