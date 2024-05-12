@@ -210,13 +210,6 @@ R"POSTAMBLE(int main(int argc, char** argv) {
                           link_flags,
                         };
 
-    // Array_Ref<String_Ref> commands({ cb->clang_path, "-std=c99", "-g",
-    //                       "-Wno-incompatible-library-redeclaration", "-Wno-format-security",
-    //                       c_filename, "-o", inst->options.output,
-    //                       inst->support_lib_s_path,
-    //                       link_flags,
-    //                     });
-
     Command_Result c_res = platform_run_command(commands, &inst->temp_allocator);
 
     if (!c_res.success) {

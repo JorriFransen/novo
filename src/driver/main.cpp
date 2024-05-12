@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     instance_free(&instance);
     return 0;
 
-    // Array_Ref<String_Ref> command({"test.bat"});
+    // String_Ref command[] = { "test.bat" };
     // Command_Result run_result = platform_run_command(command, temp_allocator());
     //
     // if (run_result.result_string.length) {
