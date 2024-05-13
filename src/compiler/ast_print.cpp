@@ -199,12 +199,18 @@ static void ast_decl_to_string(Instance* instance, String_Builder* sb, AST_Decla
 
 
         case AST_Declaration_Kind::ENUM_MEMBER: {
-            assert(false);
+            string_builder_append(sb, "ENUM_MEMBER: '%s'\n", name.data);
+            if (decl->enum_member.value_expr) {
+                ast_expr_to_string(instance, sb, decl->enum_member.value_expr);
+            }
             break;
         }
 
         case AST_Declaration_Kind::ENUM: {
-            assert(false);
+            string_builder_append(sb, "ENUM_DECL: '%s'\n", name.data);
+            for (s64 i = 0; i < decl->enumeration.members.count; i++) {
+                ast_decl_to_string(instance, sb, decl->enumeration.members[i]);
+            }
             break;
         }
 

@@ -102,6 +102,7 @@ struct AST_Declaration
         } structure;
 
         struct {
+            AST_Expression* value_expr;
         } enum_member;
 
         struct {

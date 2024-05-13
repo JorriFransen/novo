@@ -161,6 +161,10 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
 
                         AST_Statement* stmt = ast_import_statement(inst, import_path);
                         if (!stmt) return {};
+
+                        Source_Pos pos = source_pos(source_pos(parser, ct), source_pos(parser, str_tok));
+                        save_source_pos(parser->instance, stmt, pos);
+
                         darray_append(&nodes, ast_node(stmt));
 
                         break;
