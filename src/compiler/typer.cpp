@@ -126,7 +126,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
         case AST_Declaration_Kind::STRUCT: {
 
             Scope* struct_scope = decl->structure.scope;
-            auto &fields = decl->structure.fields;
+            auto &fields = decl->structure.members;
 
             for (s64 i = 0; i < fields.count; i++) {
                 auto field = fields[i];

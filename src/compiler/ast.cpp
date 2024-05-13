@@ -105,11 +105,11 @@ AST_Declaration* ast_struct_member_declaration(Instance* inst, AST_Identifier* i
     return result;
 }
 
-AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration*> fields, Scope* scope)
+AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration*> members, Scope* scope)
 {
     auto result = ast_declaration(inst, AST_Declaration_Kind::STRUCT, ident);
     result->structure.scope = scope;
-    result->structure.fields = fields;
+    result->structure.members = members;
     return result;
 }
 

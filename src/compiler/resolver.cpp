@@ -108,8 +108,8 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
 
             Scope* struct_scope = decl->structure.scope;
 
-            for (s64 i = 0; i < decl->structure.fields.count; i++) {
-                auto field = decl->structure.fields[i];
+            for (s64 i = 0; i < decl->structure.members.count; i++) {
+                auto field = decl->structure.members[i];
                 if (!resolve_declaration(inst, task, field, struct_scope)) {
                     return false;
                 }
