@@ -159,7 +159,7 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
 
         case AST_Statement_Kind::IMPORT: {
 
-            String import_path = string_append(&inst->temp_allocator, inst->cwd, stmt->import_path);
+            String_Ref import_path = stmt->import_path;
             assert(fs_is_file(import_path));
 
             if (!(fs_is_realpath(import_path))) {

@@ -3,6 +3,7 @@
 #include <containers/darray.h>
 #include <containers/hash_table.h>
 #include <memory/temp_allocator.h>
+#include <nstring.h>
 #include <platform.h>
 
 #include "ast.h"
@@ -131,9 +132,31 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
                         expect_token(parser, TOK_STRING);
 
                         String str_lit = atom_string(str_tok.atom);
+                        String_Ref module_name(str_lit.data + 1, str_lit.length - 2); // remove quotes
 
-                        String import_path = string_append(&inst->ast_allocator, parser->cwd, String_Ref(str_lit.data + 1, str_lit.length - 2));
-                        assert(fs_is_file(import_path));
+                        String_Ref candidate_dirs_[] = { inst->module_dir, parser->cwd };
+                        Array_Ref candidate_dirs(candidate_dirs_);
+
+                        String import_path;
+                        bool found = false;
+
+                        auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+
+                        for (s64 i = 0; i < candidate_dirs.count; i++) {
+
+                            String candidate_path = string_format(&inst->temp_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%.*s.no",
+                                                                  (int)candidate_dirs[i].length, candidate_dirs[i].data,
+                                                                  (int)module_name.length, module_name.data) ;
+                            if (fs_is_file(candidate_path)) {
+                                import_path = string_copy(inst->default_allocator, candidate_path);
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+                        assert(found);
 
                         AST_Statement* stmt = ast_import_statement(inst, import_path);
                         if (!stmt) return {};
@@ -1215,8 +1238,11 @@ bool expect_token_internal(Parser* parser, Token_Kind kind)
 {
     auto ct = parser->lexer.token;
     if (ct.kind != kind) {
-        auto tok_str = atom_string(ct.atom);
-        instance_fatal_error(parser->instance, source_pos(parser, ct), "Expected token '%s', got '%s'", tmp_token_kind_str(kind).data, tok_str.data);
+        String_Ref tok_str = ct.kind == TOK_EOF ? String_Ref("<EOF>") : atom_string(ct.atom);
+        String_Ref exp_tok_str = tmp_token_kind_str(kind);
+        instance_fatal_error(parser->instance, source_pos(parser, ct), "Expected token '%.*s', got '%.*s'",
+                             (int)exp_tok_str.length, exp_tok_str.data,
+                             (int)tok_str.length, tok_str.data);
         return false;
     }
 

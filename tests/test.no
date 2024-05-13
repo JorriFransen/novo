@@ -1,4 +1,5 @@
 
+//  - Move inst->cwd into the tests
 //  - Basic control flow
 //      - switch
 //      - defer
@@ -11,39 +12,12 @@
 //  - Capture errors, and check for them in tests
 
 
-// putchar :: (char: s32) -> s32 #foreign;
-// puts :: (str: *u8) -> s32 #foreign;
-// foreign_add :: (a: s64, b: s64) -> s32 #foreign;
-printf :: (format: cstring, ..) -> s32 #foreign;
-// malloc :: (size: s64) -> *void #foreign;
-// free :: (ptr: *void) -> void #foreign
+#import "c"
 
-
-//  ret_x :: (x: s64) -> int { return x; }
-//  add :: (a: s64, b: s64) -> s64 { return a + b; }
-
-Vec2 :: struct {
-    x: s64; y: s64;
-}
-
-vec :: (x: s64, y: s64) -> Vec2 { return { x, y }; }
-
-P : Vec2 : { 1, 2 };
-X : s64 : 32;
+#import "another"
 
 main :: () -> s64 {
 
-    x := 0;
-    x += 1;
-    v := vec(1, 2);
-    printf("{ %lld, %lld }\n".data, v.x, v.y);
-
-    for i := 0; i < 10; i += 1; {
-        printf("i: %lld\n".data, i);
-    }
-
-
-    assert(true);
-
-    return X;
+    printf("Hi!\n".data);
+    return abc();
 }
