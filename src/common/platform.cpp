@@ -544,7 +544,7 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Allocato
 
         String msg = string_builder_to_string(&sb);
 
-        log_trace("%.*s", (int)msg.length, msg.data);
+        log_debug("%.*s", (int)msg.length, msg.data);
     }
 
     return _platform_run_command_(command_line);

@@ -119,6 +119,19 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
             break;
         }
 
+        case AST_Declaration_Kind::ENUM_MEMBER: {
+            assert(false);
+            break;
+        }
+
+        case AST_Declaration_Kind::ENUM: {
+
+            // Scope* enum_scope = decl->enumeration.scope;
+
+            assert(false);
+            break;
+        }
+
         case AST_Declaration_Kind::FUNCTION: {
 
             for (s64 i = 0; i < decl->function.params.count; i++) {

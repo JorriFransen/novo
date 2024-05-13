@@ -51,6 +51,8 @@ enum class AST_Declaration_Kind : u32
     CONSTANT,
     STRUCT_MEMBER,
     STRUCT,
+    ENUM_MEMBER,
+    ENUM,
     FUNCTION,
 
     BUILTIN_TYPE,
@@ -98,6 +100,14 @@ struct AST_Declaration
             Scope* scope;
             DArray<AST_Declaration *> members;
         } structure;
+
+        struct {
+        } enum_member;
+
+        struct {
+            Scope* scope;
+            DArray<AST_Declaration*> members;
+        } enumeration;
 
         struct {
             DArray<AST_Declaration *> params;
@@ -396,6 +406,8 @@ NAPI AST_Declaration* ast_variable_declaration(Instance* inst, AST_Identifier* i
 NAPI AST_Declaration* ast_constant_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* value, AST_Declaration_Flags flags = AST_DECL_FLAG_NONE);
 NAPI AST_Declaration* ast_struct_member_declaration(Instance* inst, AST_Identifier* ident, AST_Type_Spec* ts, AST_Expression* default_val);
 NAPI AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> members, Scope* scope);
+NAPI AST_Declaration* ast_enum_member_declaration(Instance* inst, AST_Identifier* ident);
+NAPI AST_Declaration* ast_enum_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration*> members, Scope* scope);
 NAPI AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration *> arg_decls, DArray<AST_Statement *> body_stmts, AST_Type_Spec* return_ts, Scope* scope);
 
 NAPI AST_Statement* ast_statement(Instance* inst, AST_Statement_Kind kind);

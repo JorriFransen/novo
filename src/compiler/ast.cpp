@@ -113,6 +113,20 @@ AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, D
     return result;
 }
 
+AST_Declaration* ast_enum_member_declaration(Instance* inst, AST_Identifier* ident)
+{
+    auto result = ast_declaration(inst, AST_Declaration_Kind::ENUM_MEMBER, ident);
+    return result;
+}
+
+AST_Declaration* ast_enum_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration*> members, Scope* scope)
+{
+    auto result = ast_declaration(inst, AST_Declaration_Kind::ENUM, ident);
+    result->enumeration.scope = scope;
+    result->enumeration.members = members;
+    return result;
+}
+
 AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration*> param_decls, DArray<AST_Statement*> body_stmts, AST_Type_Spec* return_ts, Scope* scope)
 {
     auto result = ast_declaration(inst, AST_Declaration_Kind::FUNCTION, ident);

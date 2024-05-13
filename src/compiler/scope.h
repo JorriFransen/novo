@@ -21,6 +21,7 @@ enum Scope_Kind : u32
     INVALID,
     GLOBAL,
     STRUCT,
+    ENUM,
     FUNCTION_LOCAL,
 };
 

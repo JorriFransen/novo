@@ -2,6 +2,7 @@
 #include <defines.h>
 #include <instance.h>
 #include <logger.h>
+#include <memory/allocator.h>
 #include <string_builder.h>
 
 #include "command_line_args.h"

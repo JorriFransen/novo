@@ -2,6 +2,7 @@
 
 #include <containers/darray.h>
 #include <containers/hash_table.h>
+#include <defines.h>
 #include <memory/temp_allocator.h>
 #include <nstring.h>
 #include <platform.h>
@@ -304,6 +305,11 @@ AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope*
                 assert(false);
             }
             result = parse_struct_declaration(parser, ident, scope);
+
+        } else if (match_keyword(parser, g_keyword_enum)) {
+
+            result = parse_enum_declaration(parser, ident, scope);
+
         } else if (is_token(parser, '(')) {
             if (ts) {
                 // TODO: report error
@@ -403,6 +409,41 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
 
 
     AST_Declaration* result = ast_struct_declaration(parser->instance, ident, fields_array, struct_scope);
+    save_source_pos(parser->instance, result, pos);
+    return result;
+}
+
+AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, Scope* scope)
+{
+    Source_Pos pos = source_pos(parser->instance, ident);
+
+    expect_token(parser, '{');
+
+    auto members = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 8);
+    Scope* enum_scope = scope_new(parser->instance, Scope_Kind::ENUM, scope);
+
+    while (!match_token(parser, '}')) {
+
+        AST_Identifier* member_ident = parse_identifier(parser);
+
+        Source_Pos member_end_pos = source_pos(&parser->lexer);
+
+        if (!match_token(parser, ',')) expect_token(parser, ';');
+
+
+        AST_Declaration* member_decl = ast_enum_member_declaration(parser->instance, member_ident);
+
+        Source_Pos member_pos = source_pos(source_pos(parser->instance, member_ident), member_end_pos);
+        save_source_pos(parser->instance, member_decl, member_pos);
+
+        darray_append(&members, member_decl);
+    }
+
+    pos = source_pos(pos, source_pos(&parser->lexer));
+
+    auto members_array = temp_array_finalize(&parser->instance->ast_allocator, &members);
+
+    AST_Declaration* result = ast_enum_declaration(parser->instance, ident, members_array, enum_scope);
     save_source_pos(parser->instance, result, pos);
     return result;
 }

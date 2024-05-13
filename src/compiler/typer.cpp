@@ -154,6 +154,16 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
             break;
         }
 
+        case AST_Declaration_Kind::ENUM_MEMBER: {
+            assert(false);
+            break;
+        }
+
+        case AST_Declaration_Kind::ENUM: {
+            assert(false);
+            break;
+        }
+
         case AST_Declaration_Kind::FUNCTION: {
 
             if (!decl->resolved_type) {

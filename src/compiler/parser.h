@@ -53,6 +53,7 @@ NAPI DArray<AST_Node> parse_statement_nodes(Instance* inst, Parser* parser, Scop
 NAPI AST_Declaration* parse_declaration(Parser* parser, Scope* scope, bool eat_semi);
 NAPI AST_Declaration* parse_declaration(Parser* parser, AST_Identifier* ident, Scope* scope, bool eat_semi);
 NAPI AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident, Scope* scope);
+NAPI AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, Scope* scope);
 NAPI AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* ident, Scope* scope);
 NAPI AST_Declaration* parse_constant_declaration(Parser* parser, AST_Identifier* ident, AST_Type_Spec* ts, Scope* scope);
 

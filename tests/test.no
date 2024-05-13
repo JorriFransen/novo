@@ -14,10 +14,20 @@
 
 #import "c"
 
-#import "another"
+days :: enum {
+    Monday,
+    Tuesday;
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+}
 
 main :: () -> s64 {
 
     printf("Hi!\n".data);
-    return abc();
+
+
+    return 0;
 }
