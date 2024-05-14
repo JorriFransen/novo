@@ -36,9 +36,9 @@ struct Scope
 
 enum Scope_Find_Options
 {
-    SCOPE_FIND_OPTS_NONE            = 0x00,
-    SCOPE_FIND_OPTS_LIMIT_TO_STRUCT = 0x01,
-    SCOPE_FIND_OPTS_NO_REDECL_CHECK = 0x02,
+    SCOPE_FIND_OPTS_NONE               = 0x00,
+    SCOPE_FIND_OPTS_LIMIT_TO_TYPE_DECL = 0x01,
+    SCOPE_FIND_OPTS_NO_REDECL_CHECK    = 0x02,
 };
 
 NAPI Scope* scope_new(Instance* instance, Scope_Kind kind, Scope* parent = nullptr);

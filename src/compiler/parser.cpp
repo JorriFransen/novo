@@ -386,7 +386,7 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
 
         auto mem_decl = ast_struct_member_declaration(parser->instance, name, ts, default_value);
 
-        if (!scope_add_symbol(struct_scope, name->atom, mem_decl, SCOPE_FIND_OPTS_LIMIT_TO_STRUCT)) {
+        if (!scope_add_symbol(struct_scope, name->atom, mem_decl, SCOPE_FIND_OPTS_LIMIT_TO_TYPE_DECL)) {
             auto new_name = atom_string(name->atom);
 
             auto ex_decl = scope_find_symbol(struct_scope, name->atom, nullptr);
@@ -428,6 +428,8 @@ AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, S
 
     while (!match_token(parser, '}')) {
 
+        Source_Pos member_pos = source_pos(&parser->lexer);
+
         AST_Identifier* member_ident = parse_identifier(parser);
 
         Source_Pos member_end_pos = source_pos(&parser->lexer);
@@ -437,7 +439,22 @@ AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, S
 
         AST_Declaration* member_decl = ast_enum_member_declaration(parser->instance, member_ident);
 
-        Source_Pos member_pos = source_pos(source_pos(parser->instance, member_ident), member_end_pos);
+        if (!scope_add_symbol(enum_scope, member_ident->atom, member_decl, SCOPE_FIND_OPTS_LIMIT_TO_TYPE_DECL)) {
+            auto new_name = atom_string(member_ident->atom);
+
+            auto ex_decl = scope_find_symbol(enum_scope, member_ident->atom, nullptr);
+            assert(ex_decl);
+            assert(ex_decl->ident);
+
+            Source_Pos ident_pos = source_pos(parser->instance, ident);
+            Source_Pos decl_pos = source_pos(parser->instance, ex_decl);
+
+            instance_error(parser->instance, ident_pos, "Redeclaration of symbol: '%s'", new_name.data);
+            instance_fatal_error_note(parser->instance, decl_pos, "Previous declaration was here");
+            return nullptr;
+        }
+
+        member_pos = source_pos(member_pos, member_end_pos);
         save_source_pos(parser->instance, member_decl, member_pos);
 
         darray_append(&members, member_decl);

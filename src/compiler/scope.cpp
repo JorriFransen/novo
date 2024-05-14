@@ -32,7 +32,8 @@ bool scope_add_symbol(Scope* scope, Atom atom, AST_Declaration* decl, Scope_Find
 
 AST_Declaration* scope_find_symbol(Scope* scope, Atom atom, Scope **found_in_scope, Scope_Find_Options opts/*=SCOPE_FIND_OPTS_NONE*/)
 {
-    if (opts & SCOPE_FIND_OPTS_LIMIT_TO_STRUCT && scope->kind != Scope_Kind::STRUCT) {
+    if ((opts & SCOPE_FIND_OPTS_LIMIT_TO_TYPE_DECL) &&
+        (scope->kind != Scope_Kind::STRUCT && scope->kind != Scope_Kind::ENUM)) {
         return nullptr;
     }
 

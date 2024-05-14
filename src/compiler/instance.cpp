@@ -308,9 +308,6 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 add_resolve_tasks(inst, nodes, task.insert.scope, task.insert.fn_decl, task.insert.bc_deps);
                 task.insert.stmt->insert.nodes_to_insert = nodes;
             }
-
-            String ast_str = ast_to_string(inst, parsed_file, temp_allocator());
-            log_info("AST: %.*s", (int)ast_str.length, ast_str.data);
         }
 
         for (s64 i = 0; i < inst->resolve_tasks.count; i++) {
