@@ -94,6 +94,10 @@ typedef u64 p_uint_t;
 
     // Type declarations
     string_builder_append(&sb, "/* Type declarations */\n");
+    for (s64 i = 0; i < inst->enum_types.count; i++) {
+        c_backend_emit_enum_declaration(cb, &sb, inst->enum_types[i]);
+        string_builder_append(&sb, "\n");
+    }
     for (s64 i = 0; i < inst->struct_types.count; i++) {
         c_backend_emit_struct_declaration(cb, &sb, inst->struct_types[i]);
         string_builder_append(&sb, "\n");
@@ -259,6 +263,35 @@ void c_backend_emit_struct_declaration(C_Backend* cb, String_Builder* sb, Type *
     string_builder_append(sb, "} %.*s;\n", (int)name.length, name.data);
 }
 
+void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *type)
+{
+    assert(type->kind == Type_Kind::ENUM);
+
+    String name = atom_string(type->enumeration.name);
+    Type* strict_type = type->enumeration.strict_type;
+
+    string_builder_append(sb, "typedef enum %.*s : ", (int)name.length, name.data);
+    c_backend_emit_c_type(cb, sb, strict_type, "");
+    string_builder_append(sb, "\n{\n");
+
+    for (s64 i = 0; i < type->enumeration.members.count; i++) {
+        Type_Enum_Member member = type->enumeration.members[i];
+
+        string_builder_append(sb, "    ");
+        String_Ref member_name = atom_string(member.name);
+        string_builder_append(sb, "%.*s = 0x%x", (int)member_name.length, member_name.data, member.value);
+
+#if NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+        const char* fmt = strict_type->integer.sign ? ", // %llu\n" : ", // %lld\n";
+        string_builder_append(sb, fmt, member.value);
+#else // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+        string_builder_append(sb, ",\n");
+#endif // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+    }
+
+    string_builder_append(sb, "} %.*s;\n", (int)name.length, name.data);
+}
+
 void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name)
 {
     auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
@@ -343,6 +376,20 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
             if (name.length) string_builder_append(&sb, " %.*s", (int)name.length, name.data);
 
             return string_builder_to_string(&sb);
+        }
+
+        case Type_Kind::ENUM: {
+            String_Builder sb;
+            string_builder_init(&sb, ta);
+
+            String enum_name = atom_string(type->enumeration.name);
+
+            string_builder_append(&sb, "%.*s", (int)enum_name.length, enum_name.data);
+
+            if (name.length) string_builder_append(&sb, " %.*s", (int)name.length, name.data);
+
+            return string_builder_to_string(&sb);
+            break;
         }
     }
 

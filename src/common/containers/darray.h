@@ -176,7 +176,7 @@ Element_Type* darray_insert(DArray<Element_Type>* array, Element_Type element, s
 }
 
 template <typename Element_Type>
-DArray<Element_Type> darray_copy(const Array_Ref<Element_Type>& source, Allocator* allocator)
+DArray<Element_Type> darray_copy(Allocator* allocator, const Array_Ref<Element_Type>& source)
 {
     if (source.count == 0) return {};
 
@@ -190,9 +190,9 @@ DArray<Element_Type> darray_copy(const Array_Ref<Element_Type>& source, Allocato
 }
 
 template <typename Element_Type>
-DArray<Element_Type> darray_copy(DArray<Element_Type>* source, Allocator* allocator)
+DArray<Element_Type> darray_copy(Allocator* allocator, DArray<Element_Type>* source)
 {
-    return darray_copy(Array_Ref<Element_Type>(*source), allocator);
+    return darray_copy(allocator, Array_Ref<Element_Type>(*source));
 }
 
 template <typename Element_Type>
@@ -267,7 +267,7 @@ static void temp_array_destroy(Temp_Array<T>* ta)
 template <typename T>
 static DArray<T> temp_array_finalize(Allocator* allocator, Temp_Array<T>* ta)
 {
-    auto result = darray_copy(&ta->array, allocator);
+    auto result = darray_copy(allocator, &ta->array);
     temp_array_destroy(ta);
     return result;
 }

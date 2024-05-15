@@ -2,6 +2,7 @@
 
 #include <containers/darray.h>
 #include <containers/stack.h>
+#include <defines.h>
 #include <filesystem.h>
 #include <logger.h>
 #include <nstring.h>
@@ -120,15 +121,21 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
         }
 
         case AST_Declaration_Kind::ENUM_MEMBER: {
-            assert(false);
+            assert(!decl->enum_member.value_expr);
             break;
         }
 
         case AST_Declaration_Kind::ENUM: {
 
-            // Scope* enum_scope = decl->enumeration.scope;
+            Scope* enum_scope = decl->enumeration.scope;
 
-            assert(false);
+            for (s64 i = 0; i < decl->enumeration.members.count; i++) {
+                AST_Declaration* member = decl->enumeration.members[i];
+                if (!resolve_declaration(inst, task, member, enum_scope)) {
+                    return false;
+                }
+            }
+
             break;
         }
 

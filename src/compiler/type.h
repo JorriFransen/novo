@@ -24,6 +24,7 @@ enum class Type_Kind : u32
 
     FUNCTION,
     STRUCT,
+    ENUM,
 };
 
 struct Scope;
@@ -42,6 +43,12 @@ struct Type_Struct_Member_Resolved
     Atom name;
     Type* type;
     u32 offset;
+};
+
+struct Type_Enum_Member
+{
+    Atom name;
+    s64 value;
 };
 
 typedef u32 Type_Flags;
@@ -79,6 +86,13 @@ struct Type
             DArray<Type_Struct_Member_Resolved> members;
             Scope* scope;
         } structure;
+
+        struct {
+            Atom name;
+            Type* strict_type;
+            DArray<Type_Enum_Member> members;
+            Scope* scope;
+        } enumeration;
     };
 };
 
@@ -89,6 +103,7 @@ NAPI Type* boolean_type_new(Instance* inst, u32 bit_size);
 NAPI Type* pointer_type_new(Instance* inst, Type* base);
 NAPI Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type, Type_Flags flags);
 NAPI Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type_Struct_Member> members, Scope* scope);
+NAPI Type* enum_type_new(Instance* inst, Atom name, Type* strict_Type,  Array_Ref<Type_Enum_Member> members, Scope* scope);
 
 NAPI Type* pointer_type_get(Instance *inst, Type* base);
 NAPI Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type, Type_Flags flags);

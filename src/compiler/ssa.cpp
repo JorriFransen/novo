@@ -528,6 +528,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                             ssa_emit_memcpy(builder, alloc_reg, value_reg, init_expr->resolved_type->bit_size);
                             break;
                         }
+
+                        case Type_Kind::ENUM: assert(false); break;
                     }
                 }
 
@@ -565,6 +567,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     ssa_emit_memcpy(builder, lvalue, rvalue, stmt->assignment.rvalue->resolved_type->bit_size);
                     break;
                 }
+
+                case Type_Kind::ENUM: assert(false); break;
             }
             break;
         }
@@ -1642,6 +1646,7 @@ void ssa_emit_jmp(SSA_Builder* builder, u32 block)
 SSA_Register_Handle ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* to_type, SSA_Register_Handle operand_reg)
 {
     switch (from_type->kind) {
+
         case Type_Kind::INVALID: assert(false); break;
         case Type_Kind::VOID: assert(false); break;
 
@@ -1663,6 +1668,7 @@ SSA_Register_Handle ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* t
 
                 case Type_Kind::FUNCTION: assert(false); break;
                 case Type_Kind::STRUCT: assert(false); break;
+                case Type_Kind::ENUM: assert(false); break;
             }
         }
 
@@ -1682,6 +1688,7 @@ SSA_Register_Handle ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* t
 
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
+        case Type_Kind::ENUM: assert(false); break;
     }
 
     assert(false);
@@ -2154,7 +2161,9 @@ void ssa_print_pointer_value(String_Builder* sb, Type* type, u8* ptr)
             string_builder_append(sb, " }");
             break;
         }
-    }
+
+        case Type_Kind::ENUM: assert(false); break;
+     }
 }
 
 s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* program, SSA_Function* fn, s64 ip, Array_Ref<u8> bytes)

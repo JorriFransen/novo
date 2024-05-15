@@ -1,9 +1,11 @@
 #include "type.h"
 
+#include <containers/darray.h>
 #include <memory/allocator.h>
 #include <string_builder.h>
 
 #include "instance.h"
+#include "token.h"
 
 #include <assert.h>
 
@@ -98,6 +100,20 @@ Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type_Struct_Member> m
     return result;
 }
 
+Type* enum_type_new(Instance* inst, Atom name, Type* strict_type, Array_Ref<Type_Enum_Member> members, Scope* scope)
+{
+    Type* result = type_new(inst, Type_Kind::ENUM, TOK_FLAG_NONE, strict_type->bit_size, strict_type->alignment);
+
+    result->enumeration.name = name;
+    result->enumeration.strict_type = strict_type;
+    result->enumeration.members = darray_copy(&inst->ast_allocator, members);
+    result->enumeration.scope = scope;
+
+    darray_append(&inst->enum_types, result);
+
+    return result;
+}
+
 Type* pointer_type_get(Instance *inst, Type* base)
 {
     if (base->pointer_to) return base->pointer_to;
@@ -142,7 +158,8 @@ bool is_pointer_or_parent_of_pointer(Type* type)
         case Type_Kind::VOID:
         case Type_Kind::INTEGER:
         case Type_Kind::BOOLEAN:
-        case Type_Kind::FUNCTION: {
+        case Type_Kind::FUNCTION:
+        case Type_Kind::ENUM: {
             return false;
         }
 
@@ -224,6 +241,11 @@ void type_to_string(Instance* instance, String_Builder* sb, Type* type)
         case Type_Kind::FUNCTION: assert(false); break;
 
         case Type_Kind::STRUCT: {
+            string_builder_append(sb, "%s", atom_string(type->structure.name).data);
+            break;
+        }
+
+        case Type_Kind::ENUM: {
             string_builder_append(sb, "%s", atom_string(type->structure.name).data);
             break;
         }

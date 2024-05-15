@@ -21,6 +21,7 @@ struct C_Backend;
 NAPI bool c_backend_emit(Instance* inst);
 
 NAPI void c_backend_emit_struct_declaration(C_Backend* cb, String_Builder* sb, Type *type);
+NAPI void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *type);
 
 NAPI void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name);
 NAPI String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name);

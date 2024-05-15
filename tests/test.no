@@ -27,12 +27,12 @@ Day :: enum {
 
 main :: () -> s64 {
 
+    d : Day;
     //  cd : Day = Day.Monday;
     //  nd := Day.Tuesday;
     //  ld : Day = .Sunday;
 
     printf("Hi!\n".data);
-
 
     return 0;
 }

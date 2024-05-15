@@ -627,6 +627,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
 
                         case Type_Kind::FUNCTION: assert(false); break;
                         case Type_Kind::STRUCT: assert(false); break;
+                        case Type_Kind::ENUM: assert(false); break;
                     }
                 }
                 assert(arg_offset == -1);
@@ -868,6 +869,8 @@ AST_Expression* vm_const_expr_from_result(Instance* inst, VM_Result vm_res)
             u8* ptr = (u8*)vm_res.return_value;
             return vm_const_expr_from_memory(inst, vm_res.type, ptr);
         }
+
+        case Type_Kind::ENUM: assert(false); break;
     }
 
     assert(false);
@@ -925,6 +928,8 @@ AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem)
                 return ast_compound_expression(inst, expressions);
             }
         }
+
+        case Type_Kind::ENUM: assert(false); break;
     }
 
     assert(false);

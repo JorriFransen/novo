@@ -126,7 +126,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
         case AST_Declaration_Kind::STRUCT: {
 
             Scope* struct_scope = decl->structure.scope;
-            auto &fields = decl->structure.members;
+            auto& fields = decl->structure.members;
 
             for (s64 i = 0; i < fields.count; i++) {
                 auto field = fields[i];
@@ -136,7 +136,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
             }
 
-            auto member_types = temp_array_create<Type_Struct_Member>(&inst->temp_allocator, fields.count);
+            auto struct_members = temp_array_create<Type_Struct_Member>(&inst->temp_allocator, fields.count);
 
             for (s64 i = 0; i < fields.count; i++) {
                 auto field = fields[i];
@@ -145,22 +145,50 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 Type_Struct_Member member;
                 member.name = field->ident->atom;
                 member.type = field->resolved_type;
-                darray_append(&member_types, member);
+                darray_append(&struct_members, member);
             }
 
-            decl->resolved_type = struct_type_new(inst, decl->ident->atom, member_types, struct_scope);
+            decl->resolved_type = struct_type_new(inst, decl->ident->atom, struct_members, struct_scope);
 
-            temp_array_destroy(&member_types);
+            temp_array_destroy(&struct_members);
             break;
         }
 
         case AST_Declaration_Kind::ENUM_MEMBER: {
-            assert(false);
+
+            assert(!decl->enum_member.value_expr);
+
+            decl->resolved_type = inst->builtin_type_s64;
             break;
         }
 
         case AST_Declaration_Kind::ENUM: {
-            assert(false);
+
+            Scope* enum_scope = decl->enumeration.scope;
+            auto& members = decl->structure.members;
+
+            auto enum_members = temp_array_create<Type_Enum_Member>(&inst->temp_allocator, members.count);
+
+            Type* strict_type = inst->builtin_type_s64;
+
+            for (s64 i = 0; i < members.count; i++) {
+                AST_Declaration* member = members[i];
+
+                if (!type_declaration(inst, task, member, enum_scope)) {
+                    return false;
+                }
+
+                assert(member->resolved_type == strict_type);
+
+                Type_Enum_Member enum_member;
+                enum_member.name = member->ident->atom;
+                enum_member.value = i;
+                darray_append(&enum_members, enum_member);
+            }
+
+            decl->resolved_type = enum_type_new(inst, decl->ident->atom, strict_type, enum_members, enum_scope);
+
+            temp_array_destroy(&enum_members);
             break;
         }
 
@@ -1174,6 +1202,7 @@ bool valid_cast(Instance* inst, Type* from_type, Type* to_type, AST_Expression* 
 
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
+        case Type_Kind::ENUM: assert(false); break;
     }
 
     if (!result && !error_reported) {
