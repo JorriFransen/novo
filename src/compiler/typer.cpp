@@ -256,6 +256,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                         enum_members[i].value = value;
 
                         AST_Expression* new_expr = ast_integer_literal_expression(inst, value);
+                        save_source_pos(inst, new_expr, source_pos(inst, members[i]));
 
                         Resolve_Task resolve_task = resolve_task_create(inst, ast_node(new_expr), enum_scope, task->fn_decl, task->bytecode_deps);
                         bool resolve_res = resolve_expression(inst, &resolve_task, new_expr, enum_scope);
@@ -782,25 +783,45 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             Type* base_type = expr->member.base->resolved_type;
-            Type *struct_type = nullptr;
+            Scope* base_scope = nullptr;
+            bool aggregate = false;
 
-            if (base_type->kind == Type_Kind::STRUCT) {
-                struct_type = base_type;
-            } else {
-                assert(base_type->kind == Type_Kind::POINTER);
-                assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
+            switch (base_type->kind) {
+                default: assert(false); // Error should have been reported in resolver
 
-                struct_type = base_type->pointer.base;
+                case Type_Kind::POINTER: {
+                    assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
+                    base_type = base_type->pointer.base;
+                    // Falltrough
+                }
+                case Type_Kind::STRUCT: {
+                    base_scope = base_type->structure.scope;
+                    aggregate = true;
+                    break;
+                }
+
+                case Type_Kind::ENUM: {
+                    base_scope = base_type->enumeration.scope;
+                    break;
+                }
             }
 
-            assert(struct_type);
-            Scope *struct_scope = struct_type->structure.scope;
+            assert(base_type);
+            assert(base_scope);
 
-            AST_Declaration* field = scope_find_symbol(struct_scope, expr->member.member_name->atom, nullptr);
-            u32 index = field->variable.index;
-            assert(index >= 0 && index < struct_type->structure.members.count);
+            AST_Declaration* mem_decl = scope_find_symbol(base_scope, expr->member.member_name->atom, nullptr);
 
-            Type* mem_type = struct_type->structure.members[index].type;
+            Type* mem_type = nullptr;
+
+            if (aggregate) {
+                u32 index = mem_decl->variable.index;
+                assert(index >= 0 && index < base_type->structure.members.count);
+                mem_type = base_type->structure.members[index].type;
+            } else {
+                mem_type = base_type;
+            }
+
+            assert(mem_type);
 
             expr->resolved_type = mem_type;
             break;

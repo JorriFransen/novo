@@ -515,7 +515,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
                         case Type_Kind::INTEGER:
                         case Type_Kind::BOOLEAN:
-                        case Type_Kind::POINTER: {
+                        case Type_Kind::POINTER:
+                        case Type_Kind::ENUM: {
                             SSA_Register_Handle value_reg = ssa_emit_expression(builder, init_expr, scope);
                             ssa_emit_store_ptr(builder, init_expr->resolved_type->bit_size, alloc_reg, value_reg);
                             break;
@@ -528,8 +529,6 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                             ssa_emit_memcpy(builder, alloc_reg, value_reg, init_expr->resolved_type->bit_size);
                             break;
                         }
-
-                        case Type_Kind::ENUM: assert(false); break;
                     }
                 }
 
@@ -909,8 +908,9 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
         case AST_Expression_Kind::BINARY: assert(false); break;
 
         case AST_Expression_Kind::MEMBER: {
-            auto field = lvalue_expr->member.member_name->decl;
+            AST_Declaration* field = lvalue_expr->member.member_name->decl;
             assert(field);
+
             assert(field->kind == AST_Declaration_Kind::STRUCT_MEMBER);
 
             auto index = field->variable.index;
@@ -1167,8 +1167,17 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
         }
 
         case AST_Expression_Kind::MEMBER: {
-            auto lvalue = ssa_emit_lvalue(builder, expr, scope);
-            result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, lvalue);
+            if (expr->resolved_type->kind == Type_Kind::ENUM) {
+                AST_Declaration* mem_decl = expr->member.member_name->decl;
+                assert(mem_decl);
+                assert(mem_decl->kind == AST_Declaration_Kind::ENUM_MEMBER);
+
+                result_reg = ssa_emit_expression(builder, mem_decl->enum_member.value_expr, scope);
+
+            } else {
+                auto lvalue = ssa_emit_lvalue(builder, expr, scope);
+                result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, lvalue);
+            }
             break;
         }
 

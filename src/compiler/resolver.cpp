@@ -537,25 +537,47 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             }
 
             Type* base_type = expr->member.base->resolved_type;
-            Scope* struct_scope = nullptr;
+            Scope* base_scope = nullptr;
+            bool aggregate = false;
 
-            if (base_type->kind == Type_Kind::STRUCT) {
-                struct_scope = base_type->structure.scope;
-            } else {
-                assert(base_type->kind == Type_Kind::POINTER);
-                assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
-                struct_scope = base_type->pointer.base->structure.scope;
+            switch (base_type->kind) {
+                default: {
+                    String tname = temp_type_string(inst, base_type);
+                    instance_fatal_error(inst, source_pos(inst, expr->member.base), "Invalid type on left side of '.' operator '%.*s'", (int)tname.length, tname.data);
+                    break;
+                }
+
+                case Type_Kind::POINTER: {
+                    if (base_type->pointer.base->kind != Type_Kind::STRUCT) {
+                        String tname = temp_type_string(inst, base_type);
+                        instance_fatal_error(inst, source_pos(inst, expr->member.base), "Invalid type on left side of '.' operator '%.*s'", (int)tname.length, tname.data);
+                        break;
+                    }
+
+                    base_type = base_type->pointer.base;
+
+                    // Falltrough
+                }
+                case Type_Kind::STRUCT: {
+                    base_scope = base_type->structure.scope;
+                    aggregate = true;
+                    break;
+                }
+
+                case Type_Kind::ENUM: {
+                    base_scope = base_type->enumeration.scope;
+                    break;
+                }
             }
 
-            assert(struct_scope);
-
-            if (!resolve_identifier(inst, task, expr->member.member_name, struct_scope)) {
+            assert(base_scope);
+            if (!resolve_identifier(inst, task, expr->member.member_name, base_scope)) {
                 return false;
             }
 
             if (expr->member.base->flags & AST_EXPR_FLAG_CONST) {
                 expr->flags |= AST_EXPR_FLAG_CONST;
-            } else {
+            } else if (aggregate) {
                 expr->flags |= AST_EXPR_FLAG_LVALUE;
             }
 

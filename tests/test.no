@@ -33,8 +33,7 @@ Day :: enum u8 {
 
 main :: () -> s64 {
 
-    d : Day;
-    //  cd : Day = Day.Monday;
+    cd : Day = Day.Monday;
     //  nd := Day.Tuesday;
     //  ld : Day = .Sunday;
 
