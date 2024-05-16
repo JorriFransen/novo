@@ -16,9 +16,15 @@
 #import "c"
 
 Day :: enum u8 {
-    Monday,
+    Monday = 33,
+    monday = Monday,
+
+    tuesday = Tuesday;
     Tuesday;
-    Wednesday,
+
+    Wednesday = 4,
+    wednesday = Wednesday,
+
     Thursday,
     Friday,
     Saturday,

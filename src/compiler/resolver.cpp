@@ -121,7 +121,11 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
         }
 
         case AST_Declaration_Kind::ENUM_MEMBER: {
-            assert(!decl->enum_member.value_expr);
+            if (decl->enum_member.value_expr) {
+                if (!resolve_expression(inst, task, decl->enum_member.value_expr, scope)) {
+                    return false;
+                }
+            }
             break;
         }
 
@@ -468,7 +472,8 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             }
 
             assert(expr->identifier->decl);
-            if (expr->identifier->decl->kind == AST_Declaration_Kind::CONSTANT) {
+            if (expr->identifier->decl->kind == AST_Declaration_Kind::CONSTANT ||
+                expr->identifier->decl->kind == AST_Declaration_Kind::ENUM_MEMBER) {
                 expr->flags |= AST_EXPR_FLAG_CONST;
             }
 

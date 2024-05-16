@@ -6,6 +6,8 @@
 #include <nstring.h>
 
 #include "ast.h"
+#include "backend.h"
+#include "const_resolver.h"
 #include "instance.h"
 #include "resolver.h"
 #include "scope.h"
@@ -158,18 +160,33 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
 
         case AST_Declaration_Kind::ENUM_MEMBER: {
 
-            assert(!decl->enum_member.value_expr);
-
-
             Type* inferred_type = infer_type(inst, task, task->infer_type_from, scope);
+
+            AST_Expression* expr = decl->enum_member.value_expr;
+
+            if (expr) {
+                if (!type_expression(inst, task, expr, scope, inferred_type)) {
+                    return false;
+                }
+            }
 
             if (inferred_type) {
                 if (inferred_type->kind != Type_Kind::INTEGER) {
                     String iname = temp_type_string(inst, inferred_type);
-                    instance_fatal_error(inst, source_pos(inst, decl), "Enum members must have integer type, got: %.*s", (int)iname.length, iname.data);
+                    instance_fatal_error(inst, source_pos(inst, decl), "Enum members must have integer type, got '%.*s'", (int)iname.length, iname.data);
                     return false;
                 }
+
+                if (expr && expr->resolved_type != inferred_type) {
+                    String iname = temp_type_string(inst, inferred_type);
+                    String ename = temp_type_string(inst, inferred_type);
+                    instance_fatal_error(inst, source_pos(inst, expr), "Enum expression type '%.*s', does not match strict type '%.*s'",
+                                         (int)ename.length, ename.data, (int)iname.length, iname.data);
+                    return false;
+                }
+
                 decl->resolved_type = inferred_type;
+
             } else {
                 decl->resolved_type = inst->builtin_type_s64;
             }
@@ -201,21 +218,65 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
             }
 
             auto enum_members = temp_array_create<Type_Enum_Member>(&inst->temp_allocator, members.count);
+            enum_members.array.count = members.count;
 
-            for (s64 i = 0; i < members.count; i++) {
-                AST_Declaration* member = members[i];
+            auto member_resolved = temp_array_create<bool>(&inst->temp_allocator, members.count);
+            member_resolved.array.count = members.count;
 
-                assert(member->resolved_type == strict_type);
+            bool done = false;
+            while (!done) {
 
-                Type_Enum_Member enum_member;
-                enum_member.name = member->ident->atom;
-                enum_member.value = i;
-                darray_append(&enum_members, enum_member);
+                s64 current_value = 0;
+                done = true;
+
+                for (s64 i = 0; i < members.count; i++) {
+
+                    if (member_resolved[i]) {
+                        current_value = enum_members[i].value + 1;
+                        continue;
+                    }
+
+                    enum_members[i].name = members[i]->ident->atom;
+
+                    if (members[i]->enum_member.value_expr) {
+
+                        Resolved_Constant rc = const_resolve(inst, members[i]->enum_member.value_expr);
+                        if (rc.status == Resolved_Constant_Status::RESOLVED) {
+                            assert(rc.type == strict_type);
+                            enum_members[i].value = rc.integer;
+                            current_value = rc.integer + 1;
+                            member_resolved[i] = true;
+
+                        } else {
+                            done = false;
+                        }
+
+                    } else {
+                        auto value = current_value++;
+                        enum_members[i].value = value;
+
+                        AST_Expression* new_expr = ast_integer_literal_expression(inst, value);
+
+                        Resolve_Task resolve_task = resolve_task_create(inst, ast_node(new_expr), enum_scope, task->fn_decl, task->bytecode_deps);
+                        bool resolve_res = resolve_expression(inst, &resolve_task, new_expr, enum_scope);
+                        assert(resolve_res);
+
+                        Type_Task type_task = type_task_create(inst, ast_node(new_expr), infer_node(strict_type), enum_scope, task->fn_decl, task->bytecode_deps);
+                        bool type_res = type_expression(inst, &type_task, new_expr, enum_scope, strict_type);
+                        assert(type_res);
+
+                        members[i]->enum_member.value_expr = new_expr;
+
+
+                        member_resolved[i] = true;
+                    }
+                }
             }
 
             decl->resolved_type = enum_type_new(inst, decl->ident->atom, strict_type, enum_members, enum_scope);
 
             temp_array_destroy(&enum_members);
+            temp_array_destroy(&member_resolved);
             break;
         }
 

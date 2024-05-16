@@ -441,10 +441,16 @@ AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, S
 
         Source_Pos member_end_pos = source_pos(&parser->lexer);
 
+        AST_Expression* value_expr = nullptr;
+        if (match_token(parser, '=')) {
+            value_expr = parse_expression(parser);
+            if (!value_expr) return nullptr;
+        }
+
         if (!match_token(parser, ',')) expect_token(parser, ';');
 
 
-        AST_Declaration* member_decl = ast_enum_member_declaration(parser->instance, member_ident);
+        AST_Declaration* member_decl = ast_enum_member_declaration(parser->instance, member_ident, value_expr);
 
         if (!scope_add_symbol(enum_scope, member_ident->atom, member_decl, SCOPE_FIND_OPTS_LIMIT_TO_TYPE_DECL)) {
             auto new_name = atom_string(member_ident->atom);

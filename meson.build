@@ -48,6 +48,7 @@ compiler_includes = [
 ]
 
 compiler_source = [
+  'src/compiler/const_resolver.cpp', 'src/compiler/const_resolver.h',
   'src/compiler/ast.cpp', 'src/compiler/ast.h',
   'src/compiler/ast_print.cpp', 'src/compiler/ast_print.h',
   'src/compiler/atom.cpp', 'src/compiler/atom.h',

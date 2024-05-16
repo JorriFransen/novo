@@ -113,9 +113,10 @@ AST_Declaration* ast_struct_declaration(Instance* inst, AST_Identifier* ident, D
     return result;
 }
 
-AST_Declaration* ast_enum_member_declaration(Instance* inst, AST_Identifier* ident)
+AST_Declaration* ast_enum_member_declaration(Instance* inst, AST_Identifier* ident, AST_Expression* value_expr)
 {
     auto result = ast_declaration(inst, AST_Declaration_Kind::ENUM_MEMBER, ident);
+    result->enum_member.value_expr = value_expr;
     return result;
 }
 
