@@ -6,6 +6,7 @@
 
 #include "ast.h"
 #include "atom.h"
+#include "type.h"
 
 namespace Novo {
 
@@ -58,7 +59,7 @@ struct Resolve_Task
 struct Type_Task
 {
     AST_Node node;
-    Type* suggested_type;
+    Infer_Node infer_type_from;
     Scope* scope;
 
     DArray<AST_Node> *bytecode_deps;
@@ -114,7 +115,7 @@ NAPI void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope,
 NAPI void add_resolve_tasks(Instance* inst, AST_Statement* stmt, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);
 NAPI void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope);
 
-NAPI void add_type_task(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn, DArray<AST_Node>* bc_deps);
+NAPI void add_type_task(Instance* inst, AST_Node node, Infer_Node infer_type_from, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps);
 
 NAPI void add_ssa_task(Instance* inst, AST_Declaration* decl, DArray<AST_Node>* bc_deps, DArray<AST_Node>* insert_bc_deps);
 NAPI void add_ssa_task(Instance* inst, AST_Statement* stmt,Scope* scope, DArray<AST_Node>* bc_deps, DArray<AST_Node>* insert_bc_deps);
@@ -123,6 +124,6 @@ NAPI void add_ssa_task(Instance* inst, AST_Expression* expr, Scope* scope, DArra
 NAPI void add_run_task(Instance* inst, AST_Node node, Scope* scope, DArray<AST_Node>* insert_bc_deps, s64 wrapper_index);
 
 NAPI Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node>* bc_deps);
-NAPI Type_Task type_task_create(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node>* bc_deps);
+NAPI Type_Task type_task_create(Instance* inst, AST_Node node, Infer_Node infer_type_from, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps);
 
 }

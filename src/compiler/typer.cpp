@@ -7,6 +7,7 @@
 
 #include "ast.h"
 #include "instance.h"
+#include "resolver.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "task.h"
@@ -32,7 +33,8 @@ bool type_node(Instance* inst, Type_Task* task, AST_Node* node, Scope* scope)
         }
 
         case AST_Node_Kind::EXPRESSION: {
-            return type_expression(inst, task, node->expression, scope, task->suggested_type);
+            Type* inferred_type = infer_type(inst, task, task->infer_type_from, scope);
+            return type_expression(inst, task, node->expression, scope, inferred_type);
         }
 
         case AST_Node_Kind::TYPE_SPEC: {
@@ -158,25 +160,50 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
 
             assert(!decl->enum_member.value_expr);
 
-            decl->resolved_type = inst->builtin_type_s64;
+
+            Type* inferred_type = infer_type(inst, task, task->infer_type_from, scope);
+
+            if (inferred_type) {
+                if (inferred_type->kind != Type_Kind::INTEGER) {
+                    String iname = temp_type_string(inst, inferred_type);
+                    instance_fatal_error(inst, source_pos(inst, decl), "Enum members must have integer type, got: %.*s", (int)iname.length, iname.data);
+                    return false;
+                }
+                decl->resolved_type = inferred_type;
+            } else {
+                decl->resolved_type = inst->builtin_type_s64;
+            }
+
             break;
         }
 
         case AST_Declaration_Kind::ENUM: {
 
             Scope* enum_scope = decl->enumeration.scope;
-            auto& members = decl->structure.members;
+            auto& members = decl->enumeration.members;
+
+            Type* strict_type = inst->builtin_type_s64;
+            if (decl->enumeration.strict_ts) {
+                if (!type_type_spec(inst, task, decl->enumeration.strict_ts, scope)) {
+                    return false;
+                }
+
+                strict_type = decl->enumeration.strict_ts->resolved_type;
+            }
+            assert(strict_type);
+
+            for (s64 i = 0; i < members.count; i++) {
+
+                if (!(members[i]->flags & AST_DECL_FLAG_TYPED)) {
+                    task->waiting_for = members[i]->ident;
+                    return false;
+                }
+            }
 
             auto enum_members = temp_array_create<Type_Enum_Member>(&inst->temp_allocator, members.count);
 
-            Type* strict_type = inst->builtin_type_s64;
-
             for (s64 i = 0; i < members.count; i++) {
                 AST_Declaration* member = members[i];
-
-                if (!type_declaration(inst, task, member, enum_scope)) {
-                    return false;
-                }
 
                 assert(member->resolved_type == strict_type);
 

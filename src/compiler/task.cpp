@@ -184,9 +184,9 @@ void add_resolve_tasks(Instance* inst, AST_Type_Spec* ts, Scope* scope)
     darray_append(&inst->resolve_tasks, task);
 }
 
-void add_type_task(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps)
+void add_type_task(Instance* inst, AST_Node node, Infer_Node infer_type_from, Scope* scope, AST_Declaration* fn, DArray<AST_Node> *bc_deps)
 {
-    Type_Task task = type_task_create(inst, node, suggested_type, scope, fn, bc_deps);
+    Type_Task task = type_task_create(inst, node, infer_type_from, scope, fn, bc_deps);
     darray_append(&inst->type_tasks, task);
 }
 
@@ -302,11 +302,11 @@ Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AS
     return result;
 }
 
-Type_Task type_task_create(Instance* inst, AST_Node node, Type* suggested_type, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps)
+Type_Task type_task_create(Instance* inst, AST_Node node, Infer_Node infer_type_from, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps)
 {
     Type_Task result;
     result.node = node;
-    result.suggested_type = suggested_type;
+    result.infer_type_from = infer_type_from;
     result.scope = scope;
     result.fn_decl = fn_decl;
     result.waiting_for = nullptr;

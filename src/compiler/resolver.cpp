@@ -78,7 +78,7 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
                 assert(task->fn_decl);
 
                 darray_append_unique(&task->fn_decl->function.variables, decl);
-                add_type_task(inst, ast_node(decl), nullptr, scope, task->fn_decl, task->bytecode_deps);
+                add_type_task(inst, ast_node(decl), infer_node(), scope, task->fn_decl, task->bytecode_deps);
             }
             break;
         }
@@ -129,11 +129,30 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
 
             Scope* enum_scope = decl->enumeration.scope;
 
+            if (decl->enumeration.strict_ts) {
+                if (!resolve_ts(inst, task, decl->enumeration.strict_ts, scope)) {
+                    return false;
+                }
+            }
+
             for (s64 i = 0; i < decl->enumeration.members.count; i++) {
                 AST_Declaration* member = decl->enumeration.members[i];
                 if (!resolve_declaration(inst, task, member, enum_scope)) {
                     return false;
                 }
+            }
+
+            Infer_Node infer_from;
+            if (decl->enumeration.strict_ts) {
+                infer_from = infer_node(decl->enumeration.strict_ts);
+            } else {
+                infer_from = infer_node(inst->builtin_type_s64);
+            }
+
+            // Only do this when all members are resolved, to avoid creating duplicate tasks
+            for (s64 i = 0; i < decl->enumeration.members.count; i++) {
+                AST_Declaration* member = decl->enumeration.members[i];
+                add_type_task(inst, ast_node(member), infer_from, enum_scope, task->fn_decl, task->bytecode_deps);
             }
 
             break;
@@ -506,7 +525,7 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             if (!(expr->member.base->flags & AST_EXPR_FLAG_TYPED)) {
 
-                Type_Task type_task = type_task_create(inst, ast_node(expr->member.base), nullptr, scope, task->fn_decl, task->bytecode_deps);
+                Type_Task type_task = type_task_create(inst, ast_node(expr->member.base), infer_node(), scope, task->fn_decl, task->bytecode_deps);
                 if (!type_expression(inst, &type_task, expr->member.base, scope, nullptr)) {
                     return false;
                 }

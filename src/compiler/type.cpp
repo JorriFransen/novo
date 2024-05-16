@@ -4,8 +4,10 @@
 #include <memory/allocator.h>
 #include <string_builder.h>
 
+#include "ast.h"
 #include "instance.h"
 #include "token.h"
+#include "typer.h"
 
 #include <assert.h>
 
@@ -248,6 +250,50 @@ void type_to_string(Instance* instance, String_Builder* sb, Type* type)
         case Type_Kind::ENUM: {
             string_builder_append(sb, "%s", atom_string(type->structure.name).data);
             break;
+        }
+    }
+}
+
+Infer_Node infer_node()
+{
+    Infer_Node result;
+    result.kind = Infer_Node_Kind::NONE;
+    return result;
+}
+
+Infer_Node infer_node(Type* type)
+{
+    Infer_Node result;
+    result.kind = Infer_Node_Kind::TYPE;
+    result.type = type;
+    return result;
+}
+
+Infer_Node infer_node(AST_Type_Spec* ts)
+{
+    Infer_Node result;
+    result.kind = Infer_Node_Kind::TYPE_SPEC;
+    result.type_spec = ts;
+    return result;
+}
+
+Type* infer_type(Instance* inst, Type_Task* task, const Infer_Node& infer_node, Scope* scope)
+{
+    switch (infer_node.kind) {
+        case Infer_Node_Kind::NONE: assert(false); break;
+
+        case Infer_Node_Kind::TYPE: {
+            return infer_node.type;
+        }
+
+        case Infer_Node_Kind::TYPE_SPEC: {
+
+            if (!infer_node.type_spec->resolved_type) {
+                bool type_res = type_type_spec(inst, task, infer_node.type_spec, scope);
+                assert(type_res);
+            }
+
+            return infer_node.type_spec->resolved_type;
         }
     }
 }

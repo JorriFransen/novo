@@ -421,6 +421,13 @@ AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, S
 {
     Source_Pos pos = source_pos(parser->instance, ident);
 
+    AST_Type_Spec* strict_ts = nullptr;
+
+    if (!is_token(parser, '{')) {
+        strict_ts = parse_type_spec(parser);
+        if (!strict_ts) return nullptr;
+    }
+
     expect_token(parser, '{');
 
     auto members = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 8);
@@ -464,7 +471,7 @@ AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, S
 
     auto members_array = temp_array_finalize(&parser->instance->ast_allocator, &members);
 
-    AST_Declaration* result = ast_enum_declaration(parser->instance, ident, members_array, enum_scope);
+    AST_Declaration* result = ast_enum_declaration(parser->instance, ident, strict_ts, members_array, enum_scope);
     save_source_pos(parser->instance, result, pos);
     return result;
 }

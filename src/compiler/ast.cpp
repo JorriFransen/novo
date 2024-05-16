@@ -119,9 +119,10 @@ AST_Declaration* ast_enum_member_declaration(Instance* inst, AST_Identifier* ide
     return result;
 }
 
-AST_Declaration* ast_enum_declaration(Instance* inst, AST_Identifier* ident, DArray<AST_Declaration*> members, Scope* scope)
+AST_Declaration* ast_enum_declaration(Instance* inst, AST_Identifier* ident,AST_Type_Spec* strict_ts, DArray<AST_Declaration*> members, Scope* scope)
 {
     auto result = ast_declaration(inst, AST_Declaration_Kind::ENUM, ident);
+    result->enumeration.strict_ts = strict_ts;
     result->enumeration.scope = scope;
     result->enumeration.members = members;
     return result;

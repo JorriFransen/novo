@@ -15,7 +15,7 @@
 
 #import "c"
 
-Day :: enum {
+Day :: enum u8 {
     Monday,
     Tuesday;
     Wednesday,

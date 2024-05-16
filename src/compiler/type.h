@@ -7,8 +7,10 @@
 
 namespace Novo {
 
+struct AST_Type_Spec;
 struct Instance;
 struct String_Builder;
+struct Type_Task;
 
 #undef VOID // windows...
 
@@ -96,6 +98,23 @@ struct Type
     };
 };
 
+enum class Infer_Node_Kind : u8
+{
+    NONE,
+    TYPE,
+    TYPE_SPEC,
+};
+
+struct Infer_Node
+{
+    Infer_Node_Kind kind;
+
+    union {
+        Type* type;
+        AST_Type_Spec* type_spec;
+    };
+};
+
 NAPI Type* type_new(Instance* instance, Type_Kind kind, Type_Flags flags, u32 bit_size, u32 alignment);
 NAPI Type* void_type_new(Instance* inst);
 NAPI Type* integer_type_new(Instance* inst, bool sign, u32 bit_size);
@@ -114,5 +133,10 @@ NAPI bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to);
 
 NAPI String temp_type_string(Instance* inst, Type* type);
 NAPI void type_to_string(Instance* instance, String_Builder* sb, Type* type);
+
+NAPI Infer_Node infer_node();
+NAPI Infer_Node infer_node(Type* type);
+NAPI Infer_Node infer_node(AST_Type_Spec* ts);
+NAPI Type* infer_type(Instance* inst, Type_Task* task, const Infer_Node& infer_node, Scope* scope);
 
 }
