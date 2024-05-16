@@ -83,6 +83,9 @@ Resolved_Constant const_resolve_identifier(Instance* inst, AST_Identifier* ident
         case AST_Declaration_Kind::FUNCTION: assert(false); break;
         case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
     }
+
+    assert(false);
+    return { Resolved_Constant_Status::UNRESOLVED };
 }
 
 }

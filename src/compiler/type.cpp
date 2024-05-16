@@ -296,6 +296,9 @@ Type* infer_type(Instance* inst, Type_Task* task, const Infer_Node& infer_node, 
             return infer_node.type_spec->resolved_type;
         }
     }
+
+    assert(false);
+    return nullptr;
 }
 
 }
