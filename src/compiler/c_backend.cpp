@@ -2,6 +2,7 @@
 
 #include "atom.h"
 #include "instance.h"
+#include "source_pos.h"
 #include "ssa.h"
 #include "token.h"
 #include "type.h"
@@ -279,7 +280,8 @@ void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *ty
 
         string_builder_append(sb, "    ");
         String_Ref member_name = atom_string(member.name);
-        string_builder_append(sb, "%.*s = 0x%x", (int)member_name.length, member_name.data, member.value);
+        string_builder_append(sb, "%.*s_%.*s = 0x%x", (int)name.length, name.data, (int)member_name.length, member_name.data, member.value);
+
 
 #if NOVO_C_BACKEND_PRINT_SSA_COMMENTS
         const char* fmt = strict_type->integer.sign ? ", // %llu\n" : ", // %lld\n";
@@ -287,7 +289,9 @@ void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *ty
 #else // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
         string_builder_append(sb, ",\n");
 #endif // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
+
     }
+
 
     string_builder_append(sb, "} %.*s;\n", (int)name.length, name.data);
 }
@@ -708,6 +712,32 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     c_backend_emit_c_type(cb, sb, pointer_type, "");
                     string_builder_append(sb, ")&c%lld;", offset);
 
+                    break;
+                }
+
+                case SSA_OP_LOAD_ENUM: {
+                    u32 result_reg = FETCH32();
+                    u64 index = FETCH64();
+
+                    Type* enum_type = func->registers[result_reg].type;
+                    assert(enum_type->kind == Type_Kind::ENUM);
+
+                    u64 value;
+                    switch (enum_type->bit_size) {
+                        default: assert(false && "Invalid size in SSA_OP_LOAD_ENUM");
+
+                        case 8: value = FETCH(); break;
+                        case 16: value = FETCH16(); break;
+                        case 32: value = FETCH32(); break;
+                        case 64: value = FETCH64(); break;
+                    }
+
+                    assert(value == enum_type->enumeration.members[index].value);
+
+                    String ename = atom_string(enum_type->enumeration.name);
+                    String emember_name = atom_string(enum_type->enumeration.members[index].name);
+
+                    string_builder_append(sb, "    r%u = %.*s_%.*s;", result_reg, (int)ename.length, ename.data, (int)emember_name.length, emember_name.data);
                     break;
                 }
 

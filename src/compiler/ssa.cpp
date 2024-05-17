@@ -1,6 +1,7 @@
 #include "ssa.h"
 
 #include <containers/stack.h>
+#include <defines.h>
 #include <hash.h>
 #include <memory/temp_allocator.h>
 #include <string_builder.h>
@@ -1172,7 +1173,10 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                 assert(mem_decl);
                 assert(mem_decl->kind == AST_Declaration_Kind::ENUM_MEMBER);
 
-                result_reg = ssa_emit_expression(builder, mem_decl->enum_member.value_expr, scope);
+                assert(mem_decl->enum_member.value_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
+                assert(mem_decl->enum_member.value_expr->resolved_type == expr->resolved_type->enumeration.strict_type);
+
+                result_reg = ssa_emit_load_enum(builder, expr->resolved_type, mem_decl->enum_member.index_in_type);
 
             } else {
                 auto lvalue = ssa_emit_lvalue(builder, expr, scope);
@@ -1493,7 +1497,7 @@ void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, SSA_Register_Handle 
 
 SSA_Register_Handle ssa_emit_load_immediate(SSA_Builder* builder, Type* type, u64 immediate_value)
 {
-    assert(type->kind == Type_Kind::INTEGER || type->kind == Type_Kind::BOOLEAN || type->kind == Type_Kind::POINTER);
+    assert(type->kind == Type_Kind::INTEGER || type->kind == Type_Kind::BOOLEAN || type->kind == Type_Kind::POINTER || type->kind == Type_Kind::ENUM);
 
     assert(type->bit_size % 8 == 0);
     auto size = type->bit_size / 8;
@@ -1567,6 +1571,31 @@ SSA_Register_Handle ssa_emit_load_constant(SSA_Builder *builder, u32 index)
     ssa_emit_32(builder, builder->program->constants[index].offset);
 
     return dest_reg;
+}
+
+SSA_Register_Handle ssa_emit_load_enum(SSA_Builder* builder, Type* enum_type, s64 index)
+{
+    assert(enum_type->kind == Type_Kind::ENUM);
+    assert(enum_type->enumeration.members.count > index);
+
+    assert(enum_type->bit_size % 8 == 0);
+
+    SSA_Register_Handle result = ssa_register_create(builder, enum_type);
+
+    ssa_emit_op(builder, SSA_OP_LOAD_ENUM);
+    ssa_emit_reg(builder, result);
+    ssa_emit_64(builder, index);
+
+    switch (enum_type->bit_size) {
+        default: assert(false && "Invalid enum size in ssa_emit_load_enum"); break;
+
+        case 8: ssa_emit_8(builder, enum_type->enumeration.members[index].value); break;
+        case 16: ssa_emit_16(builder, enum_type->enumeration.members[index].value); break;
+        case 32: ssa_emit_32(builder, enum_type->enumeration.members[index].value); break;
+        case 64: ssa_emit_64(builder, enum_type->enumeration.members[index].value); break;
+    }
+
+    return result;
 }
 
 SSA_Register_Handle ssa_emit_struct_offset(SSA_Builder* builder, SSA_Register_Handle struct_ptr_reg, Type* struct_type, s64 index)
@@ -2404,6 +2433,30 @@ s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* progr
             ip += sizeof(u32);
 
             string_builder_append(sb, "  %%%u = LOAD_CONST %u\n", dest_reg, offset_reg);
+            break;
+        }
+
+        case SSA_OP_LOAD_ENUM: {
+            u32 dest_reg = *(u32*)&bytes[ip];
+            ip += sizeof(u32);
+
+            u64 index = *(u64*)&bytes[ip];
+            ip += sizeof(u64);
+
+            Type* enum_type = fn->registers[dest_reg].type;
+            assert(enum_type->kind == Type_Kind::ENUM);
+
+            u64 value;
+            switch (enum_type->bit_size) {
+                default: assert(false && "Invalid size in SSA_OP_LOAD_ENUM");
+
+                case 8: value = *(u8*)&bytes[ip]; ip += sizeof(u8); break;
+                case 16: value = *(u16*)&bytes[ip]; ip += sizeof(u16); break;
+                case 32: value = *(u32*)&bytes[ip]; ip += sizeof(u32); break;
+                case 64: value = *(u64*)&bytes[ip]; ip += sizeof(u64); break;
+            }
+
+            string_builder_append(sb, "  %%%u = LOAD_ENUM %llu %llu\n", dest_reg, index, value);
             break;
         }
 

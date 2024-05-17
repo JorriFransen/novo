@@ -244,6 +244,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                         if (rc.status == Resolved_Constant_Status::RESOLVED) {
                             assert(rc.type == strict_type);
                             enum_members[i].value = rc.integer;
+                            members[i]->enum_member.index_in_type = i;
                             current_value = rc.integer + 1;
                             member_resolved[i] = true;
 
@@ -267,7 +268,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                         assert(type_res);
 
                         members[i]->enum_member.value_expr = new_expr;
-
+                        members[i]->enum_member.index_in_type = i;
 
                         member_resolved[i] = true;
                     }

@@ -52,6 +52,7 @@ enum SSA_Op : u8
     SSA_OP_LOAD_PARAM,      // LOAD_PARAM [32-bit dest reg] [32-bit param index]
     SSA_OP_LOAD_PTR,        // LOAD_PTR [8-bit size reg] [32-bit dest reg] [32-bit ptr_reg]
     SSA_OP_LOAD_CONST,      // LOAD_CONST [32-bit dest reg] [32-bit offset]
+    SSA_OP_LOAD_ENUM,       // LOAD_ENUM [32-bit dest reg] [64-bit index of enum member] [value of enum member] (The enum type should be inferred from the result register, size of the value depends on enum type)
 
     SSA_OP_STRUCT_OFFSET,   // STRUCT_OFFSET [32-bit dest reg] [32-bit base ptr reg] [32-bit offset] [16-bit index]
     SSA_OP_POINTER_OFFSET,  // POINTER_OFFSET [64-bit size in bytes] [32-bit dest reg] [32-bit base ptr reg] [32-bit index reg]
@@ -231,6 +232,7 @@ NAPI SSA_Register_Handle ssa_emit_load_immediate(SSA_Builder* builder, Type* typ
 NAPI SSA_Register_Handle ssa_emit_load_param(SSA_Builder* builder, u32 param_index);
 NAPI SSA_Register_Handle ssa_emit_load_ptr(SSA_Builder* builder, Type* type, SSA_Register_Handle ptr_reg);
 NAPI SSA_Register_Handle ssa_emit_load_constant(SSA_Builder *builder, u32 index);
+NAPI SSA_Register_Handle ssa_emit_load_enum(SSA_Builder* builder, Type* enum_type, s64 index);
 NAPI SSA_Register_Handle ssa_emit_struct_offset(SSA_Builder* builder, SSA_Register_Handle struct_ptr_reg, Type* struct_type, s64 index);
 NAPI SSA_Register_Handle ssa_emit_pointer_offset(SSA_Builder* builder, Type* pointer_type, SSA_Register_Handle base_reg, SSA_Register_Handle index_reg);
 NAPI SSA_Register_Handle ssa_emit_pointer_diff(SSA_Builder* builder, s64 pointee_bit_size, SSA_Register_Handle left_reg, SSA_Register_Handle right_reg);

@@ -117,6 +117,7 @@ AST_Declaration* ast_enum_member_declaration(Instance* inst, AST_Identifier* ide
 {
     auto result = ast_declaration(inst, AST_Declaration_Kind::ENUM_MEMBER, ident);
     result->enum_member.value_expr = value_expr;
+    result->enum_member.index_in_type = -1;
     return result;
 }
 

@@ -103,6 +103,7 @@ struct AST_Declaration
 
         struct {
             AST_Expression* value_expr;
+            s64 index_in_type;
         } enum_member;
 
         struct {

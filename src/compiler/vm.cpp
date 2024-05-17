@@ -479,6 +479,27 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
                 break;
             }
 
+            case SSA_OP_LOAD_ENUM: {
+                u32 dest_reg = vm_fetch<u32>(block, &ip);
+                /*u64 index =*/vm_fetch<u64>(block, &ip);
+
+                Type* enum_type = fn->registers[dest_reg].type;
+                assert(enum_type->kind == Type_Kind::ENUM);
+
+                u64 value;
+                switch (enum_type->bit_size) {
+                    default: assert(false && "Invalid size in SSA_OP_LOAD_ENUM");
+
+                    case 8: value = vm_fetch<u8>(block, &ip); break;
+                    case 16: value = vm_fetch<u16>(block, &ip); break;
+                    case 32: value = vm_fetch<u32>(block, &ip); break;
+                    case 64: value = vm_fetch<u64>(block, &ip); break;
+                }
+
+                vm_set_register(vm, dest_reg, value);
+                break;
+            }
+
             case SSA_OP_STRUCT_OFFSET: {
                 u32 dest_reg = vm_fetch<u32>(block, &ip);
                 u32 ptr_reg = vm_fetch<u32>(block, &ip);
