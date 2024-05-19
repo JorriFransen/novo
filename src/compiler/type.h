@@ -7,6 +7,7 @@
 
 namespace Novo {
 
+struct AST_Expression;
 struct AST_Type_Spec;
 struct Instance;
 struct String_Builder;
@@ -101,8 +102,10 @@ struct Type
 enum class Infer_Node_Kind : u8
 {
     NONE,
+
     TYPE,
     TYPE_SPEC,
+
 };
 
 struct Infer_Node
@@ -137,6 +140,7 @@ NAPI void type_to_string(Instance* instance, String_Builder* sb, Type* type);
 NAPI Infer_Node infer_node();
 NAPI Infer_Node infer_node(Type* type);
 NAPI Infer_Node infer_node(AST_Type_Spec* ts);
+NAPI Infer_Node infer_node(AST_Expression* expr);
 NAPI Type* infer_type(Instance* inst, Type_Task* task, const Infer_Node& infer_node, Scope* scope);
 
 }

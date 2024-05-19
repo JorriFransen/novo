@@ -935,6 +935,8 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
             return ssa_emit_struct_offset(builder, base_lvalue, struct_type, index);
         }
 
+        case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
+
         case AST_Expression_Kind::CALL: {
             assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
 
@@ -1182,6 +1184,20 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                 auto lvalue = ssa_emit_lvalue(builder, expr, scope);
                 result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, lvalue);
             }
+            break;
+        }
+
+        case AST_Expression_Kind::IMPLICIT_MEMBER: {
+
+            AST_Declaration* mem_decl = expr->implicit_member.member_name->decl;
+
+            assert(mem_decl);
+            assert(mem_decl->kind == AST_Declaration_Kind::ENUM_MEMBER);
+
+            assert(mem_decl->enum_member.value_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
+            assert(mem_decl->enum_member.value_expr->resolved_type == expr->resolved_type->enumeration.strict_type);
+
+            result_reg = ssa_emit_load_enum(builder, expr->resolved_type, mem_decl->enum_member.index_in_type);
             break;
         }
 
@@ -1865,6 +1881,7 @@ SSA_Register_Handle ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expre
         case AST_Expression_Kind::UNARY: assert(false); break;
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
         case AST_Expression_Kind::DEREF: assert(false); break;
@@ -1881,7 +1898,7 @@ SSA_Register_Handle ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expre
         case AST_Expression_Kind::BOOL_LITERAL: assert(false); break;
         case AST_Expression_Kind::NULL_LITERAL: assert(false); break;
         case AST_Expression_Kind::STRING_LITERAL: assert(false); break;
-    }
+        }
 
     assert(false);
     return {};
@@ -1913,6 +1930,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
         case AST_Expression_Kind::UNARY: assert(false); break;
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
 
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;

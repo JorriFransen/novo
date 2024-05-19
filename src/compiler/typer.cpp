@@ -6,7 +6,6 @@
 #include <nstring.h>
 
 #include "ast.h"
-#include "backend.h"
 #include "const_resolver.h"
 #include "instance.h"
 #include "resolver.h"
@@ -41,6 +40,10 @@ bool type_node(Instance* inst, Type_Task* task, AST_Node* node, Scope* scope)
 
         case AST_Node_Kind::TYPE_SPEC: {
             return type_type_spec(inst, task, node->ts, scope);
+        }
+
+        case AST_Node_Kind::IDENTIFIER: {
+            return type_identifier(inst, task, node->identifier, scope, nullptr);
         }
     }
 
@@ -825,6 +828,33 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             assert(mem_type);
 
             expr->resolved_type = mem_type;
+            break;
+        }
+
+        case AST_Expression_Kind::IMPLICIT_MEMBER: {
+
+            Type* left_type = nullptr;
+            if (suggested_type) {
+                left_type = suggested_type;
+            }
+
+            if (!left_type) {
+                instance_fatal_error(inst, source_pos(inst, expr), "Cannot infer left (implicit) side of member expression");
+                break;
+            }
+
+            if (left_type->kind != Type_Kind::ENUM) {
+                instance_fatal_error(inst, source_pos(inst, expr), "Left (implicit) type of member expression must be enum type");
+                break;
+            }
+
+            Resolve_Task name_task = resolve_task_create(inst, ast_node(expr->implicit_member.member_name), left_type->enumeration.scope, task->fn_decl, task->bytecode_deps);
+            if (!resolve_identifier(inst, &name_task, expr->implicit_member.member_name, left_type->enumeration.scope)) {
+                return false;
+            }
+
+            expr->implicit_member.enum_scope = left_type->enumeration.scope;
+            expr->resolved_type = left_type;
             break;
         }
 

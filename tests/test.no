@@ -34,8 +34,8 @@ Day :: enum u8 {
 main :: () -> s64 {
 
     cd : Day = Day.Monday;
-    //  nd := Day.Tuesday;
-    //  ld : Day = .Sunday;
+    nd := Day.Tuesday;
+    ld : Day = .Sunday;
 
     printf("Hi!\n".data);
 

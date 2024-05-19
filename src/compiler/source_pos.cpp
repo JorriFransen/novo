@@ -79,6 +79,7 @@ Source_Pos source_pos(Instance* inst, AST_Node &node)
         case AST_Node_Kind::STATEMENT: return source_pos(inst, node.statement);
         case AST_Node_Kind::EXPRESSION: return source_pos(inst, node.expression);
         case AST_Node_Kind::TYPE_SPEC: return source_pos(inst, node.ts);
+        case AST_Node_Kind::IDENTIFIER: return source_pos(inst, node.identifier);
     }
 
     assert(false);

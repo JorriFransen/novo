@@ -892,6 +892,16 @@ AST_Expression* parse_leaf_expression(Parser* parser)
             break;
         }
 
+        case '.': {
+            next_token(&parser->lexer);
+
+             AST_Identifier* member_ident = parse_identifier(parser);
+             pos = source_pos(pos, source_pos(&parser->lexer));
+
+             result = ast_implicit_member_expression(parser->instance, member_ident);
+            break;
+        }
+
         default: {
             assert(!result);
             auto tok_str = atom_string(ct.atom);

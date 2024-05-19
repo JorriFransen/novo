@@ -167,15 +167,15 @@ typedef u64 p_uint_t;
 
     // Function definitions
     string_builder_append(&sb, "/* Function definitions */\n");
+    s64 emitted_function_count = 0;
     for (s64 i = 0; i < program->functions.count; i++) {
 
         assert(stack_count(&arg_stack) == 0);
 
-        if (i > 0) string_builder_append(&sb, "\n");
-
         SSA_Function *func = &program->functions[i];
-
         if (func->foreign || func->run_wrapper) continue;
+
+        if (emitted_function_count++ > 0) string_builder_append(&sb, "\n");
 
         c_backend_emit_function_decl(cb, &sb, func);
         string_builder_append(&sb, "\n");
@@ -1026,6 +1026,7 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
         case AST_Expression_Kind::UNARY: assert(false); break;
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
+        case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
         case AST_Expression_Kind::DEREF: assert(false); break;

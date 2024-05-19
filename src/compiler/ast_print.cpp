@@ -51,6 +51,7 @@ String ast_to_string(Instance* instance, AST_File* file, String_Builder* sb)
 
             case AST_Node_Kind::EXPRESSION: assert(false); break;
             case AST_Node_Kind::TYPE_SPEC: assert(false); break;
+            case AST_Node_Kind::IDENTIFIER: assert(false); break;
         }
 
         string_builder_append(sb, "\n");
@@ -518,6 +519,16 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
             ast_print_pos(inst, sb, expr->member.member_name);
             ast_print_indent(sb, indent + 1);
             string_builder_append(sb, "MEMBER_NAME: '%s'\n", atom_string(expr->member.member_name->atom).data);
+            break;
+        }
+
+        case AST_Expression_Kind::IMPLICIT_MEMBER: {
+            string_builder_append(sb, "EXPR_IMPLICIT_MEMBER:\n");
+
+            ast_print_pos(inst, sb, expr->implicit_member.member_name);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "MEMBER_NAME: '%s'\n", atom_string(expr->member.member_name->atom).data);
+
             break;
         }
 

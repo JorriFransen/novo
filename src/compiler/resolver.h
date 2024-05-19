@@ -1,5 +1,6 @@
 #pragma once
 
+#include "type.h"
 #include <defines.h>
 
 namespace Novo {

@@ -1,5 +1,3 @@
-#include "resolver.h"
-
 #include <containers/darray.h>
 #include <containers/stack.h>
 #include <defines.h>
@@ -10,6 +8,7 @@
 #include "ast.h"
 #include "atom.h"
 #include "instance.h"
+#include "resolver.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "task.h"
@@ -42,6 +41,10 @@ bool resolve_node(Instance* inst, Resolve_Task* task, AST_Node* node, Scope* sco
         case AST_Node_Kind::TYPE_SPEC: {
             return resolve_ts(inst, task, node->ts, scope);
         }
+
+        case AST_Node_Kind::IDENTIFIER: {
+            return resolve_identifier(inst, task, node->identifier, scope);
+        }
     }
 
     assert(false);
@@ -59,8 +62,11 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
         case AST_Declaration_Kind::INVALID: assert(false); break;
 
         case AST_Declaration_Kind::VARIABLE: {
-            if (decl->variable.type_spec && !resolve_ts(inst, task, decl->variable.type_spec, scope)) {
-                return false;
+
+            if (decl->variable.type_spec) {
+                if (!resolve_ts(inst, task, decl->variable.type_spec, scope)) {
+                    return false;
+                }
             }
 
             if (decl->variable.init_expr && !resolve_expression(inst, task, decl->variable.init_expr, scope)) {
@@ -85,8 +91,10 @@ bool resolve_declaration(Instance* inst, Resolve_Task* task, AST_Declaration* de
 
         case AST_Declaration_Kind::CONSTANT: {
 
-            if (decl->constant.type_spec && !resolve_ts(inst, task, decl->constant.type_spec, scope)) {
-                return false;
+            if (decl->constant.type_spec) {
+                if (!resolve_ts(inst, task, decl->constant.type_spec, scope)) {
+                    return false;
+                }
             }
 
             if (!resolve_expression(inst, task, decl->constant.value, scope)) {
@@ -581,6 +589,11 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 expr->flags |= AST_EXPR_FLAG_LVALUE;
             }
 
+            break;
+        }
+
+        case AST_Expression_Kind::IMPLICIT_MEMBER: {
+            // Identifier is resolved in typer
             break;
         }
 

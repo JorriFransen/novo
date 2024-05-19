@@ -33,6 +33,11 @@ AST_Node ast_node(AST_Type_Spec* expr)
     return AST_Node { AST_Node_Kind::TYPE_SPEC, { .ts = expr } };
 }
 
+AST_Node ast_node(AST_Identifier* ident)
+{
+    return AST_Node { AST_Node_Kind::IDENTIFIER, { .identifier = ident } };
+}
+
 Type* ast_node_type(const AST_Node& node)
 {
     switch (node.kind) {
@@ -41,6 +46,11 @@ Type* ast_node_type(const AST_Node& node)
         case AST_Node_Kind::STATEMENT: assert(false); break;
         case AST_Node_Kind::EXPRESSION: return node.expression->resolved_type;
         case AST_Node_Kind::TYPE_SPEC: return node.ts->resolved_type;
+        case AST_Node_Kind::IDENTIFIER: {
+            assert(node.identifier->decl);
+            assert(node.identifier->decl->resolved_type);
+            return node.identifier->decl->resolved_type;
+        }
     }
 
     assert(false);
@@ -311,6 +321,14 @@ AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_
     auto result = ast_expression(inst, AST_Expression_Kind::MEMBER);
     result->member.base = base;
     result->member.member_name = member_name;
+    return result;
+}
+
+AST_Expression* ast_implicit_member_expression(Instance* inst, AST_Identifier* member_name)
+{
+    auto result = ast_expression(inst, AST_Expression_Kind::IMPLICIT_MEMBER);
+    result->implicit_member.enum_scope = nullptr;
+    result->implicit_member.member_name = member_name;
     return result;
 }
 

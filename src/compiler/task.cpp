@@ -71,6 +71,7 @@ void add_resolve_tasks(Instance* inst, AST_File* file, Scope* scope, AST_Declara
 
             case AST_Node_Kind::EXPRESSION: assert(false); break;
             case AST_Node_Kind::TYPE_SPEC: assert(false); break;
+            case AST_Node_Kind::IDENTIFIER: assert(false); break;
         }
     }
 }
@@ -95,6 +96,7 @@ void add_resolve_tasks(Instance* inst, DArray<AST_Node> nodes, Scope* scope, AST
 
             case AST_Node_Kind::EXPRESSION: assert(false); break;
             case AST_Node_Kind::TYPE_SPEC: assert(false); break;
+            case AST_Node_Kind::IDENTIFIER: assert(false); break;
         }
     }
 }

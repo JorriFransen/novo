@@ -24,6 +24,7 @@ enum class AST_Node_Kind
     STATEMENT,
     EXPRESSION,
     TYPE_SPEC,
+    IDENTIFIER,
 };
 
 struct AST_Node
@@ -36,6 +37,7 @@ struct AST_Node
         AST_Statement* statement;
         AST_Expression* expression;
         AST_Type_Spec* ts;
+        AST_Identifier* identifier;
     };
 };
 
@@ -241,6 +243,7 @@ enum class AST_Expression_Kind : u32
     UNARY,
     BINARY,
     MEMBER,
+    IMPLICIT_MEMBER,
     CALL,
 
     ADDRESS_OF,
@@ -310,6 +313,11 @@ struct AST_Expression
             AST_Expression* base;
             AST_Identifier* member_name;
         } member;
+
+        struct {
+            Scope* enum_scope;
+            AST_Identifier* member_name;
+        } implicit_member;
 
         struct
         {
@@ -398,6 +406,7 @@ NAPI AST_Node ast_node(AST_Declaration* decl);
 NAPI AST_Node ast_node(AST_Statement* stmt);
 NAPI AST_Node ast_node(AST_Expression* expr);
 NAPI AST_Node ast_node(AST_Type_Spec* expr);
+NAPI AST_Node ast_node(AST_Identifier* ident);
 
 NAPI Type* ast_node_type(const AST_Node& node);
 
@@ -435,6 +444,7 @@ NAPI AST_Expression* ast_identifier_expression(Instance* inst, AST_Identifier* i
 NAPI AST_Expression* ast_unary_expression(Instance* inst, u32 op, AST_Expression* operand);
 NAPI AST_Expression* ast_binary_expression(Instance* inst, u32 op, AST_Expression* lhs, AST_Expression* rhs);
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name);
+NAPI AST_Expression* ast_implicit_member_expression(Instance* inst, AST_Identifier* member_name);
 NAPI AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression*> args);
 NAPI AST_Expression* ast_address_of_expression(Instance* instance, AST_Expression* operand);
 NAPI AST_Expression* ast_deref_expression(Instance* instance, AST_Expression* operand);
