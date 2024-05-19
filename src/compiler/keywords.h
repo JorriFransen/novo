@@ -40,12 +40,14 @@ namespace Novo {
 ALL_NOVO_KEYWORDS
 
 #undef NOVO_KEYWORD
- 
+
 // These are not 'reserved' names, but they are a lot like keywords
-#define NOVO_EXTRA_ATOMS    \
-    NOVO_EXTRA_ATOM(run)    \
-    NOVO_EXTRA_ATOM(import) \
-    NOVO_EXTRA_ATOM(insert) \
+#define NOVO_EXTRA_ATOMS               \
+    NOVO_EXTRA_ATOM(run)               \
+    NOVO_EXTRA_ATOM(import)            \
+    NOVO_EXTRA_ATOM(insert)            \
+    NOVO_EXTRA_ATOM(foreign)           \
+    NOVO_EXTRA_ATOM(compiler_function) \
 
 #define NOVO_EXTRA_ATOM(x) NAPI extern Atom g_atom_##x;
 NOVO_EXTRA_ATOMS

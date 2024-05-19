@@ -1,0 +1,6 @@
+
+#import "compiler"
+
+main :: () -> int {
+    return 0;
+}

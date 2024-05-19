@@ -581,12 +581,22 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
         auto directive_name = parser->lexer.token;
         expect_token(parser, TOK_NAME);
-        assert(directive_name.atom == atom_get("foreign"));
+
+        switch (directive_name.keyword) {
+            default: {
+                String name = atom_string(directive_name.atom);
+                instance_fatal_error(parser->instance, source_pos(parser, directive_name), "Invalid directive: %.*s", (int)name.length, name.data);
+                break;
+            }
+
+            case Novo_Keyword::KW_foreign: {
+                flags |= AST_DECL_FLAG_FOREIGN;break;
+                break;
+            }
+        }
 
         pos = source_pos(pos, source_pos(&parser->lexer));
         expect_token(parser, ';');
-
-        flags |= AST_DECL_FLAG_FOREIGN;
     }
 
     if (c_vararg && ! (flags & AST_DECL_FLAG_FOREIGN)) {

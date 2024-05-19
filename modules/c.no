@@ -1,5 +1,4 @@
 
-
 putchar :: (char: s32) -> s32 #foreign;
 puts :: (str: cstring) -> s32 #foreign;
 printf :: (format: cstring, ..) -> s32 #foreign;
