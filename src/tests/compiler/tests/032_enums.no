@@ -1,20 +1,4 @@
 
-//  - Move import path resolution to resolver
-//  - Move inst->cwd into the tests
-//  - Basic control flow
-//      - switch
-//      - defer
-//  - Nested function declarations
-//  - Cleanup error reporting
-//      - seperate creating and submission, this should be cleaner (eg. in valid_cast())
-
-//  - Keyword tokens should be associated with some enum so the parser can switch on this instead of using if-else chains
-//  - Redo linear allocator to have blocks
-//  - Capture errors, and check for them in tests
-
-
-#import "c"
-
 Day :: enum u8 {
     Monday = 33,
     monday = Monday,
@@ -31,7 +15,8 @@ Day :: enum u8 {
     Sunday,
 }
 
-main :: () -> s64 {
+main :: () -> int {
+
 
     assert(Day.Monday == 33);
     assert(Day.monday == 33);
@@ -62,8 +47,6 @@ main :: () -> s64 {
 
     assert(ld == Day.Sunday);
     assert(ld == 8);
-
-    printf("HI\n".data);
 
     return 0;
 }

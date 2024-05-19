@@ -1175,7 +1175,8 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                 assert(mem_decl);
                 assert(mem_decl->kind == AST_Declaration_Kind::ENUM_MEMBER);
 
-                assert(mem_decl->enum_member.value_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
+                assert(mem_decl->enum_member.value_expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
+                       mem_decl->enum_member.value_expr->kind == AST_Expression_Kind::IDENTIFIER);
                 assert(mem_decl->enum_member.value_expr->resolved_type == expr->resolved_type->enumeration.strict_type);
 
                 result_reg = ssa_emit_load_enum(builder, expr->resolved_type, mem_decl->enum_member.index_in_type);

@@ -192,6 +192,11 @@ bool is_pointer_or_parent_of_pointer(Type* type)
 
 bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to)
 {
+    // Enum to integer
+    if (from->kind == Type_Kind::ENUM && to->kind == Type_Kind::INTEGER) {
+        return from->enumeration.strict_type == to;
+    }
+
     // Implicit conversion to cstring
     if ((from == pointer_type_get(inst, inst->builtin_type_u8) || from == pointer_type_get(inst, inst->builtin_type_s8)) &&
         to == inst->builtin_type_cstring) {

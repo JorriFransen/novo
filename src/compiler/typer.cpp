@@ -743,9 +743,10 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             } else {
 
                 if (lhs->resolved_type->kind != Type_Kind::INTEGER &&
+                    lhs->resolved_type->kind != Type_Kind::ENUM &&
                     lhs->resolved_type->kind != Type_Kind::POINTER) {
 
-                    instance_fatal_error(inst, source_pos(inst, lhs), "Expected integer or pointer type on left side of binary operator '%s', got: '%s'",
+                    instance_fatal_error(inst, source_pos(inst, lhs), "Expected integer, enum or pointer type on left side of binary operator '%s', got: '%s'",
                             tmp_token_kind_str((Token_Kind)expr->binary.op).data,
                             temp_type_string(inst, lhs->resolved_type).data);
                 }
@@ -1095,7 +1096,12 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
         case AST_Expression_Kind::INTEGER_LITERAL: {
 
             if (suggested_type) {
-                assert(suggested_type->kind == Type_Kind::INTEGER);
+                assert(suggested_type->kind == Type_Kind::INTEGER ||
+                       suggested_type->kind == Type_Kind::ENUM);
+
+                if (suggested_type->kind == Type_Kind::ENUM) {
+                    suggested_type = suggested_type->enumeration.strict_type;
+                }
 
                 bool hex = expr->flags & AST_EXPR_FLAG_HEX_LITERAL;
                 bool binary = expr->flags & AST_EXPR_FLAG_BINARY_LITERAL;
