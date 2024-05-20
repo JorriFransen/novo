@@ -1,7 +1,6 @@
 #include "type.h"
 
 #include <containers/darray.h>
-#include <cuchar>
 #include <memory/allocator.h>
 #include <memory/arena.h>
 #include <string_builder.h>
@@ -66,6 +65,8 @@ Type* array_type_new(Instance* inst, u64 length, Type* element_type)
 
     result->array.length = length;
     result->array.element_type = element_type;
+
+    darray_append(&inst->array_types, result);
 
     return result;
 }
@@ -135,6 +136,21 @@ Type* pointer_type_get(Instance *inst, Type* base)
     if (base->pointer_to) return base->pointer_to;
 
     return pointer_type_new(inst, base);
+}
+
+Type* array_type_get(Instance* inst, u64 length, Type* element_type)
+{
+    for (s64 i = 0; i < inst->array_types.count; i++) {
+        Type* atype = inst->array_types[i];
+
+        if (atype->flags != TOK_FLAG_NONE) continue;
+
+        if (atype->array.length == length && atype->array.element_type == element_type) {
+            return atype;
+        }
+    }
+
+    return array_type_new(inst, length, element_type);
 }
 
 Type* function_type_get(Instance* inst, Array_Ref<Type*> param_types, Type* return_type, Type_Flags flags)
