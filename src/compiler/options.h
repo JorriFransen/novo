@@ -12,6 +12,7 @@ namespace Novo {
     NOVO_BOOL_OPTION('b', print_bytecode, false, "Print bytecode", "[VALUE]")               \
     NOVO_STRING_OPTION('o', output, nullptr, "Output file name", "FILENAME")                \
     NOVO_BOOL_OPTION('k', keep_c_backend_output, false, "Keep c backend output", "[VALUE]") \
+    NOVO_BOOL_OPTION('n', no_backend, false, "Disable (c) backend", "[VALUE]")              \
 
 
 struct Options  {
