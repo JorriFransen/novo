@@ -66,6 +66,7 @@ void instance_init(Instance* inst, Options options)
 
     darray_init(&inst->ast_allocator, &inst->function_types);
     darray_init(&inst->ast_allocator, &inst->struct_types);
+    darray_init(&inst->ast_allocator, &inst->array_types);
     darray_init(&inst->ast_allocator, &inst->enum_types);
 
     inst->fatal_error = false;
