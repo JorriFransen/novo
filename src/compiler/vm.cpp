@@ -645,6 +645,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
                         }
 
                         case Type_Kind::POINTER: dcArgPointer(vm->ffi.vm, (void*)arg); break;
+                        case Type_Kind::ARRAY: assert(false); break;
 
                         case Type_Kind::FUNCTION: assert(false); break;
                         case Type_Kind::STRUCT: assert(false); break;
@@ -884,6 +885,7 @@ AST_Expression* vm_const_expr_from_result(Instance* inst, VM_Result vm_res)
 
         case Type_Kind::BOOLEAN: assert(false); break;
         case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::ARRAY: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
 
         case Type_Kind::STRUCT: {
@@ -920,6 +922,7 @@ AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem)
         }
 
         case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::ARRAY: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
 
         case Type_Kind::STRUCT: {

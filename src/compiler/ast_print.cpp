@@ -672,6 +672,12 @@ static void ast_ts_to_string(Instance* inst, String_Builder* sb, AST_Type_Spec* 
             ast_ts_to_string(inst, sb, ts->base, indent + 1);
             break;
         }
+
+        case AST_Type_Spec_Kind::ARRAY: {
+            string_builder_append(sb, "ARRAY_TS:\n");
+            assert(false);
+            break;
+        }
     }
 }
 
