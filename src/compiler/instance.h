@@ -62,6 +62,7 @@ struct Instance
 
     DArray<Type*> function_types;
     DArray<Type*> struct_types;
+    DArray<Type*> array_types;
     DArray<Type*> enum_types;
 
     bool fatal_error;
