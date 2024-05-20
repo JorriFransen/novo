@@ -1,6 +1,7 @@
 #include "type.h"
 
 #include <containers/darray.h>
+#include <cuchar>
 #include <memory/allocator.h>
 #include <memory/arena.h>
 #include <string_builder.h>
@@ -53,6 +54,18 @@ Type* pointer_type_new(Instance* inst, Type* base)
     auto result = type_new(inst, Type_Kind::POINTER, TYPE_FLAG_NONE, inst->pointer_byte_size * 8, inst->pointer_byte_size);
     result->pointer.base = base;
     base->pointer_to = result;
+
+    return result;
+}
+
+Type* array_type_new(Instance* inst, u64 length, Type* element_type)
+{
+    assert(length);
+    u64 bit_size = element_type->bit_size * length;
+    Type* result = type_new(inst, Type_Kind::ARRAY, TOK_FLAG_NONE, bit_size, element_type->alignment);
+
+    result->array.length = length;
+    result->array.element_type = element_type;
 
     return result;
 }
@@ -171,6 +184,9 @@ bool is_pointer_or_parent_of_pointer(Type* type)
             return true;
         }
 
+        case Type_Kind::ARRAY: {
+            return is_pointer_or_parent_of_pointer(type->array.element_type);
+        }
 
         case Type_Kind::STRUCT: {
             bool result = false;
@@ -246,6 +262,12 @@ void type_to_string(Instance* instance, String_Builder* sb, Type* type)
                 string_builder_append(sb, "*");
                 type_to_string(instance, sb, type->pointer.base);
             }
+            break;
+        }
+
+        case Type_Kind::ARRAY: {
+            string_builder_append(sb, "[%llu]", type->array.length);
+            type_to_string(instance, sb, type->array.element_type);
             break;
         }
 

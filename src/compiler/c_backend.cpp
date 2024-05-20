@@ -366,6 +366,10 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
             break;
         }
 
+        case Type_Kind::ARRAY: {
+            assert(false);
+        }
+
         case Type_Kind::FUNCTION: {
             String_Builder sb;
             string_builder_init(&sb, &ta);

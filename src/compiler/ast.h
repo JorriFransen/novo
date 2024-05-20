@@ -369,6 +369,7 @@ enum class AST_Type_Spec_Kind : u32
     INVALID,
     IDENTIFIER,
     POINTER,
+    ARRAY,
 };
 
 typedef u32 AST_Type_Spec_Flags;
@@ -389,6 +390,11 @@ struct AST_Type_Spec
     union {
         AST_Identifier* identifier;
         AST_Type_Spec *base;
+
+        struct {
+            AST_Expression* length;
+            AST_Type_Spec* element_ts;
+        } array;
     };
 };
 
@@ -465,6 +471,7 @@ NAPI AST_Expression* ast_string_literal_expression(Instance* inst, Atom atom);
 NAPI AST_Type_Spec* ast_type_spec(Instance* inst, AST_Type_Spec_Kind kind);
 NAPI AST_Type_Spec* ast_identifier_type_spec(Instance* inst, AST_Identifier* ident);
 NAPI AST_Type_Spec* ast_pointer_type_spec(Instance* inst, AST_Type_Spec *base);
+NAPI AST_Type_Spec* ast_array_type_spec(Instance* inst, AST_Expression* length_expr, AST_Type_Spec* element_ts);
 
 NAPI AST_Identifier* ast_identifier(Instance* inst, Atom atom);
 
