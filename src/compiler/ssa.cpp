@@ -532,6 +532,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                             break;
                         }
 
+                        case Type_Kind::ARRAY: assert(false); break;
                         case Type_Kind::FUNCTION: assert(false); break;
 
                         case Type_Kind::STRUCT: {
@@ -568,6 +569,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     break;
                 }
 
+                case Type_Kind::ARRAY: assert(false); break;
                 case Type_Kind::FUNCTION: assert(false); break;
 
                 case Type_Kind::STRUCT: {
@@ -1730,6 +1732,7 @@ SSA_Register_Handle ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* t
                     break;
                 }
 
+                case Type_Kind::ARRAY: assert(false); break;
                 case Type_Kind::FUNCTION: assert(false); break;
                 case Type_Kind::STRUCT: assert(false); break;
                 case Type_Kind::ENUM: assert(false); break;
@@ -1750,6 +1753,7 @@ SSA_Register_Handle ssa_emit_cast(SSA_Builder* builder, Type* from_type, Type* t
             }
         }
 
+        case Type_Kind::ARRAY: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
         case Type_Kind::ENUM: assert(false); break;
@@ -2222,6 +2226,7 @@ void ssa_print_pointer_value(String_Builder* sb, Type* type, u8* ptr)
 
         case Type_Kind::BOOLEAN: assert(false); break;
         case Type_Kind::POINTER: assert(false); break;
+        case Type_Kind::ARRAY: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
 
         case Type_Kind::STRUCT: {

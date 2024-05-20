@@ -781,6 +781,10 @@ bool resolve_ts(Instance* inst, Resolve_Task* task, AST_Type_Spec* ts, Scope* sc
             result = resolve_ts(inst, task, ts->base, scope);
             break;
         }
+
+        case AST_Type_Spec_Kind::ARRAY: {
+            assert(false);
+        }
     }
 
     if (result) {
