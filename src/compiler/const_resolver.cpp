@@ -33,6 +33,7 @@ Resolved_Constant const_resolve(Instance* inst, AST_Expression* expr)
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
         case AST_Expression_Kind::DEREF: assert(false); break;
         case AST_Expression_Kind::CAST: assert(false); break;

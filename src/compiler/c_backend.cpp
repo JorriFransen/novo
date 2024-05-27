@@ -1043,6 +1043,7 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
         case AST_Expression_Kind::DEREF: assert(false); break;

@@ -947,6 +947,7 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
         }
 
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
 
         case AST_Expression_Kind::CALL: {
             assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
@@ -1212,6 +1213,8 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
             result_reg = ssa_emit_load_enum(builder, expr->resolved_type, mem_decl->enum_member.index_in_type);
             break;
         }
+
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
 
         case AST_Expression_Kind::CALL: {
 
@@ -1896,6 +1899,7 @@ SSA_Register_Handle ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expre
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
         case AST_Expression_Kind::DEREF: assert(false); break;
@@ -1948,6 +1952,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
 
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
