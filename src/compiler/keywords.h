@@ -48,6 +48,8 @@ ALL_NOVO_KEYWORDS
     NOVO_EXTRA_ATOM(insert)            \
     NOVO_EXTRA_ATOM(foreign)           \
     NOVO_EXTRA_ATOM(compiler_function) \
+    NOVO_EXTRA_ATOM(length)            \
+    NOVO_EXTRA_ATOM(data)              \
 
 #define NOVO_EXTRA_ATOM(x) NAPI extern Atom g_atom_##x;
 NOVO_EXTRA_ATOMS

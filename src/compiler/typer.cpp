@@ -9,6 +9,7 @@
 #include "ast.h"
 #include "const_resolver.h"
 #include "instance.h"
+#include "keywords.h"
 #include "resolver.h"
 #include "scope.h"
 #include "source_pos.h"
@@ -802,18 +803,27 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             Type* base_type = expr->member.base->resolved_type;
             Scope* base_scope = nullptr;
             bool aggregate = false;
+            bool array = false;
 
             switch (base_type->kind) {
                 default: assert(false); // Error should have been reported in resolver
 
                 case Type_Kind::POINTER: {
                     assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
-                    base_type = base_type->pointer.base;
-                    // Falltrough
-                }
-                case Type_Kind::STRUCT: {
-                    base_scope = base_type->structure.scope;
                     aggregate = true;
+                    base_type = base_type->pointer.base;
+                    base_scope = base_type->structure.scope;
+                    break;
+                }
+
+                case Type_Kind::STRUCT: {
+                    aggregate = true;
+                    base_scope = base_type->structure.scope;
+                    break;
+                }
+
+                case Type_Kind::ARRAY: {
+                    array = true;
                     break;
                 }
 
@@ -824,23 +834,35 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             assert(base_type);
-            assert(base_scope);
 
-            AST_Declaration* mem_decl = scope_find_symbol(base_scope, expr->member.member_name->atom, nullptr);
+            if (array) {
 
-            Type* mem_type = nullptr;
+                if (expr->member.member_name->atom == g_atom_length) {
+                    expr->resolved_type = inst->builtin_type_int;
+                } else if (expr->member.member_name->atom == g_atom_data) {
+                    assert(base_type->kind == Type_Kind::ARRAY);
+                    expr->resolved_type = pointer_type_get(inst, base_type->array.element_type);
+                } else assert(false && !"Should have been caught in resolver");
 
-            if (aggregate) {
-                u32 index = mem_decl->variable.index;
-                assert(index >= 0 && index < base_type->structure.members.count);
-                mem_type = base_type->structure.members[index].type;
             } else {
-                mem_type = base_type;
+                assert(base_scope);
+
+                AST_Declaration* mem_decl = scope_find_symbol(base_scope, expr->member.member_name->atom, nullptr);
+
+                Type* mem_type = nullptr;
+
+                if (aggregate) {
+                    u32 index = mem_decl->variable.index;
+                    assert(index >= 0 && index < base_type->structure.members.count);
+                    mem_type = base_type->structure.members[index].type;
+                } else {
+                    mem_type = base_type;
+                }
+
+                assert(mem_type);
+
+                expr->resolved_type = mem_type;
             }
-
-            assert(mem_type);
-
-            expr->resolved_type = mem_type;
             break;
         }
 
