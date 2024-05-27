@@ -252,7 +252,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         if (param_decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED) {
 
             SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, param_decl->resolved_type);
-            darray_append(&func->allocs, { ast_node(param_decl), alloc_reg });
+            darray_append(&func->allocs, { ast_node(param_decl), param_decl->resolved_type, alloc_reg });
         }
     }
 
@@ -261,10 +261,28 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     // Emit storage for local variables
     for (s64 i = 0; i < decl->function.variables.count; i++) {
 
-        auto var_decl = decl->function.variables[i];
+        AST_Declaration* var_decl = decl->function.variables[i];
 
-        SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, var_decl->resolved_type);
-        darray_append(&func->allocs, { ast_node(var_decl), alloc_reg });
+        SSA_Register_Handle alloc_reg;
+        Type* alloc_type = nullptr;
+
+        if (var_decl->resolved_type->kind == Type_Kind::ARRAY) {
+
+            SSA_Register_Handle array_reg = ssa_emit_alloc(builder, var_decl->resolved_type);
+            darray_append(&func->allocs, { {}, var_decl->resolved_type, array_reg } );
+
+            Type* ptr_type = pointer_type_get(inst, var_decl->resolved_type->array.element_type);
+            alloc_type = ptr_type;
+
+            alloc_reg = ssa_emit_alloc(builder, ptr_type);
+            ssa_emit_store_ptr(builder, inst->pointer_byte_size * 8, alloc_reg, array_reg);
+        } else {
+            alloc_reg = ssa_emit_alloc(builder, var_decl->resolved_type);
+            alloc_type = var_decl->resolved_type;
+        }
+
+        assert(alloc_type);
+        darray_append(&func->allocs, { ast_node(var_decl), alloc_type, alloc_reg });
     }
 
     // Emit storage for (temporary) aggregates
@@ -273,7 +291,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         auto expr = decl->function.temp_structs[i];
 
         SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, expr->resolved_type);
-        darray_append(&func->allocs, { ast_node(expr), alloc_reg });
+        darray_append(&func->allocs, { ast_node(expr), expr->resolved_type, alloc_reg });
     }
 
     // Copy parameters into local storage
@@ -398,7 +416,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
 
     if (sret) {
         sret_alloc_reg = ssa_emit_alloc(builder, return_type);
-        darray_append(&func->allocs, { ast_node(expr), sret_alloc_reg });
+        darray_append(&func->allocs, { ast_node(expr), return_type, sret_alloc_reg });
     }
 
     for (s64 i = 0; i < expr->call.args.count; i++) {
@@ -406,7 +424,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
 
         if (arg_expr->resolved_type->kind == Type_Kind::STRUCT) {
             SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, arg_expr->resolved_type);
-            darray_append(&func->allocs, { ast_node(arg_expr), alloc_reg });
+            darray_append(&func->allocs, { ast_node(arg_expr), arg_expr->resolved_type, alloc_reg });
         }
     }
 
@@ -534,7 +552,14 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
                         case Type_Kind::FUNCTION: assert(false); break;
 
-                        case Type_Kind::ARRAY:
+                        case Type_Kind::ARRAY: {
+                            Type* element_ptr_type = pointer_type_get(builder->instance, init_expr->resolved_type->array.element_type);
+                            SSA_Register_Handle array_address_reg = ssa_emit_load_ptr(builder, element_ptr_type, alloc_reg);
+                            SSA_Register_Handle value_reg = ssa_emit_lvalue(builder, init_expr, scope);
+                            ssa_emit_memcpy(builder, array_address_reg, value_reg, init_expr->resolved_type->bit_size);
+                            break;
+                        }
+
                         case Type_Kind::STRUCT: {
                             SSA_Register_Handle value_reg = ssa_emit_lvalue(builder, init_expr, scope);
                             ssa_emit_memcpy(builder, alloc_reg, value_reg, init_expr->resolved_type->bit_size);
@@ -1573,14 +1598,14 @@ SSA_Register_Handle ssa_emit_load_param(SSA_Builder* builder, u32 param_index)
     return result;
 }
 
-SSA_Register_Handle ssa_emit_load_ptr(SSA_Builder* builder, Type* type, SSA_Register_Handle ptr_reg)
+SSA_Register_Handle ssa_emit_load_ptr(SSA_Builder* builder, Type* dest_type, SSA_Register_Handle ptr_reg)
 {
-    assert(type->bit_size % 8 == 0);
-    auto size = type->bit_size / 8;
+    assert(dest_type->bit_size % 8 == 0);
+    auto size = dest_type->bit_size / 8;
     assert(size > 0 && size < U8_MAX);
     assert(size <= 8);
 
-    SSA_Register_Handle dest_reg = ssa_register_create(builder, type);
+    SSA_Register_Handle dest_reg = ssa_register_create(builder, dest_type);
 
     ssa_emit_op(builder, SSA_OP_LOAD_PTR);
     ssa_emit_8(builder, size);
@@ -2355,7 +2380,7 @@ s64 ssa_print_instruction(Instance* inst, String_Builder* sb, SSA_Program* progr
             ip += sizeof(s64);
 
             assert(dest_reg < fn->allocs.count);
-            Type* alloc_type = ast_node_type(fn->allocs[dest_reg].ast_node);
+            Type* alloc_type = fn->allocs[dest_reg].type;
 
             string_builder_append(sb, "  %%%u = ALLOC %lld <%s>\n", dest_reg, size,
                                   temp_type_string(inst, alloc_type).data);

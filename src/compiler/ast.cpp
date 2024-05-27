@@ -38,25 +38,6 @@ AST_Node ast_node(AST_Identifier* ident)
     return AST_Node { AST_Node_Kind::IDENTIFIER, { .identifier = ident } };
 }
 
-Type* ast_node_type(const AST_Node& node)
-{
-    switch (node.kind) {
-        case AST_Node_Kind::INVALID: assert(false); break;
-        case AST_Node_Kind::DECLARATION: return node.declaration->resolved_type;
-        case AST_Node_Kind::STATEMENT: assert(false); break;
-        case AST_Node_Kind::EXPRESSION: return node.expression->resolved_type;
-        case AST_Node_Kind::TYPE_SPEC: return node.ts->resolved_type;
-        case AST_Node_Kind::IDENTIFIER: {
-            assert(node.identifier->decl);
-            assert(node.identifier->decl->resolved_type);
-            return node.identifier->decl->resolved_type;
-        }
-    }
-
-    assert(false);
-    return nullptr;
-}
-
 AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes)
 {
     auto result = allocate(&inst->ast_allocator, AST_File);

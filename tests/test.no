@@ -18,18 +18,9 @@
 
 main :: () -> s64 {
 
-    printf("Array test\n".data);
+    x := 44;
 
-    array_test_1();
-
+    printf("Hello! %i\n".data, x);
     return 0;
 }
 
-array_test_1 :: () {
-    a1 : [2]int = { 11, 22 };
-    a2 :        = { 33, 44 };
-}
-
-
-
-add :: (a: int, b: int) -> int { return a + b; }

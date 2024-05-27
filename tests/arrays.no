@@ -6,9 +6,17 @@ main :: () -> int {
     //  printf("Array test!\n".data);
 
     a1 : [2]int; // Local allocation, uninitialized
-    a2 : [2]int = { 33, 44 }; // Local allocation, initialized
+    // %0 = ALLOC 16 <[2]int>
+    // %1 = ALLOC 8 <*int>
+    // STORE_PTR 8 %1 %0
 
-    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    a2 : [2]int = { 33, 44 }; // Local allocation, initialized
+    // %2 = ALLOC 16 <[2]int>
+    // MEMCPY %2 &{ 33, 44 }
+    // %3 = ALLOC 8 <*int>
+    // STORE_PTR 8 %3 %2
+
+    //  printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
     //  printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
 
     //  assert(a1.length == 2);
@@ -22,7 +30,13 @@ main :: () -> int {
     //  assert(a1.data != a2.data);
 
     //  a1 = { 11, 22 }; // Store in local allocation
+    // %4 = LOAD_PTR 8 %1
+    //  MEMCPY %4 &{ 11, 22 }
+
     //  a1 = a2;         // Store in local allocation, still seperate arrays
+    // %6 = LOAD_PTR 8 %1
+    // %7 = LOAD_PTR 8 %3
+    // MEMCPY %6 %7
 
     //  invalid1 := <a2; // Disallow dereference
 
@@ -34,10 +48,11 @@ main :: () -> int {
     //  a4 : [2]int;
     //  init_array(*a4, 77, 88);
 
-    //  a5 : *[2]int = heap_array(99, 1010); // Allocate array on heap, return by pointer
+    //  a5 : *[2]int = heap_array(99, 1010); // Allocate array on heap
     //  assert(a5.length == 2);
     //  assert(a5.data != a4.data);
 
     return 0;
 
 }
+
