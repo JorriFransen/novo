@@ -687,8 +687,15 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 ptr_reg = FETCH32();
                     u32 value_reg = FETCH32();
 
+                    SSA_Register ptr_reg_data = func->registers[ptr_reg];
+                    Type* ptr_type = ptr_reg_data.type;
+
+                    if (ptr_reg_data.alloc_reg) {
+                        ptr_type = pointer_type_get(cb->inst, ptr_type);
+                    }
+
                     string_builder_append(sb, "    *(r%u) = (", ptr_reg);
-                    c_backend_emit_c_type(cb, sb, func->registers[ptr_reg].type, "");
+                    c_backend_emit_c_type(cb, sb, ptr_type->pointer.base, "");
                     string_builder_append(sb, ")r%u;",  value_reg);
                     break;
                 }

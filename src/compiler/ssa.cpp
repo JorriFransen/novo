@@ -972,7 +972,21 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
         }
 
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
-        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
+
+        case AST_Expression_Kind::SUBSCRIPT: {
+
+            AST_Expression* base_expr = lvalue_expr->subscript.base;
+            AST_Expression* index_expr = lvalue_expr->subscript.index;
+
+            assert(base_expr->resolved_type->kind == Type_Kind::ARRAY);
+            Type* elem_ptr_type = pointer_type_get(builder->instance, base_expr->resolved_type->array.element_type);
+
+            SSA_Register_Handle base_reg = ssa_emit_expression(builder, base_expr, scope);
+            base_reg = ssa_emit_load_ptr(builder, elem_ptr_type, base_reg);
+            SSA_Register_Handle index_reg = ssa_emit_expression(builder, index_expr, scope);
+            return ssa_emit_pointer_offset(builder, elem_ptr_type, base_reg, index_reg);
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
             assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
@@ -1095,7 +1109,7 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                 } else {
 
                     auto lvalue = ssa_emit_lvalue(builder, expr, scope);
-                    if (expr->resolved_type->kind == Type_Kind::STRUCT) {
+                    if (expr->resolved_type->kind == Type_Kind::STRUCT || expr->resolved_type->kind == Type_Kind::ARRAY) {
                         result_reg = lvalue;
                     } else {
                         result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, lvalue);
@@ -1239,7 +1253,13 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
             break;
         }
 
-        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: {
+
+            SSA_Register_Handle ptr_reg = ssa_emit_lvalue(builder, expr, scope);
+            result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, ptr_reg);
+
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
 

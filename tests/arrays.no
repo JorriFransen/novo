@@ -16,8 +16,17 @@ main :: () -> int {
     // %3 = ALLOC 8 <*int>
     // STORE_PTR 8 %3 %2
 
-    //  printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
-    //  printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+
+    a1[0] = 90;
+    a1[1] = 91;
+    a2[0] = 92;
+    a2[1] = 93;
+
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+
 
     //  assert(a1.length == 2);
     //  assert(a1.data == *a1);
