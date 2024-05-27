@@ -361,13 +361,15 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
             } else {
                 if (name.length) result = c_backend_emit_c_type(cb, type->pointer.base, string_format(&ta, "(*%.*s)", (int)name.length, name.data));
                 else             result = c_backend_emit_c_type(cb, type->pointer.base, "*");
-            }
+           }
 
             break;
         }
 
         case Type_Kind::ARRAY: {
-            assert(false);
+            if (name.length) result = c_backend_emit_c_type(cb, type->array.element_type, string_format(&ta, "%.*s[%lld]", (int)name.length, name.data, type->array.length));
+            else assert(false);
+            break;
         }
 
         case Type_Kind::FUNCTION: {
