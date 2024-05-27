@@ -24,6 +24,7 @@ main :: () -> int {
     a2[0] = 92;
     a2[1] = 93;
 
+    printf("\n".data);
     printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
     printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
 
@@ -35,14 +36,30 @@ main :: () -> int {
 
     assert(a1.data != a2.data);
 
-    //  a1 = { 11, 22 }; // Store in local allocation
+    a1 = { 11, 22 }; // Store in local allocation
     // %4 = LOAD_PTR 8 %1
     //  MEMCPY %4 &{ 11, 22 }
 
-    //  a1 = a2;         // Store in local allocation, still seperate arrays
+    printf("\n".data);
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+
+    a1 = a2;         // Store in local allocation, still seperate arrays
     // %6 = LOAD_PTR 8 %1
     // %7 = LOAD_PTR 8 %3
     // MEMCPY %6 %7
+
+    assert(a1.data != a2.data);
+
+    printf("\n".data);
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+
+    //  a3 : [2]int = { add(101, 10), add(202, 20) };
+    //  printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
+
+    //  a3 = { add(101, 11), add(202, 22) };
+    //  printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
 
     //  invalid1 := <a2; // Disallow dereference
 
@@ -62,3 +79,4 @@ main :: () -> int {
 
 }
 
+add :: (a: s64, b: s64) -> int { return a + b; }

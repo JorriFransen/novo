@@ -9,10 +9,12 @@ array_basics :: () {
     assert(a1[1] == 0);
     assert(a1[2] == 0);
 
-
-    // TODO: implement = (assignment)
-    // TODO: compare pointers before and after
-    //  a1 = {  12, 23, 34 };
+    old_ptr := a1.data;
+    a1 = { 12, 23, 34 };
+    assert(a1.data == old_ptr);
+    assert(a1[0] == 12);
+    assert(a1[1] == 23);
+    assert(a1[2] == 34);
 
     a2 : [3]int = { 45, 56, 67 };
     assert(a2.length == 3);

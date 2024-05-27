@@ -595,8 +595,25 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     break;
                 }
 
-                case Type_Kind::ARRAY: assert(false); break;
                 case Type_Kind::FUNCTION: assert(false); break;
+
+                case Type_Kind::ARRAY: {
+
+                    Type* element_ptr_type = pointer_type_get(builder->instance, stmt->assignment.lvalue->resolved_type->array.element_type);
+
+                    SSA_Register_Handle rvalue;
+                    if (stmt->assignment.rvalue->flags & AST_EXPR_FLAG_CONST) {
+                        rvalue = ssa_emit_lvalue(builder, stmt->assignment.rvalue, scope);
+                    } else {
+                        rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);
+                        rvalue = ssa_emit_load_ptr(builder, element_ptr_type, rvalue);
+                    }
+                    SSA_Register_Handle lvalue = ssa_emit_expression(builder, stmt->assignment.lvalue, scope);
+                    assert(stmt->assignment.lvalue->resolved_type->kind == Type_Kind::ARRAY);
+                    lvalue = ssa_emit_load_ptr(builder, element_ptr_type, lvalue);
+                    ssa_emit_memcpy(builder, lvalue, rvalue, stmt->assignment.rvalue->resolved_type->bit_size);
+                    break;
+                }
 
                 case Type_Kind::STRUCT: {
                     SSA_Register_Handle rvalue = ssa_emit_lvalue(builder, stmt->assignment.rvalue, scope);
