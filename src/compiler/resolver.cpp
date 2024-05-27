@@ -783,7 +783,17 @@ bool resolve_ts(Instance* inst, Resolve_Task* task, AST_Type_Spec* ts, Scope* sc
         }
 
         case AST_Type_Spec_Kind::ARRAY: {
-            assert(false);
+            result = true;
+            if (!resolve_expression(inst, task, ts->array.length, scope)) {
+                result = false;
+                break;
+            }
+
+            if (!resolve_ts(inst, task, ts->array.element_ts, scope)) {
+                result = false;
+                break;
+            }
+            break;
         }
     }
 
