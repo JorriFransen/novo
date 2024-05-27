@@ -532,9 +532,9 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                             break;
                         }
 
-                        case Type_Kind::ARRAY: assert(false); break;
                         case Type_Kind::FUNCTION: assert(false); break;
 
+                        case Type_Kind::ARRAY:
                         case Type_Kind::STRUCT: {
                             SSA_Register_Handle value_reg = ssa_emit_lvalue(builder, init_expr, scope);
                             ssa_emit_memcpy(builder, alloc_reg, value_reg, init_expr->resolved_type->bit_size);
@@ -1955,7 +1955,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
         case AST_Expression_Kind::CAST: assert(false); break;
 
         case AST_Expression_Kind::COMPOUND: {
-            assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
+            assert(const_expr->resolved_type->kind == Type_Kind::STRUCT || const_expr->resolved_type->kind == Type_Kind::ARRAY);
 
             for (s64 i = 0; i < const_expr->compound.expressions.count; i++) {
                 ssa_emit_constant(inst, program, const_expr->compound.expressions[i], bytes);
