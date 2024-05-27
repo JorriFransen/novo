@@ -420,8 +420,6 @@ NAPI AST_Node ast_node(AST_Expression* expr);
 NAPI AST_Node ast_node(AST_Type_Spec* expr);
 NAPI AST_Node ast_node(AST_Identifier* ident);
 
-NAPI Type* ast_node_type(const AST_Node& node);
-
 NAPI AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes);
 
 NAPI AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident, AST_Declaration_Flags flags = AST_DECL_FLAG_NONE);

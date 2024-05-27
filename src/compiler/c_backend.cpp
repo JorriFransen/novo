@@ -687,7 +687,9 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 ptr_reg = FETCH32();
                     u32 value_reg = FETCH32();
 
-                    string_builder_append(sb, "    *(r%u) = r%u;", ptr_reg, value_reg);
+                    string_builder_append(sb, "    *(r%u) = (", ptr_reg);
+                    c_backend_emit_c_type(cb, sb, func->registers[ptr_reg].type, "");
+                    string_builder_append(sb, ")r%u;",  value_reg);
                     break;
                 }
 
