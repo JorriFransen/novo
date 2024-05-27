@@ -1232,7 +1232,28 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
         }
 
         case AST_Type_Spec_Kind::ARRAY: {
-            assert(false);
+            if (!type_expression(inst, task, ts->array.length, scope, inst->builtin_type_int)) {
+                return false;
+            }
+
+            if (!(ts->array.length->flags & AST_EXPR_FLAG_CONST)) {
+                instance_fatal_error(inst, source_pos(inst, ts->array.length), "Length of static array must be constant");
+            }
+
+            Resolved_Constant rc = const_resolve(inst, ts->array.length);
+            assert(rc.status == Resolved_Constant_Status::RESOLVED);
+            s64 length = rc.integer;
+
+            if (length < 1) {
+                instance_fatal_error(inst, source_pos(inst, ts->array.length), "Invalid array length '%lld', minimum length is '1'", length);
+            }
+
+            if (!type_type_spec(inst, task, ts->array.element_ts, scope)) {
+                return false;
+            }
+
+            ts->resolved_type = array_type_get(inst, length, ts->array.element_ts->resolved_type);
+            break;
         }
     }
 

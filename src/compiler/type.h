@@ -129,13 +129,13 @@ NAPI Type* void_type_new(Instance* inst);
 NAPI Type* integer_type_new(Instance* inst, bool sign, u32 bit_size);
 NAPI Type* boolean_type_new(Instance* inst, u32 bit_size);
 NAPI Type* pointer_type_new(Instance* inst, Type* base);
-NAPI Type* array_type_new(Instance* inst, u64 length, Type* element_type);
+NAPI Type* array_type_new(Instance* inst, s64 length, Type* element_type);
 NAPI Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type, Type_Flags flags);
 NAPI Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type_Struct_Member> members, Scope* scope);
 NAPI Type* enum_type_new(Instance* inst, Atom name, Type* strict_Type,  Array_Ref<Type_Enum_Member> members, Scope* scope);
 
 NAPI Type* pointer_type_get(Instance *inst, Type* base);
-NAPI Type* array_type_get(Instance* inst, u64 length, Type* element_type);
+NAPI Type* array_type_get(Instance* inst, s64 length, Type* element_type);
 NAPI Type* function_type_get(Instance* inst, Array_Ref<Type*> param_types, Type* return_type, Type_Flags flags);
 
 NAPI bool is_pointer_or_parent_of_pointer(Type* type);
