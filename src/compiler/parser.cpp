@@ -952,7 +952,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
     temp_arena_release(tarena);
 
-    while (is_token(parser, '(') || is_token(parser, '.')) {
+    while (is_token(parser, '(') || is_token(parser, '.') || is_token(parser, '[')) {
 
         switch ((u32)parser->lexer.token.kind) {
             case '(': {
@@ -988,6 +988,16 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
                 result = ast_member_expression(parser->instance, result, member_name);
 
+                save_source_pos(parser->instance, result, pos);
+                break;
+            }
+
+            case '[': {
+                next_token(&parser->lexer);
+                AST_Expression* index_expr = parse_expression(parser);
+                expect_token(parser, ']');
+                pos = source_pos(pos, source_pos(&parser->lexer));
+                result = ast_subscript_expression(parser->instance, result, index_expr);
                 save_source_pos(parser->instance, result, pos);
                 break;
             }

@@ -8,7 +8,7 @@ main :: () -> int {
     a1 : [2]int; // Local allocation, uninitialized
     a2 : [2]int = { 33, 44 }; // Local allocation, initialized
 
-    //  printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
     //  printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
 
     //  assert(a1.length == 2);

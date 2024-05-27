@@ -28,7 +28,24 @@ Resolved_Constant const_resolve(Instance* inst, AST_Expression* expr)
             break;
         }
 
-        case AST_Expression_Kind::UNARY: assert(false); break;
+        case AST_Expression_Kind::UNARY: {
+            result = const_resolve(inst, expr->unary.operand);
+            if (result.status != Resolved_Constant_Status::RESOLVED) return result;
+            assert(result.type == result_type);
+
+            switch (expr->unary.op) {
+                default: assert(false);
+
+                case '-': {
+                    // TODO: FIXME: This should work for all integer sizes
+                    result.integer = -result.integer;
+                    break;
+                }
+            }
+
+            break;
+        }
+
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;

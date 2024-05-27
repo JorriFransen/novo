@@ -598,7 +598,16 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             break;
         }
 
-        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: {
+            if (!resolve_expression(inst, task, expr->subscript.base, scope)) {
+                return false;
+            }
+
+            if (!resolve_expression(inst, task, expr->subscript.index, scope)) {
+                return false;
+            }
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
 

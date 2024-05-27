@@ -871,7 +871,46 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
-        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: {
+
+            AST_Expression* base = expr->subscript.base;
+            AST_Expression* index = expr->subscript.index;
+
+            if (!type_expression(inst, task, base, scope, nullptr)) {
+                return false;
+            }
+
+            if (base->resolved_type->kind != Type_Kind::ARRAY) {
+                String tname = temp_type_string(inst, base->resolved_type);
+                instance_fatal_error(inst, source_pos(inst, base), "Base of subscript must be of array type, got '%.*s'", (int)tname.length, tname.data);
+            }
+
+            if (!type_expression(inst, task, index, scope, inst->builtin_type_s64)) {
+                return false;
+            }
+
+            if (index->resolved_type->kind != Type_Kind::INTEGER) {
+                String tname = temp_type_string(inst, index->resolved_type);
+                instance_fatal_error(inst, source_pos(inst, index), "Type of subscript index must be integer, got '%.*s'", (int)tname.length, tname.data);
+            }
+
+            if (index->flags & AST_EXPR_FLAG_CONST) {
+                Resolved_Constant rc = const_resolve(inst, index);
+                assert(rc.status == Resolved_Constant_Status::RESOLVED);
+                assert(rc.type == inst->builtin_type_s64);
+
+                s64 ci = rc.integer;
+
+                if (ci < 0 || ci >= base->resolved_type->array.length) {
+                    String tname = temp_type_string(inst, base->resolved_type);
+                    instance_fatal_error(inst, source_pos(inst, index), "Constant index '%lld' out of bounds of type '%.*s'", ci, (int)tname.length, tname.data);
+                }
+
+            }
+
+            expr->resolved_type = base->resolved_type->array.element_type;
+            break;
+        }
 
         case AST_Expression_Kind::CALL: {
 
