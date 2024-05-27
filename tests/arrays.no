@@ -1,0 +1,40 @@
+
+#import "c"
+
+
+main :: () -> int {
+    //  printf("Array test!\n".data);
+
+    a1 : [2]int; // Local allocation, uninitialized
+    //  a2 : [2]int = { 33, 44 }; // Local allocation, initialized
+
+    //  assert(a1.length == 2);
+    //  assert(a1.data == *a1);
+    //  assert(a1.data == *a1[0]);
+
+    //  assert(a2.length == 2);
+    //  assert(a2.data == *a2);
+    //  assert(a2.data == *a2[0]);
+
+    //  assert(a1.data != a2.data);
+
+    //  a1 = { 11, 22 }; // Store in local allocation
+    //  a1 = a2;         // Store in local allocation, still seperate arrays
+
+    //  invalid1 := <a2; // Disallow dereference
+
+    //  array_func1(a1); // Create local copy of a1's elements, pass pointer to function
+
+    //  a3 := make_array(55, 66); // Create temporary array for return value, pass pointer, assign (memcpy) to variable after return
+
+    //  // Create uninitialized local allocation, pass it's pointer
+    //  a4 : [2]int;
+    //  init_array(*a4, 77, 88);
+
+    //  a5 : *[2]int = heap_array(99, 1010); // Allocate array on heap, return by pointer
+    //  assert(a5.length == 2);
+    //  assert(a5.data != a4.data);
+
+    return 0;
+
+}
