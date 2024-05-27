@@ -1,0 +1,27 @@
+
+array_basics :: () {
+    //  a1 : [3]int;
+
+    // TODO: Implement this!
+    //  assert(a1[0] == 0);
+    //  assert(a1[1] == 0);
+    //  assert(a1[2] == 0);
+
+
+    // TODO: implement = (assignment)
+    // TODO: compare pointers before and after
+    //  a1 = {  12, 23, 34 };
+
+    a2 : [3]int = { 45, 56, 67 };
+    //  assert(a2.length == 3);
+    assert(a2[0] == 45);
+    assert(a2[1] == 56);
+    assert(a2[2] == 67);
+}
+
+main :: () -> int {
+
+    array_basics();
+
+    return 0;
+}
