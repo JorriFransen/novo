@@ -332,6 +332,14 @@ AST_Expression* ast_implicit_member_expression(Instance* inst, AST_Identifier* m
     return result;
 }
 
+AST_Expression* ast_subscript_expression(Instance* inst, AST_Expression* base, AST_Expression* index)
+{
+    AST_Expression* result = ast_expression(inst, AST_Expression_Kind::SUBSCRIPT);
+    result->subscript.base = base;
+    result->subscript.index = index;
+    return result;
+}
+
 AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression*> args)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::CALL);

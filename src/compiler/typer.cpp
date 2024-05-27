@@ -871,6 +871,8 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             break;
         }
 
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
+
         case AST_Expression_Kind::CALL: {
 
             AST_Expression* base = expr->call.base;
