@@ -27,16 +27,13 @@ main :: () -> int {
     printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
     printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
 
+    assert(a1.length == 2);
+    assert(a1.data == *a1[0]);
 
-    //  assert(a1.length == 2);
-    //  assert(a1.data == *a1);
-    //  assert(a1.data == *a1[0]);
+    assert(a2.length == 2);
+    assert(a2.data == *a2[0]);
 
-    //  assert(a2.length == 2);
-    //  assert(a2.data == *a2);
-    //  assert(a2.data == *a2[0]);
-
-    //  assert(a1.data != a2.data);
+    assert(a1.data != a2.data);
 
     //  a1 = { 11, 22 }; // Store in local allocation
     // %4 = LOAD_PTR 8 %1

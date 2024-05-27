@@ -9,6 +9,7 @@
 
 #include "ast.h"
 #include "instance.h"
+#include "keywords.h"
 #include "token.h"
 #include "type.h"
 
@@ -1221,7 +1222,7 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
         }
 
         case AST_Expression_Kind::MEMBER: {
-            if (expr->resolved_type->kind == Type_Kind::ENUM) {
+            if (expr->member.base->resolved_type->kind == Type_Kind::ENUM) {
                 AST_Declaration* mem_decl = expr->member.member_name->decl;
                 assert(mem_decl);
                 assert(mem_decl->kind == AST_Declaration_Kind::ENUM_MEMBER);
@@ -1231,6 +1232,18 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                 assert(mem_decl->enum_member.value_expr->resolved_type == expr->resolved_type->enumeration.strict_type);
 
                 result_reg = ssa_emit_load_enum(builder, expr->resolved_type, mem_decl->enum_member.index_in_type);
+
+            } else if (expr->member.base->resolved_type->kind == Type_Kind::ARRAY) {
+
+                // TODO: Flag these, or replace with integer literal expressions in typer
+                if (expr->member.member_name->atom == g_atom_length) {
+                    result_reg = ssa_emit_load_immediate(builder, expr->resolved_type, expr->member.base->resolved_type->array.length);
+                } else if (expr->member.member_name->atom == g_atom_data) {
+
+                    SSA_Register_Handle base_reg = ssa_emit_expression(builder, expr->member.base, scope);
+                    result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, base_reg);
+
+                } else assert(false && !"Should have been caught while resolving");
 
             } else {
                 auto lvalue = ssa_emit_lvalue(builder, expr, scope);

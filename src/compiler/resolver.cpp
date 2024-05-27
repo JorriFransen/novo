@@ -8,6 +8,7 @@
 #include "ast.h"
 #include "atom.h"
 #include "instance.h"
+#include "keywords.h"
 #include "resolver.h"
 #include "scope.h"
 #include "source_pos.h"
@@ -548,28 +549,35 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             Type* base_type = expr->member.base->resolved_type;
             Scope* base_scope = nullptr;
             bool aggregate = false;
+            bool array = false;
 
             switch (base_type->kind) {
                 default: {
                     String tname = temp_type_string(inst, base_type);
-                    instance_fatal_error(inst, source_pos(inst, expr->member.base), "Invalid type on left side of '.' operator '%.*s'", (int)tname.length, tname.data);
+                    instance_fatal_error(inst, source_pos(inst, expr->member.base), "Invalid type '%.*s' on left side of '.' operator", (int)tname.length, tname.data);
                     break;
                 }
 
                 case Type_Kind::POINTER: {
                     if (base_type->pointer.base->kind != Type_Kind::STRUCT) {
                         String tname = temp_type_string(inst, base_type);
-                        instance_fatal_error(inst, source_pos(inst, expr->member.base), "Invalid type on left side of '.' operator '%.*s'", (int)tname.length, tname.data);
+                        instance_fatal_error(inst, source_pos(inst, expr->member.base), "Invalid type '%.*s' on left side of '.' operator", (int)tname.length, tname.data);
                         break;
                     }
 
                     base_type = base_type->pointer.base;
-
-                    // Falltrough
+                    base_scope = base_type->structure.scope;
+                    aggregate = true;
                 }
+
                 case Type_Kind::STRUCT: {
                     base_scope = base_type->structure.scope;
                     aggregate = true;
+                    break;
+                }
+
+                case Type_Kind::ARRAY: {
+                    array = true;
                     break;
                 }
 
@@ -579,15 +587,33 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 }
             }
 
-            assert(base_scope);
-            if (!resolve_identifier(inst, task, expr->member.member_name, base_scope)) {
-                return false;
-            }
+            if (array) {
 
-            if (expr->member.base->flags & AST_EXPR_FLAG_CONST) {
-                expr->flags |= AST_EXPR_FLAG_CONST;
-            } else if (aggregate) {
-                expr->flags |= AST_EXPR_FLAG_LVALUE;
+                if (expr->member.member_name->atom == g_atom_length) {
+                    expr->flags |= AST_EXPR_FLAG_CONST;
+
+                } else if (expr->member.member_name->atom == g_atom_data) {
+                    if (expr->member.base->flags & AST_EXPR_FLAG_CONST) {
+                        expr->flags |= AST_EXPR_FLAG_CONST;
+                    }
+                    expr->flags |= AST_EXPR_FLAG_LVALUE;
+
+                } else {
+                    String name = atom_string(expr->member.member_name->atom);
+                    instance_fatal_error(inst, source_pos(inst, expr->member.member_name), "Invalid member '%.*s' on array type", (int)name.length, name.data);
+                }
+
+            } else {
+                assert(base_scope);
+                if (!resolve_identifier(inst, task, expr->member.member_name, base_scope)) {
+                    return false;
+                }
+
+                if (expr->member.base->flags & AST_EXPR_FLAG_CONST) {
+                    expr->flags |= AST_EXPR_FLAG_CONST;
+                } else if (aggregate) {
+                    expr->flags |= AST_EXPR_FLAG_LVALUE;
+                }
             }
 
             break;
@@ -605,6 +631,10 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
 
             if (!resolve_expression(inst, task, expr->subscript.index, scope)) {
                 return false;
+            }
+
+            if (expr->subscript.base->flags & AST_EXPR_FLAG_LVALUE) {
+                expr->flags |= AST_EXPR_FLAG_LVALUE;
             }
             break;
         }
