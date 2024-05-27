@@ -1006,14 +1006,26 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
         case AST_Expression_Kind::COMPOUND: {
             assert(suggested_type);
-            assert(suggested_type->kind == Type_Kind::STRUCT);
 
-            assert(suggested_type->structure.members.count == expr->compound.expressions.count);
+            if (suggested_type->kind == Type_Kind::STRUCT) {
+                assert(suggested_type->structure.members.count == expr->compound.expressions.count);
 
-            for (s64 i = 0; i < expr->compound.expressions.count; i++) {
-                if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->structure.members[i].type)) {
-                    return false;
+                for (s64 i = 0; i < expr->compound.expressions.count; i++) {
+                    if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->structure.members[i].type)) {
+                        return false;
+                    }
                 }
+
+            } else if (suggested_type->kind == Type_Kind::ARRAY) {
+                assert(suggested_type->array.length == expr->compound.expressions.count);
+
+                for (s64 i = 0; i < expr->compound.expressions.count; i++) {
+                    if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->array.element_type)) {
+                        return false;
+                    }
+                }
+            } else {
+                assert(false && "Unhandled suggested type for compound expr");
             }
 
             if (!(expr->flags & AST_EXPR_FLAG_CONST)) {

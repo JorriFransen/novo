@@ -530,7 +530,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
         string_builder_append(sb, "    ");
         string_format(reg_name, "r%u", i);
 
-        if (register_type->kind == Type_Kind::STRUCT || func->registers[i].alloc_reg) {
+        if (register_type->kind == Type_Kind::STRUCT || register_type->kind == Type_Kind::ARRAY || func->registers[i].alloc_reg) {
             register_type = pointer_type_get(cb->inst, register_type);
         }
 
@@ -1049,8 +1049,12 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
         case AST_Expression_Kind::CAST: assert(false); break;
 
         case AST_Expression_Kind::COMPOUND: {
-            assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
-            assert(const_expr->compound.expressions.count == const_expr->resolved_type->structure.members.count);
+            if (const_expr->resolved_type->kind == Type_Kind::STRUCT) {
+                assert(const_expr->compound.expressions.count == const_expr->resolved_type->structure.members.count);
+            } else {
+                assert(const_expr->resolved_type->kind == Type_Kind::ARRAY);
+                assert(const_expr->compound.expressions.count == const_expr->resolved_type->array.length);
+            }
 
             string_builder_append(sb, "{ ");
 
