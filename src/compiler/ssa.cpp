@@ -602,7 +602,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     Type* element_ptr_type = pointer_type_get(builder->instance, stmt->assignment.lvalue->resolved_type->array.element_type);
 
                     SSA_Register_Handle rvalue;
-                    if (stmt->assignment.rvalue->flags & AST_EXPR_FLAG_CONST) {
+                    if (stmt->assignment.rvalue->kind == AST_Expression_Kind::COMPOUND) {
                         rvalue = ssa_emit_lvalue(builder, stmt->assignment.rvalue, scope);
                     } else {
                         rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);
@@ -1029,6 +1029,9 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
 
             } else {
 
+                bool is_struct = lvalue_expr->resolved_type->kind == Type_Kind::STRUCT;
+                assert(is_struct || lvalue_expr->resolved_type->kind == Type_Kind::ARRAY);
+
                 SSA_Register_Handle compound_alloc_reg;
                 bool found = ssa_find_alloc(builder, lvalue_expr, &compound_alloc_reg);
                 assert(found);
@@ -1036,18 +1039,26 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
                 for (s64 i = 0; i < lvalue_expr->compound.expressions.count; i++) {
 
                     AST_Expression* expr = lvalue_expr->compound.expressions[i];
-                    bool member_is_aggregate = expr->resolved_type->kind == Type_Kind::STRUCT;
+                    bool member_is_struct = expr->resolved_type->kind == Type_Kind::STRUCT;
 
                     SSA_Register_Handle value_reg;
-                    if (member_is_aggregate) {
+                    if (member_is_struct) {
                         value_reg = ssa_emit_lvalue(builder, expr, scope);
                     } else {
                         value_reg = ssa_emit_expression(builder, expr, scope);
                     }
 
-                    SSA_Register_Handle ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, lvalue_expr->resolved_type, i);
 
-                    if (member_is_aggregate) {
+                    SSA_Register_Handle ptr_reg;
+                    if (is_struct) {
+                        ptr_reg = ssa_emit_struct_offset(builder, compound_alloc_reg, lvalue_expr->resolved_type, i);
+                    } else {
+                        SSA_Register_Handle index_reg = ssa_emit_load_immediate(builder, builder->instance->builtin_type_int, i);
+                        Type* array_elem_ptr_type = pointer_type_get(builder->instance, lvalue_expr->resolved_type->array.element_type);
+                        ptr_reg = ssa_emit_pointer_offset(builder, array_elem_ptr_type, compound_alloc_reg, index_reg);
+                    }
+
+                    if (member_is_struct) {
                         ssa_emit_memcpy(builder, ptr_reg, value_reg, expr->resolved_type->bit_size);
                     } else {
                         ssa_emit_store_ptr(builder, expr->resolved_type->bit_size, ptr_reg, value_reg);

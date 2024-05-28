@@ -273,17 +273,17 @@ enum class AST_Expression_Kind : u32
 typedef u32 AST_Expression_Flags;
 enum AST_Expression_Flag : AST_Expression_Flags
 {
-    AST_EXPR_FLAG_NONE              = 0x0000,
+    AST_EXPR_FLAG_NONE           = 0x0000,
 
-    AST_EXPR_FLAG_RESOLVED          = 0x0001,
-    AST_EXPR_FLAG_TYPED             = 0x0002,
-    AST_EXPR_FLAG_CONST             = 0x0004,
-    AST_EXPR_FLAG_LVALUE            = 0x0008,
+    AST_EXPR_FLAG_RESOLVED       = 0x0001,
+    AST_EXPR_FLAG_TYPED          = 0x0002,
+    AST_EXPR_FLAG_CONST          = 0x0004,
+    AST_EXPR_FLAG_LVALUE         = 0x0008,
 
-    AST_EXPR_FLAG_HEX_LITERAL       = 0x0010,
-    AST_EXPR_FLAG_BINARY_LITERAL    = 0x0020,
+    AST_EXPR_FLAG_HEX_LITERAL    = 0x0010,
+    AST_EXPR_FLAG_BINARY_LITERAL = 0x0020,
 
-    AST_EXPR_FLAG_CHILD_OF_RUN      = 0x0040,
+    AST_EXPR_FLAG_CHILD_OF_RUN   = 0x0040,
 };
 
 struct AST_Expression

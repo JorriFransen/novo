@@ -2,9 +2,10 @@
 array_basics :: () {
     a1 : [3]int;
 
-    // TODO: Implement this!
     assert(a1.length == 3);
     assert(a1.data == *a1[0]);
+
+    // TODO: Implement this!
     assert(a1[0] == 0);
     assert(a1[1] == 0);
     assert(a1[2] == 0);
@@ -22,7 +23,21 @@ array_basics :: () {
     assert(a2[0] == 45);
     assert(a2[1] == 56);
     assert(a2[2] == 67);
+
+    a3 : [3]int = { add(1, 2), add(2, 3), add(3, 4) };
+    assert(a3.length == 3);
+    assert(a3.data == *a3[0]);
+    assert(a3[0] == 3);
+    assert(a3[1] == 5);
+    assert(a3[2] == 7);
+
+    a3 = { add(11, 22), add(22, 33), add(33, 44) };
+    assert(a3[0] == 33);
+    assert(a3[1] == 55);
+    assert(a3[2] == 77);
 }
+
+add :: (a: int, b: int) -> int { return a + b; }
 
 main :: () -> int {
 
