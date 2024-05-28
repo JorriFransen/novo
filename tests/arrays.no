@@ -55,11 +55,15 @@ main :: () -> int {
     printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
     printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
 
-    //  a3 : [2]int = { add(101, 10), add(202, 20) };
-    //  printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
+    a3 : [2]int = { add(101, 10), add(202, 20) };
 
-    //  a3 = { add(101, 11), add(202, 22) };
-    //  printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
+    printf("\n".data);
+    printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
+
+    a3 = { add(101, 11), add(202, 22) };
+
+    printf("\n".data);
+    printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
 
     //  invalid1 := <a2; // Disallow dereference
 

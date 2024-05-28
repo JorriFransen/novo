@@ -817,13 +817,21 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 index_reg = FETCH32();
 
                     Type* base_ptr_type = func->registers[base_ptr_reg].type;
-                    assert(base_ptr_type->kind == Type_Kind::POINTER);
-                    Type* base_pointee_type = base_ptr_type->pointer.base;
+
+                    Type* base_pointee_type = nullptr;
+                    if (base_ptr_type->kind == Type_Kind::POINTER) {
+                        base_pointee_type = base_ptr_type->pointer.base;
+                    } else if (base_ptr_type->kind == Type_Kind::ARRAY) {
+                        base_pointee_type = base_ptr_type->array.element_type;
+                        base_ptr_type = pointer_type_get(cb->inst, base_pointee_type);
+                    } else assert(false);
                     assert(base_pointee_type->bit_size / 8 == size);
 
                     assert(func->registers[result_reg].type == base_ptr_type);
 
-                    string_builder_append(sb, "    r%u = r%u + r%u;", result_reg, base_ptr_reg, index_reg);
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    c_backend_emit_c_type(cb, sb, base_ptr_type, "");
+                    string_builder_append(sb, ")r%u + r%u;", base_ptr_reg, index_reg);
 
                     break;
                 }
