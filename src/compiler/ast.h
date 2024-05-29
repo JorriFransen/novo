@@ -119,7 +119,7 @@ struct AST_Declaration
             AST_Type_Spec* return_ts;
             DArray<AST_Statement *> body;
             DArray<AST_Declaration *> variables;
-            DArray<AST_Expression *> temp_structs;
+            DArray<AST_Expression *> implicit_allocs;
 
             Scope* scope;
 
@@ -284,6 +284,8 @@ enum AST_Expression_Flag : AST_Expression_Flags
     AST_EXPR_FLAG_BINARY_LITERAL = 0x0020,
 
     AST_EXPR_FLAG_CHILD_OF_RUN   = 0x0040,
+
+    AST_EXPR_FLAG_PARAM          = 0x0080,
 };
 
 struct AST_Expression

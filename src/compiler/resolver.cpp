@@ -256,12 +256,6 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
                 instance_fatal_error(inst, pos, "Attempting to assign to a constant");
             }
 
-            if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
-                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE &&
-                lvalue->identifier->decl->flags & AST_DECL_FLAG_PARAM) {
-                lvalue->identifier->decl->flags |= AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED;
-            }
-
             if (!resolve_expression(inst, task, stmt->assignment.rvalue, scope)) {
                 return false;
             }
@@ -493,6 +487,11 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
             }
 
             if (expr->identifier->decl->kind == AST_Declaration_Kind::VARIABLE) {
+
+                if (expr->identifier->decl->flags & AST_DECL_FLAG_PARAM) {
+                    expr->flags |= AST_EXPR_FLAG_PARAM;
+                }
+
                 expr->flags |= AST_EXPR_FLAG_LVALUE;
             }
 

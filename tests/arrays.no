@@ -1,6 +1,34 @@
 
 #import "c"
 
+//  bfunc :: (a: [2]int) {
+
+//      printf("[bfunc] : { %i, %i }\n".data, a[0], a[0]);
+//      a[1] = -2;
+//  }
+
+//  afunc :: (a: [2]int) -> int {
+//      r := a[0];
+
+//      a[0] = -1;
+
+//      printf("[afunc] before calling bfunc: { %i, %i }\n".data, a[0], a[1]);
+//      bfunc(a);
+//      printf("[afunc] after calling bfunc: { %i, %i }\n".data, a[0], a[1]);
+
+//      return r;
+//  }
+
+//  main :: () -> int {
+//      a : [2]int = { 11, 22 };
+
+//      printf("[main] before calling afunc: { %i, %i }\n".data, a[0], a[1]);
+//      afunc(a);
+//      printf("[main] after calling afunc: { %i, %i }\n".data, a[0], a[1]);
+
+//      return 0;
+//  }
+
 
 main :: () -> int {
     //  printf("Array test!\n".data);
@@ -64,10 +92,13 @@ main :: () -> int {
 
     printf("\n".data);
     printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
+    printf("\n".data);
 
     //  invalid1 := <a2; // Disallow dereference
 
-    //  array_func1(a1); // Create local copy of a1's elements, pass pointer to function
+    array_value_func_1(a1); // Create local copy of a1's elements, pass pointer to function
+    assert(a1[0] == 92);
+    assert(a1[1] == 93);
 
     //  a3 := make_array(55, 66); // Create temporary array for return value, pass pointer, assign (memcpy) to variable after return
 
@@ -84,3 +115,23 @@ main :: () -> int {
 }
 
 add :: (a: s64, b: s64) -> int { return a + b; }
+
+array_value_func_1 :: (a: [2]int) {
+
+    printf("[enter] array_value_func_1: (%p) { %i, %i }\n".data, a.data, a[0], a[1]);
+
+    a[0] = -1;
+    a[1] = -2;
+
+    array_value_func_2(a);
+
+    printf("[exit]  array_value_func_1: (%p) { %i, %i }\n".data, a.data, a[0], a[1]);
+}
+
+array_value_func_2 :: (a: [2]int) {
+    printf("[enter] array_value_func_2: (%p) { %i, %i }\n".data, a.data,  a[0], a[1]);
+
+    a = { -11, -12 };
+
+    printf("[exit]  array_value_func_2: (%p) { %i, %i }\n".data, a.data,  a[0], a[1]);
+}
