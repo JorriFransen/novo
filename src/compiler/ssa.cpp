@@ -8,6 +8,7 @@
 #include <string_builder.h>
 
 #include "ast.h"
+#include "const_resolver.h"
 #include "instance.h"
 #include "keywords.h"
 #include "token.h"
@@ -287,9 +288,9 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     }
 
     // Emit storage for (temporary) aggregates
-    for (s64 i = 0; i < decl->function.temp_structs.count; i++) {
+    for (s64 i = 0; i < decl->function.implicit_allocs.count; i++) {
 
-        auto expr = decl->function.temp_structs[i];
+        auto expr = decl->function.implicit_allocs[i];
 
         SSA_Register_Handle alloc_reg = ssa_emit_alloc(builder, expr->resolved_type);
         darray_append(&func->allocs, { ast_node(expr), expr->resolved_type, alloc_reg });
@@ -610,7 +611,9 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     }
                     SSA_Register_Handle lvalue = ssa_emit_expression(builder, stmt->assignment.lvalue, scope);
                     assert(stmt->assignment.lvalue->resolved_type->kind == Type_Kind::ARRAY);
-                    lvalue = ssa_emit_load_ptr(builder, element_ptr_type, lvalue);
+                    if (!(stmt->assignment.lvalue->flags & AST_EXPR_FLAG_PARAM)) {
+                        lvalue = ssa_emit_load_ptr(builder, element_ptr_type, lvalue);
+                    }
                     ssa_emit_memcpy(builder, lvalue, rvalue, stmt->assignment.rvalue->resolved_type->bit_size);
                     break;
                 }
@@ -928,13 +931,14 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
             assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
             bool is_struct = decl->resolved_type->kind == Type_Kind::STRUCT;
+            bool is_array = decl->resolved_type->kind == Type_Kind::ARRAY;
             bool is_param = decl->flags & AST_DECL_FLAG_PARAM;
 
             if (is_param) {
-                assert(decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED || is_struct);
+                assert(decl->flags & AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED || is_struct || is_array);
             }
 
-            if (is_param && is_struct) {
+            if (is_param && (is_struct || is_array)) {
                 u32 param_index = decl->variable.index;
                 if (function->sret) param_index++;
                 return ssa_emit_load_param(builder, param_index);
@@ -1000,7 +1004,11 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
             Type* elem_ptr_type = pointer_type_get(builder->instance, base_expr->resolved_type->array.element_type);
 
             SSA_Register_Handle base_reg = ssa_emit_expression(builder, base_expr, scope);
-            base_reg = ssa_emit_load_ptr(builder, elem_ptr_type, base_reg);
+
+            if (!(base_expr->flags & AST_EXPR_FLAG_PARAM)) {
+                base_reg = ssa_emit_load_ptr(builder, elem_ptr_type, base_reg);
+            }
+
             SSA_Register_Handle index_reg = ssa_emit_expression(builder, index_expr, scope);
             return ssa_emit_pointer_offset(builder, elem_ptr_type, base_reg, index_reg);
             break;
@@ -1266,10 +1274,13 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                 // TODO: Flag these, or replace with integer literal expressions in typer
                 if (expr->member.member_name->atom == g_atom_length) {
                     result_reg = ssa_emit_load_immediate(builder, expr->resolved_type, expr->member.base->resolved_type->array.length);
+
                 } else if (expr->member.member_name->atom == g_atom_data) {
 
                     SSA_Register_Handle base_reg = ssa_emit_expression(builder, expr->member.base, scope);
-                    result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, base_reg);
+                    if (!(expr->member.base->flags & AST_EXPR_FLAG_PARAM)) {
+                        result_reg = ssa_emit_load_ptr(builder, expr->resolved_type, base_reg);
+                    }
 
                 } else assert(false && !"Should have been caught while resolving");
 
@@ -1332,6 +1343,20 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                     assert(found);
 
                     SSA_Register_Handle src_ptr_reg = ssa_emit_lvalue(builder, arg_expr, scope);
+                    ssa_emit_memcpy(builder, arg_reg, src_ptr_reg, arg_expr->resolved_type->bit_size);
+
+                } else if (arg_expr->resolved_type->kind == Type_Kind::ARRAY) {
+
+                    bool found = ssa_find_alloc(builder, arg_expr, &arg_reg);
+                    assert(found);
+
+                    Type* elem_ptr_type = pointer_type_get(builder->instance, arg_expr->resolved_type->array.element_type);
+
+                    SSA_Register_Handle src_ptr_reg = ssa_emit_lvalue(builder, arg_expr, scope);
+
+                    if (!(arg_expr->flags & AST_EXPR_FLAG_PARAM)) {
+                        src_ptr_reg = ssa_emit_load_ptr(builder, elem_ptr_type, src_ptr_reg);
+                    }
                     ssa_emit_memcpy(builder, arg_reg, src_ptr_reg, arg_expr->resolved_type->bit_size);
 
                 } else {
@@ -2034,7 +2059,25 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
 
         case AST_Expression_Kind::INVALID: assert(false); break;
         case AST_Expression_Kind::IDENTIFIER: assert(false); break;
-        case AST_Expression_Kind::UNARY: assert(false); break;
+
+        case AST_Expression_Kind::UNARY: {
+            switch (const_expr->unary.op) {
+                default: assert(false);
+
+                case '-': {
+                    assert(const_expr->resolved_type->kind == Type_Kind::INTEGER);
+
+                    Resolved_Constant rc = const_resolve(inst, const_expr);
+                    assert(rc.status == Resolved_Constant_Status::RESOLVED);
+
+                    ssa_emit_constant_integer(program, bytes, const_expr->resolved_type, rc.integer);
+
+                    break;
+                }
+            }
+            break;
+        }
+
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
@@ -2063,17 +2106,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
         case AST_Expression_Kind::OFFSETOF: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
-            Type *inttype = const_expr->resolved_type;
-            assert(inttype->kind == Type_Kind::INTEGER);
-
-            switch (inttype->bit_size) {
-                default: assert(false); break;
-                case 8: ssa_emit_8(bytes, (u8)const_expr->integer_literal); break;
-                case 16: ssa_emit_16(bytes, (u16)const_expr->integer_literal); break;
-                case 32: ssa_emit_32(bytes, (u32)const_expr->integer_literal); break;
-                case 64: ssa_emit_64(bytes, (u64)const_expr->integer_literal); break;
-            }
-
+            ssa_emit_constant_integer(program, bytes, const_expr->resolved_type, const_expr->integer_literal);
             break;
         }
 
@@ -2160,6 +2193,21 @@ u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type, AST
     }
 
     return result;
+}
+
+void ssa_emit_constant_integer(SSA_Program* program, DArray<u8> *bytes, Type* type, u64 value)
+{
+    assert(type->kind == Type_Kind::INTEGER);
+
+    assert(type->kind == Type_Kind::INTEGER);
+
+    switch (type->bit_size) {
+        default: assert(false); break;
+        case 8: ssa_emit_8(bytes, (u8)value); break;
+        case 16: ssa_emit_16(bytes, (u16)value); break;
+        case 32: ssa_emit_32(bytes, (u32)value); break;
+        case 64: ssa_emit_64(bytes, (u64)value); break;
+    }
 }
 
 Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref name)

@@ -260,6 +260,7 @@ NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 NAPI SSA_Register_Handle ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
 NAPI u32 ssa_emit_constant(Instance *inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
 NAPI u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type, AST_Expression* const_expr);
+NAPI void ssa_emit_constant_integer(SSA_Program* program, DArray<u8> *bytes, Type* type, u64 value);
 
 NAPI Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref name);
 

@@ -387,6 +387,15 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                         temp_type_string(inst, rvalue->resolved_type).data);
             }
 
+            if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
+                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE &&
+                lvalue->identifier->decl->flags & AST_DECL_FLAG_PARAM &&
+                !(lvalue->resolved_type->kind == Type_Kind::ARRAY)) {
+
+                lvalue->identifier->decl->flags |= AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED;
+            }
+
+
             break;
         }
 
@@ -989,14 +998,14 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             expr->resolved_type = fn_type->function.return_type;
             assert(task->fn_decl || child_of_run);
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
-                    darray_append_unique(&task->fn_decl->function.temp_structs, expr->call.args[i]);
+                if ((expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT || expr->call.args[i]->resolved_type->kind == Type_Kind::ARRAY) && !child_of_run) {
+                    darray_append_unique(&task->fn_decl->function.implicit_allocs, expr->call.args[i]);
                 }
             }
 
             if (expr->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
                 assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
-                darray_append_unique(&task->fn_decl->function.temp_structs, expr);
+                darray_append_unique(&task->fn_decl->function.implicit_allocs, expr);
             }
 
             assert(base->kind == AST_Expression_Kind::IDENTIFIER);
@@ -1080,7 +1089,13 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 }
 
             } else if (suggested_type->kind == Type_Kind::ARRAY) {
-                assert(suggested_type->array.length == expr->compound.expressions.count);
+
+                if (suggested_type->array.length != expr->compound.expressions.count) {
+                    String tname = temp_type_string(inst, suggested_type);
+                    instance_fatal_error(inst, source_pos(inst, expr), "Invalid compound expression length, got '%lld', expected '%lld' for type '%.*s'",
+                                         expr->compound.expressions.count, suggested_type->array.length,
+                                         (int)tname.length, tname.data);
+                }
 
                 for (s64 i = 0; i < expr->compound.expressions.count; i++) {
                     if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->array.element_type)) {
@@ -1092,7 +1107,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             if (!(expr->flags & AST_EXPR_FLAG_CONST)) {
-                darray_append_unique(&task->fn_decl->function.temp_structs, expr);
+                darray_append_unique(&task->fn_decl->function.implicit_allocs, expr);
             }
             expr->resolved_type = suggested_type;
             break;
