@@ -253,7 +253,7 @@ String temp_type_string(Instance* inst, Type* type)
     return result;
 }
 
-void type_to_string(Instance* instance, String_Builder* sb, Type* type)
+void type_to_string(Instance* inst, String_Builder* sb, Type* type)
 {
     switch (type->kind) {
 
@@ -272,22 +272,31 @@ void type_to_string(Instance* instance, String_Builder* sb, Type* type)
         }
 
         case Type_Kind::POINTER: {
-            if (type == instance->builtin_type_cstring) {
+            if (type == inst->builtin_type_cstring) {
                 string_builder_append(sb, "cstring");
             } else {
                 string_builder_append(sb, "*");
-                type_to_string(instance, sb, type->pointer.base);
+                type_to_string(inst, sb, type->pointer.base);
             }
             break;
         }
 
         case Type_Kind::ARRAY: {
             string_builder_append(sb, "[%llu]", type->array.length);
-            type_to_string(instance, sb, type->array.element_type);
+            type_to_string(inst, sb, type->array.element_type);
             break;
         }
 
-        case Type_Kind::FUNCTION: assert(false); break;
+        case Type_Kind::FUNCTION: {
+            string_builder_append(sb, "(");
+            for (s64 i = 0; i < type->function.param_types.count; i++) {
+                if (i > 0) string_builder_append(sb, ", ");
+                type_to_string(inst, sb, type->function.param_types[i]);
+            }
+            string_builder_append(sb, ") -> ");
+            type_to_string(inst, sb, type->function.return_type);
+            break;
+        }
 
         case Type_Kind::STRUCT: {
             string_builder_append(sb, "%s", atom_string(type->structure.name).data);

@@ -116,7 +116,9 @@ void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func,
 
     if (!foreign) ssa_block_create(program, func, "entry");
 
-    bool sret = type->function.return_type->kind == Type_Kind::STRUCT;
+    Type* return_type = type->function.return_type;
+
+    bool sret = return_type->kind == Type_Kind::STRUCT || return_type->kind == Type_Kind::ARRAY;
 
     func->sret = sret;
     if (sret) func->param_count++;
@@ -215,7 +217,9 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     SSA_Function local_func;
     assert(decl->ident);
 
-    bool sret = decl->resolved_type->function.return_type->kind == Type_Kind::STRUCT;
+    Type* return_type = decl->resolved_type->function.return_type;
+
+    bool sret = return_type->kind == Type_Kind::STRUCT || return_type->kind == Type_Kind::ARRAY;
 
     ssa_function_init(inst, program, &local_func, decl);
 
@@ -413,7 +417,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
 
     SSA_Builder* builder = &local_builder;
 
-    bool sret = return_type->kind == Type_Kind::STRUCT;
+    bool sret = return_type->kind == Type_Kind::STRUCT || return_type->kind == Type_Kind::ARRAY;
     SSA_Register_Handle sret_alloc_reg;
 
     if (sret) {
@@ -556,8 +560,8 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
 
                         case Type_Kind::ARRAY: {
                             Type* element_ptr_type = pointer_type_get(builder->instance, init_expr->resolved_type->array.element_type);
-                            SSA_Register_Handle array_address_reg = ssa_emit_load_ptr(builder, element_ptr_type, alloc_reg);
                             SSA_Register_Handle value_reg = ssa_emit_lvalue(builder, init_expr, scope);
+                            SSA_Register_Handle array_address_reg = ssa_emit_load_ptr(builder, element_ptr_type, alloc_reg);
                             ssa_emit_memcpy(builder, array_address_reg, value_reg, init_expr->resolved_type->bit_size);
                             break;
                         }
@@ -1015,7 +1019,8 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
         }
 
         case AST_Expression_Kind::CALL: {
-            assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
+            assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT ||
+                   lvalue_expr->resolved_type->kind == Type_Kind::ARRAY);
 
             return ssa_emit_expression(builder, lvalue_expr, scope);
         }
