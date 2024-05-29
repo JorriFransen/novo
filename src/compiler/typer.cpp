@@ -1003,8 +1003,8 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 }
             }
 
-            if (expr->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
-                assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
+            if ((expr->resolved_type->kind == Type_Kind::STRUCT || expr->resolved_type->kind == Type_Kind::ARRAY) && !child_of_run) {
+                assert(fn_type->function.return_type == expr->resolved_type);
                 darray_append_unique(&task->fn_decl->function.implicit_allocs, expr);
             }
 

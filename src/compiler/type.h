@@ -144,7 +144,7 @@ NAPI bool is_pointer_or_parent_of_pointer(Type* type);
 NAPI bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to);
 
 NAPI String temp_type_string(Instance* inst, Type* type);
-NAPI void type_to_string(Instance* instance, String_Builder* sb, Type* type);
+NAPI void type_to_string(Instance* inst, String_Builder* sb, Type* type);
 
 NAPI Infer_Node infer_node();
 NAPI Infer_Node infer_node(Type* type);
