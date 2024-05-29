@@ -449,7 +449,26 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
         name = "novo_main";
     }
 
+    Type* return_type = func->type->function.return_type;
+    Type* c_ret_type = return_type;
+
     string_builder_append(&local_sb, "%.*s(", (int)name.length, name.data);
+
+    Type* sret_type = nullptr;
+    if (return_type->kind == Type_Kind::STRUCT) {
+        c_ret_type = cb->inst->builtin_type_void;
+        sret_type = pointer_type_get(cb->inst, return_type);
+    } else if (return_type->kind == Type_Kind::ARRAY) {
+        c_ret_type = cb->inst->builtin_type_void;
+        sret_type = pointer_type_get(cb->inst, return_type->array.element_type);
+    }
+
+    if (sret_type) {
+        c_backend_emit_c_type(cb, &local_sb, sret_type, "sret");
+        if (func->param_count > 1) {
+            string_builder_append(&local_sb, ", ");
+        }
+    }
 
     if (func->param_count) {
         for (s64 i = 0; i < func->type->function.param_types.count; i++) {
@@ -460,7 +479,21 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
             char param_name[32];
             string_format(param_name, "p%lld", i);
 
+            Type* array_type = nullptr;
+
+            if (param_type->kind == Type_Kind::STRUCT) {
+                param_type = pointer_type_get(cb->inst, param_type);
+            } else if (param_type->kind == Type_Kind::ARRAY) {
+                array_type = param_type;
+                param_type = pointer_type_get(cb->inst, param_type->array.element_type);
+            }
+
             c_backend_emit_c_type(cb, &local_sb, param_type, param_name);
+
+            if (array_type) {
+                String tname = temp_type_string(cb->inst, array_type);
+                string_builder_append(&local_sb, "/* %.*s */", (int)tname.length, tname.data);
+            }
         }
     }
 
@@ -471,13 +504,7 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
     string_builder_append(&local_sb, ")");
 
     String result = string_builder_to_string(&local_sb);
-
-    Type* return_type = func->type->function.return_type;
-    if (return_type->kind == Type_Kind::ARRAY) {
-        return_type = pointer_type_get(cb->inst, return_type->array.element_type);
-    }
-
-    c_backend_emit_c_type(cb, sb, return_type, result);
+    c_backend_emit_c_type(cb, sb, c_ret_type, result);
 
     temp_arena_release(tarena);
 }
@@ -501,12 +528,6 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
 
     char reg_name[32];
 
-    if (func->sret) {
-        string_builder_append(sb, "    ");
-        c_backend_emit_c_type(cb, sb, func->type->function.return_type, "retval");
-        string_builder_append(sb, " = {};\n");
-    }
-
     for (s64 i = 0; i < func->allocs.count; i++) {
         string_builder_append(sb, "    ");
         string_format(reg_name, "alloc_r%u", i);
@@ -528,12 +549,24 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
         string_builder_append(sb, "    ");
         string_format(reg_name, "r%u", i);
 
-        if (register_type->kind == Type_Kind::STRUCT || register_type->kind == Type_Kind::ARRAY || func->registers[i].alloc_reg) {
-            register_type = pointer_type_get(cb->inst, register_type);
+        Type* initial_type = register_type;
+        bool is_struct = register_type->kind == Type_Kind::STRUCT;
+        bool is_array = register_type->kind == Type_Kind::ARRAY;
+        if (is_struct || is_array || func->registers[i].alloc_reg) {
+            if (is_array) {
+                register_type = pointer_type_get(cb->inst, register_type->array.element_type);
+            } else {
+                register_type = pointer_type_get(cb->inst, register_type);
+            }
         }
 
         c_backend_emit_c_type(cb, sb, register_type, reg_name);
-        string_builder_append(sb, ";\n");
+        string_builder_append(sb, ";");
+        if (is_array || is_struct) {
+            String tname = temp_type_string(cb->inst, initial_type);
+            string_builder_append(sb, " /* %.*s */", (int)tname.length, tname.data);
+        }
+        string_builder_append(sb, "\n");
     }
 
     string_builder_append(sb, "\n");
@@ -656,7 +689,15 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     /*u64 size =*/ FETCH64();
 
                     string_format(reg_name, "alloc_r%u", result_reg);
-                    string_builder_append(sb, "    r%u = &(%s);", result_reg, reg_name);
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    Type *ctype = func->registers[result_reg].type;
+                    if (ctype->kind == Type_Kind::ARRAY) {
+                        ctype = pointer_type_get(cb->inst, ctype->array.element_type);
+                    } else {
+                        ctype = pointer_type_get(cb->inst, ctype);
+                    }
+                    c_backend_emit_c_type(cb, sb, ctype, "");
+                    string_builder_append(sb, ")&(%s);", reg_name);
                     break;
                 }
 
@@ -733,22 +774,8 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     string_builder_append(sb, "    r%u = ", result_reg);
 
                     if (sret) {
-                        string_builder_append(sb, "&retval;");
-
+                        string_builder_append(sb, "sret;");
                     } else {
-                        Type* param_type = func->type->function.param_types[param_index];
-
-                        if (param_type->kind == Type_Kind::STRUCT) {
-                            string_builder_append(sb, "&");
-                        } else if (param_type->kind == Type_Kind::ARRAY) {
-
-                            Type* dest_type = func->registers[result_reg].type;
-                            dest_type = pointer_type_get(cb->inst, dest_type);
-
-                            string_builder_append(sb, "(");
-                            c_backend_emit_c_type(cb, sb, dest_type, "");
-                            string_builder_append(sb, ")");
-                        }
                         string_builder_append(sb, "p%u;", param_index);
                     }
 
@@ -768,7 +795,14 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 result_reg = FETCH32();
                     u32 offset = FETCH32();
 
-                    Type* pointer_type = pointer_type_get(cb->inst, func->registers[result_reg].type);
+                    Type* register_type = func->registers[result_reg].type;
+                    Type* pointer_type = nullptr;
+                    if (register_type->kind == Type_Kind::ARRAY) {
+                        pointer_type = pointer_type_get(cb->inst, register_type->array.element_type);
+                    } else {
+                        pointer_type = pointer_type_get(cb->inst, register_type);
+                    }
+                    assert(pointer_type);
 
                     string_builder_append(sb, "    r%u = (", result_reg);
                     c_backend_emit_c_type(cb, sb, pointer_type, "");
@@ -885,37 +919,20 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
 
                     SSA_Function* callee = &cb->inst->ssa_program.functions[fn_index];
                     String callee_name = atom_string(callee->name);
-                    Type* return_type = callee->type->function.return_type;
 
                     assert(!callee->foreign);
 
                     u32 arg_count = callee->param_count;
                     assert(stack_count(arg_stack) >= arg_count);
 
-                    string_builder_append(sb, "    ");
+                    bool return_used = func->registers[result_reg].used;
 
-                    if (callee->sret) {
-                        u32 res_reg = stack_peek(arg_stack, arg_count - 1);
-                        if(func->registers[res_reg].used) {
-                            string_builder_append(sb, "*");
-                            if (return_type->kind == Type_Kind::ARRAY) {
-                                string_builder_append(sb, "(");
-                                Type* elem_ptr_type = pointer_type_get(cb->inst, return_type->array.element_type);
-                                Type* ptr_type = pointer_type_get(cb->inst, elem_ptr_type);
-                                c_backend_emit_c_type(cb, sb, ptr_type, "");
-                                string_builder_append(sb, ")");
-                            }
-                            string_builder_append(sb, "(r%u) = ", res_reg);
-                        }
-                    } else if (func->registers[result_reg].used) {
+                    string_builder_append(sb, "    ");
+                    if (return_used) {
                         string_builder_append(sb, "r%u = ", result_reg);
                     }
 
                     string_builder_append(sb, "%.*s(", (int)callee_name.length, callee_name.data);
-
-                    if (callee->sret) {
-                        arg_count -= 1;
-                    }
 
                     s64 arg_offset = arg_count - 1;
                     for (s64 i = 0; i < arg_count; i++) {
@@ -923,28 +940,9 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                         if (i > 0) string_builder_append(sb, ", ");
 
                         u32 arg_reg = stack_peek(arg_stack, arg_offset--);
-                        Type* arg_type = func->registers[arg_reg].type;
+                        // Type* arg_type = func->registers[arg_reg].type;
 
-                        Type* param_type = nullptr;
-                        if (i < callee->type->function.param_types.count) {
-                            param_type = callee->type->function.param_types[i];
-                        } else {
-                            param_type = arg_type;
-                        }
-                        assert(param_type);
-
-
-                        if (arg_type->kind == Type_Kind::STRUCT && param_type->kind == Type_Kind::STRUCT) {
-                            string_builder_append(sb, "*(r%u)", arg_reg);
-                        } else if (arg_type->kind == Type_Kind::ARRAY) {
-                            Type* elem_ptr_type = pointer_type_get(cb->inst, arg_type->array.element_type);
-                            string_builder_append(sb, "(");
-                            c_backend_emit_c_type(cb, sb, elem_ptr_type, "");
-                            string_builder_append(sb, ")");
-                            string_builder_append(sb, "r%u", arg_reg);
-                        } else {
-                            string_builder_append(sb, "r%u", arg_reg);
-                        }
+                        string_builder_append(sb, "r%u", arg_reg);
                     }
 
                     string_builder_append(sb, ");");
@@ -1014,7 +1012,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 value_reg = FETCH32();
 
                     if (func->sret) {
-                        string_builder_append(sb, "    return *r%u;", value_reg);
+                        string_builder_append(sb, "    return ;");
                     } else {
                         string_builder_append(sb, "    return r%u;", value_reg);
                     }
