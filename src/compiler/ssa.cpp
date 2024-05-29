@@ -607,7 +607,7 @@ void ssa_emit_statement(SSA_Builder* builder, AST_Statement* stmt, Scope* scope)
                     Type* element_ptr_type = pointer_type_get(builder->instance, stmt->assignment.lvalue->resolved_type->array.element_type);
 
                     SSA_Register_Handle rvalue;
-                    if (stmt->assignment.rvalue->kind == AST_Expression_Kind::COMPOUND) {
+                    if (stmt->assignment.rvalue->kind == AST_Expression_Kind::COMPOUND || stmt->assignment.rvalue->kind == AST_Expression_Kind::CALL) {
                         rvalue = ssa_emit_lvalue(builder, stmt->assignment.rvalue, scope);
                     } else {
                         rvalue = ssa_emit_expression(builder, stmt->assignment.rvalue, scope);

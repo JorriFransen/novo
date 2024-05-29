@@ -40,6 +40,17 @@ array_basics :: () {
     assert(a3[0] == 33);
     assert(a3[1] == 55);
     assert(a3[2] == 77);
+
+    a4 := make_array(42, 43, 44);
+    assert(a4[0] == 42);
+    assert(a4[1] == 43);
+    assert(a4[2] == 44);
+
+    a4 = make_array(44, 34, 24);
+    assert(a4[0] == 44);
+    assert(a4[1] == 34);
+    assert(a4[2] == 24);
+
 }
 
 add :: (a: int, b: int) -> int { return a + b; }
@@ -55,6 +66,10 @@ array_value_func_1 :: (a: [3]int) {
 
 array_value_func_2 :: (a: [3]int) {
     a = { -11, -12, -13 };
+}
+
+make_array :: (v0: int, v1: int, v2: int) -> [3]int {
+    return { v0, v1, v2 };
 }
 
 main :: () -> int {
