@@ -73,8 +73,8 @@ static bool run_test_case(Test_Case* tc, Options options)
 {
     options.keep_c_backend_output = true;
     options.input_file = tc->file_path;
-    options.verbose = true;
-    options.trace = true;
+    // options.verbose = true;
+    // options.trace = true;
 
     fs_mkdir("build");
 
