@@ -80,7 +80,7 @@ array_basics :: () {
     assert(a2[2] == 3);
 
     a2p := *a2;
-    init_array_1(a2p, 11, 22, 33);
+    init_array_2(a2p, 11, 22, 33);
     assert(a2[0] == 11);
     assert(a2[1] == 22);
     assert(a2[2] == 33);
@@ -91,10 +91,33 @@ array_basics :: () {
     assert(a3[2] == 3);
 
     a3p := *a3;
-    init_array_1(a3p, 11, 22, 33);
+    init_array_3(a3p, 11, 22, 33);
     assert(a3[0] == 11);
     assert(a3[1] == 22);
     assert(a3[2] == 33);
+
+    init_array_4(*a4, 1, 2, 3);
+    assert(a4[0] == 1);
+    assert(a4[1] == 2);
+    assert(a4[2] == 3);
+
+    a4p := *a4;
+    init_array_4(a4p, 11, 22, 33);
+    assert(a4[0] == 11);
+    assert(a4[1] == 22);
+    assert(a4[2] == 33);
+
+    a5 : [3]int;
+    init_array_5(*a5, 1, 2, 3);
+    assert(a5[0] == 1);
+    assert(a5[1] == 2);
+    assert(a5[2] == 3);
+
+    a5p := *a5;
+    init_array_5(a5p, 11, 22, 33);
+    assert(a5[0] == 11);
+    assert(a5[1] == 22);
+    assert(a5[2] == 33);
 }
 
 add :: (a: int, b: int) -> int { return a + b; }
@@ -130,6 +153,16 @@ init_array_2 :: (a: *[3]int, v0: int, v1: int, v2: int) {
 }
 
 init_array_3 :: (a: *[3]int, v0: int, v1: int, v2: int) {
+    <a = { v0, v1, v2 };
+}
+
+init_array_4 :: (a: *[3]int, v0: int, v1: int, v2: int) {
+    a[0] = v0;
+    a[1] = v1;
+    a[2] = v2;
+}
+
+init_array_5 :: (a: *[3]int, v0: int, v1: int, v2: int) {
     <a = { v0, v1, v2 };
 }
 

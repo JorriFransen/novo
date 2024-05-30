@@ -911,7 +911,12 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 return false;
             }
 
-            if (base->resolved_type->kind != Type_Kind::ARRAY) {
+            Type* array_type = base->resolved_type;
+            if (array_type->kind == Type_Kind::POINTER && array_type->pointer.base->kind == Type_Kind::ARRAY) {
+                array_type = array_type->pointer.base;
+            }
+
+            if (array_type->kind != Type_Kind::ARRAY) {
                 String tname = temp_type_string(inst, base->resolved_type);
                 instance_fatal_error(inst, source_pos(inst, base), "Base of subscript must be of array type, got '%.*s'", (int)tname.length, tname.data);
             }
@@ -939,7 +944,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             }
 
-            expr->resolved_type = base->resolved_type->array.element_type;
+            expr->resolved_type = array_type->array.element_type;
             break;
         }
 
