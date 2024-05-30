@@ -315,13 +315,14 @@ void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *ty
     string_builder_append(sb, "} %.*s;\n", (int)name.length, name.data);
 }
 
-void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name)
+void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name, CType_Flags flags/* =CTYPE_FLAG_NONE*/)
 {
-    String result = c_backend_emit_c_type(cb, type, name);
+    String result = c_backend_emit_c_type(cb, type, name, flags);
+
     string_builder_append(sb, "%.*s", (int)result.length, result.data);
 }
 
-String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
+String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name, CType_Flags flags/* =CTYPE_FLAG_NONE*/)
 {
     if (string_equal(name, "main")) {
         assert(type->kind == Type_Kind::FUNCTION);
@@ -360,16 +361,21 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
             if (type == cb->inst->builtin_type_cstring) {
                 result = string_format(&ta, "const char (*%.*s)", (int)name.length, name.data);
             } else {
-                if (name.length) result = c_backend_emit_c_type(cb, type->pointer.base, string_format(&ta, "(*%.*s)", (int)name.length, name.data));
-                else             result = c_backend_emit_c_type(cb, type->pointer.base, "(*)");
-           }
-
+                if (name.length) result = c_backend_emit_c_type(cb, type->pointer.base, string_format(&ta, "(*%.*s)", (int)name.length, name.data), flags);
+                else             result = c_backend_emit_c_type(cb, type->pointer.base, "(*)", flags);
+            }
             break;
         }
 
         case Type_Kind::ARRAY: {
-            if (name.length) result = c_backend_emit_c_type(cb, type->array.element_type, string_format(&ta, "%.*s[%lld]", (int)name.length, name.data, type->array.length));
-            else             result = c_backend_emit_c_type(cb, type->array.element_type, string_format(&ta, "[%lld]", type->array.length));
+
+            if (flags & CTYPE_FLAG_ARRAY_ELEM_POINTER) {
+                Type* ptr_type = pointer_type_get(cb->inst, type->array.element_type);
+                result = c_backend_emit_c_type(cb, ptr_type, name, flags);
+            } else {
+                if (name.length) result = c_backend_emit_c_type(cb, type->array.element_type, string_format(&ta, "%.*s[%lld]", (int)name.length, name.data, type->array.length), flags);
+                else             result = c_backend_emit_c_type(cb, type->array.element_type, string_format(&ta, "[%lld]", type->array.length), flags);
+            }
             break;
         }
 
@@ -382,7 +388,7 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
 
             if (type->function.param_types.count) {
                 for (s64 i = 0; i < type->function.param_types.count; i++) {
-                    string_builder_append(&sb, "%s%s", i == 0 ? "" : ", ", c_backend_emit_c_type(cb, type->function.param_types[i], ""));
+                    string_builder_append(&sb, "%s%s", i == 0 ? "" : ", ", c_backend_emit_c_type(cb, type->function.param_types[i], "", flags));
                 }
             }
 
@@ -400,7 +406,7 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
                 return_type = pointer_type_get(cb->inst, return_type->array.element_type);
             }
 
-            return c_backend_emit_c_type(cb, return_type, result);
+            return c_backend_emit_c_type(cb, return_type, result, flags);
         }
 
         case Type_Kind::STRUCT: {
@@ -479,19 +485,18 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
             char param_name[32];
             string_format(param_name, "p%lld", i);
 
-            Type* array_type = nullptr;
+            Type* orig_type = nullptr;
 
             if (param_type->kind == Type_Kind::STRUCT) {
                 param_type = pointer_type_get(cb->inst, param_type);
-            } else if (param_type->kind == Type_Kind::ARRAY) {
-                array_type = param_type;
-                param_type = pointer_type_get(cb->inst, param_type->array.element_type);
+            } else if (param_type->kind == Type_Kind::ARRAY || (param_type->kind == Type_Kind::POINTER && param_type->pointer.base->kind == Type_Kind::ARRAY)) {
+                orig_type = param_type;
             }
 
-            c_backend_emit_c_type(cb, &local_sb, param_type, param_name);
+            c_backend_emit_c_type(cb, &local_sb, param_type, param_name, CTYPE_FLAG_ARRAY_ELEM_POINTER);
 
-            if (array_type) {
-                String tname = temp_type_string(cb->inst, array_type);
+            if (orig_type) {
+                String tname = temp_type_string(cb->inst, orig_type);
                 string_builder_append(&local_sb, "/* %.*s */", (int)tname.length, tname.data);
             }
         }
@@ -552,15 +557,15 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
         Type* initial_type = register_type;
         bool is_struct = register_type->kind == Type_Kind::STRUCT;
         bool is_array = register_type->kind == Type_Kind::ARRAY;
-        if (is_struct || is_array || func->registers[i].alloc_reg) {
-            if (is_array) {
-                register_type = pointer_type_get(cb->inst, register_type->array.element_type);
-            } else {
-                register_type = pointer_type_get(cb->inst, register_type);
-            }
+
+        if (is_array) {
+            register_type = pointer_type_get(cb->inst, register_type->array.element_type);
+        } else if (is_struct || func->registers[i].alloc_reg) {
+            register_type = pointer_type_get(cb->inst, register_type);
         }
 
-        c_backend_emit_c_type(cb, sb, register_type, reg_name);
+        c_backend_emit_c_type(cb, sb, register_type, reg_name, CTYPE_FLAG_ARRAY_ELEM_POINTER);
+
         string_builder_append(sb, ";");
         if (is_array || is_struct) {
             String tname = temp_type_string(cb->inst, initial_type);

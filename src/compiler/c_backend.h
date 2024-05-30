@@ -19,13 +19,19 @@ struct Type;
 
 struct C_Backend;
 
+typedef u8 CType_Flags;
+enum CType_Flag : CType_Flags {
+    CTYPE_FLAG_NONE               = 0x00,
+    CTYPE_FLAG_ARRAY_ELEM_POINTER = 0x01,
+};
+
 NAPI bool c_backend_emit(Instance* inst);
 
 NAPI void c_backend_emit_struct_declaration(C_Backend* cb, String_Builder* sb, Type *type);
 NAPI void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *type);
 
-NAPI void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name);
-NAPI String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name);
+NAPI void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name, CType_Flags flags = CTYPE_FLAG_NONE);
+NAPI String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name, CType_Flags flags = CTYPE_FLAG_NONE);
 
 NAPI void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Function* func);
 NAPI void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack);

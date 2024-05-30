@@ -1416,7 +1416,11 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
                 assert(false);
             } else {
                 SSA_Register_Handle ptr_reg = ssa_emit_expression(builder, expr->unary.operand, scope);
-                return ssa_emit_load_ptr(builder, expr->resolved_type, ptr_reg);
+                Type* ptr_type = expr->resolved_type;
+                if (expr->resolved_type->kind == Type_Kind::ARRAY) {
+                    return ptr_reg;
+                }
+                return ssa_emit_load_ptr(builder, ptr_type, ptr_reg);
             }
 
             assert(false);
