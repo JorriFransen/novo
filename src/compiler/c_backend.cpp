@@ -742,7 +742,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                         case 64: value = FETCH64(); break;
                     }
 
-                    assert(value == enum_type->enumeration.members[index].value);
+                    assert(value == (u64)enum_type->enumeration.members[index].value);
 
                     String ename = atom_string(enum_type->enumeration.name);
                     String emember_name = atom_string(enum_type->enumeration.members[index].name);

@@ -103,6 +103,9 @@ NAPI FN_ALLOCATOR(arena_allocator_fn)
             return nullptr;
         }
     }
+
+    assert(false);
+    return nullptr;
 }
 
 }
