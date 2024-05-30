@@ -558,15 +558,20 @@ bool resolve_expression(Instance* inst, Resolve_Task* task, AST_Expression* expr
                 }
 
                 case Type_Kind::POINTER: {
-                    if (base_type->pointer.base->kind != Type_Kind::STRUCT) {
+                    aggregate = base_type->pointer.base->kind == Type_Kind::STRUCT;
+                    array = base_type->pointer.base->kind == Type_Kind::ARRAY;
+
+                    if (!aggregate && !array) {
                         String tname = temp_type_string(inst, base_type);
                         instance_fatal_error(inst, source_pos(inst, expr->member.base), "Invalid type '%.*s' on left side of '.' operator", (int)tname.length, tname.data);
                         break;
                     }
 
                     base_type = base_type->pointer.base;
-                    base_scope = base_type->structure.scope;
-                    aggregate = true;
+
+                    if (aggregate) {
+                        base_scope = base_type->structure.scope;
+                    }
                 }
 
                 case Type_Kind::STRUCT: {

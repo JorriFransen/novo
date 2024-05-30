@@ -818,10 +818,14 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 default: assert(false); // Error should have been reported in resolver
 
                 case Type_Kind::POINTER: {
-                    assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
-                    aggregate = true;
+                    aggregate = base_type->pointer.base->kind == Type_Kind::STRUCT;
+                    array = base_type->pointer.base->kind == Type_Kind::ARRAY;
+
                     base_type = base_type->pointer.base;
-                    base_scope = base_type->structure.scope;
+
+                    if (aggregate) {
+                        base_scope = base_type->structure.scope;
+                    }
                     break;
                 }
 

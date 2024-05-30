@@ -11,23 +11,6 @@
 
 #import "c"
 
-//  main :: () -> int {
-
-//      a: [2]int = { 11, 22 };
-//      pa := *a;
-
-//      printf("pa[0]  : %i\n".data, (pa)[0]);
-//      printf("(*a)[1]: %i\n".data, (*a)[1]);
-
-//      (*a)[0] = 2;
-//      pa[1] = 1;
-
-//      printf("pa[0]  : %i\n".data, (pa)[0]);
-//      printf("(*a)[1]: %i\n".data, (*a)[1]);
-
-//      return 0;
-//  }
-
 main :: () -> int {
 
     a1 : [2]int; // Local allocation, uninitialized
@@ -99,12 +82,22 @@ main :: () -> int {
     printf("a5: { %lld, %lld }\n".data, a5[0], a5[1]);
 
     printf("*a5: { %lld, %lld }\n".data, (*a5)[0], (*a5)[1]);
+    ap5 := *a5;
+    printf("ap5: { %lld, %lld }\n".data, ap5[0], ap5[1]);
+
+    printf("\n".data);
+    printf("a5.length: %i\n".data, a5.length);
+    printf("ap5.length: %i\n".data, ap5.length);
+    assert(a5.length == ap5.length);
+    assert(a5.data == ap5.data);
+    assert(ap5.data == (*a5).data);
 
     //  invalid1 := <a2; // Disallow dereference
 
-    //  a5 : *[2]int = heap_array(99, 1010); // Allocate array on heap
-    //  assert(a5.length == 2);
-    //  assert(a5.data != a4.data);
+    //  a6 : *[2]int = heap_array(99, 1010); // Allocate array on heap
+    //  assert(a6.length == 2);
+    //  assert(a6.data != a5.data);
+    //  free(cast(*void, a6));
 
     return 0;
 
@@ -141,3 +134,7 @@ init_array :: (a: *[2]int, v1: int, v2: int) {
     <a = { v1, v2 };
 
 }
+
+//  heap_array ::  (v0: int, v1: int) -> *[2]int {
+//      return null;
+//  }
