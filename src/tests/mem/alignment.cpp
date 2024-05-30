@@ -1,31 +1,26 @@
 
 #include <defines.h>
 #include <memory/allocator.h>
-#include <memory/linear_allocator.h>
 
 #include <cassert>
 #include <cstdio>
+#include <memory/arena.h>
 
 using namespace Novo;
 
-struct Allocator_Info
-{
-    Allocator* allocator;
-    bool can_free;
-};
-
-bool test_align(Allocator_Info info);
+bool test_align(Allocator* allocator);
 
 int main(int argc, char* argv[])
 {
 
-    Linear_Allocator linear_allocator_data;
-    Allocator linear_allocator = linear_allocator_create(&linear_allocator_data, c_allocator(), 4096 * 2 * 6);
+
+    Arena arena;
+    Allocator arena_allocator = arena_allocator_create(&arena);
 
 
-    Allocator_Info allocators[] = {
-        { c_allocator(), true },
-        { &linear_allocator, false },
+    Allocator* allocators[] = {
+        c_allocator(),
+        &arena_allocator,
     };
 
     bool ok = true;
@@ -39,7 +34,7 @@ int main(int argc, char* argv[])
     return ok ? 0 : 1;
 }
 
-bool test_align(Allocator_Info info)
+bool test_align(Allocator* allocator)
 {
     for (u64 align = 1; align <= 4096; align *= 2) {
 
@@ -47,14 +42,14 @@ bool test_align(Allocator_Info info)
             s64 size = align * i;
             printf("align: %llu, size: %lld\n", align, size);
 
-            void* ptr = allocate_aligned(info.allocator, size, align);
+            void* ptr = allocate_aligned(allocator, size, align);
             assert((u64)ptr % align == 0);
 
-            if (info.can_free) free(info.allocator, ptr);
+            if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) free(allocator, ptr);
         }
 
         printf("\n");
-        if (!info.can_free) free_all(info.allocator);
+        if (allocator->flags & ALLOCATOR_FLAG_CANT_FREE) free_all(allocator);
 
     }
 

@@ -16,10 +16,6 @@
 
 using namespace Novo;
 
-static Temp_Allocator ta_data;
-static Allocator ta_;
-static Allocator* ta = &ta_;
-
 struct Test_Case
 {
     const char* file_path;
@@ -76,6 +72,8 @@ static bool run_test_case(Test_Case* tc, Options options)
     // options.verbose = true;
     // options.trace = true;
 
+    auto ta = temp_allocator();
+
     fs_mkdir("build");
 
     String filename = fs_filename_strip_extension(ta, tc->file_path);
@@ -116,7 +114,6 @@ static bool run_test_case(Test_Case* tc, Options options)
 int main(int argc, char* argv[]) {
 
     auto ca = c_allocator();
-    ta_ = temp_allocator_create(&ta_data, ca, KIBIBYTE(1));
 
     Options options;
 
@@ -134,7 +131,7 @@ int main(int argc, char* argv[]) {
     s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
     s64 test_success_count = 0;
 
-    auto mark = temp_allocator_get_mark(&ta_data);
+    auto mark = temp_allocator_get_mark();
 
     for (s64 i = 0; i < test_count; i++) {
 
@@ -150,7 +147,7 @@ int main(int argc, char* argv[]) {
 
         if (result) test_success_count++;
 
-        temp_allocator_reset(&ta_data, mark);
+        temp_allocator_reset(mark);
     }
 
     printf("\n%lld/%lld tests successful\n", test_success_count, test_count);

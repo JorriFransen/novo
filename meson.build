@@ -32,7 +32,7 @@ common_source = [
   'src/common/containers/stack.h',
 
   'src/common/memory/allocator.cpp', 'src/common/memory/allocator.h',
-  'src/common/memory/linear_allocator.cpp', 'src/common/memory/linear_allocator.h',
+  'src/common/memory/arena.cpp', 'src/common/memory/arena.h',
   'src/common/memory/temp_allocator.cpp', 'src/common/memory/temp_allocator.h',
 ]
 

@@ -1,4 +1,8 @@
 
+//  - Support realloc in arenas
+//  - Use arena in temp allocator, only use the global one?
+//  - Think about an allocator for the dynamic arrays in Instance
+
 //  - Move import path resolution to resolver
 //  - Move inst->cwd into the tests
 //  - Basic control flow
@@ -9,7 +13,6 @@
 //      - seperate creating and submission, this should be cleaner (eg. in valid_cast())
 
 //  - Keyword tokens should be associated with some enum so the parser can switch on this instead of using if-else chains
-//  - Redo linear allocator to have blocks
 //  - Capture errors, and check for them in tests
 
 

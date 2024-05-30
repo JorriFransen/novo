@@ -9,11 +9,11 @@ namespace Novo {
 
 Scope* scope_new(Instance* instance, Scope_Kind kind, Scope* parent/*=nullptr*/)
 {
-    Scope* result = allocate<Scope>(&instance->scope_allocator);
+    Scope* result = allocate<Scope>(&instance->ast_allocator);
     result->kind = kind;
     result->parent = parent;
 
-    darray_init(&instance->scope_allocator, &result->symbols, 0);
+    darray_init(&instance->ast_allocator, &result->symbols, 0);
 
     return result;
 }

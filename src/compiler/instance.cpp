@@ -44,9 +44,10 @@ void instance_init(Instance* inst, Options options)
 
     auto default_alloc = inst->default_allocator;
 
-    inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data, default_alloc, MEBIBYTE(1));
-    inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(64));
-    inst->scope_allocator = inst->ast_allocator;
+
+    inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data);
+    inst->ast_allocator = arena_allocator_create(&inst->ast_arena);
+    inst->ast_allocator = inst->ast_allocator;
 
     darray_init(default_alloc, &inst->parse_tasks);
     darray_init(default_alloc, &inst->resolve_tasks);
@@ -218,7 +219,7 @@ void instance_free(Instance* inst)
     vm_free(&inst->vm);
 
     temp_allocator_free(&inst->temp_allocator_data);
-    linear_allocator_free(&inst->ast_allocator_data);
+    arena_free(&inst->ast_arena);
 
     hash_table_free(&inst->ident_positions);
     hash_table_free(&inst->decl_positions);

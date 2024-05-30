@@ -4,7 +4,7 @@
 #include <containers/hash_table.h>
 #include <defines.h>
 #include <memory/allocator.h>
-#include <memory/linear_allocator.h>
+#include <memory/arena.h>
 #include <memory/temp_allocator.h>
 #include <nstring.h>
 
@@ -48,9 +48,8 @@ struct Instance
     Temp_Allocator temp_allocator_data;
     Allocator temp_allocator;
 
-    Linear_Allocator ast_allocator_data;
+    Arena ast_arena;
     Allocator ast_allocator;
-    Allocator scope_allocator;
 
     DArray<Parse_Task> parse_tasks;
     DArray<Resolve_Task> resolve_tasks;

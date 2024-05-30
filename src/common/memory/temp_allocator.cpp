@@ -1,29 +1,30 @@
 #include "temp_allocator.h"
+#include "memory/arena.h"
 
 #include <cassert>
 #include <cstring>
 
 namespace Novo {
 
-Allocator temp_allocator_create(Temp_Allocator* ta, Allocator* backing_allocator, s64 size)
+Allocator temp_allocator_create(Temp_Allocator* ta)
 {
-    linear_allocator_create(&ta->linear_allocator_data, backing_allocator, size);
+    arena_create(&ta->arena);
     return { temp_allocator_fn, ta, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
 void temp_allocator_free(Temp_Allocator* ta)
 {
-    linear_allocator_free(&ta->linear_allocator_data);
+    arena_free(&ta->arena);
 }
 
 Temp_Allocator_Mark temp_allocator_get_mark(Temp_Allocator* ta)
 {
-    return ta->linear_allocator_data.used;
+    return ta->arena.used;
 }
 
 void temp_allocator_reset(Temp_Allocator* ta, Temp_Allocator_Mark mark/*={}*/)
 {
-    ta->linear_allocator_data.used = mark;
+    ta->arena.used = mark;
 }
 
 FN_ALLOCATOR(temp_allocator_fn)
@@ -33,7 +34,7 @@ FN_ALLOCATOR(temp_allocator_fn)
     switch (mode) {
 
         case Allocator_Mode::ALLOCATE: {
-            auto result = linear_allocator_allocate(&ta->linear_allocator_data, size, align);
+            void* result = arena_alloc(&ta->arena, size, align);
             memset(result, 0, size);
             return result;
         }
@@ -49,7 +50,7 @@ FN_ALLOCATOR(temp_allocator_fn)
         }
 
         case Allocator_Mode::FREE_ALL: {
-            linear_allocator_free_all(&ta->linear_allocator_data);
+            arena_reset(&ta->arena);
             return nullptr;
         }
     }
@@ -65,7 +66,7 @@ Allocator g_temp_allocator;
 Allocator* temp_allocator()
 {
     if (!g_temp_allocator_initialized) {
-        g_temp_allocator = temp_allocator_create(&g_temp_allocator_data, c_allocator(), MEBIBYTE(1));
+        g_temp_allocator = temp_allocator_create(&g_temp_allocator_data);
         g_temp_allocator_initialized = true;
     }
 

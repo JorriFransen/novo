@@ -1,6 +1,5 @@
 #include "string_builder.h"
 
-#include "memory/linear_allocator.h"
 #include "memory/temp_allocator.h"
 
 #include <cstring>
@@ -24,7 +23,7 @@ void string_builder_init(String_Builder* sb, Allocator* allocator, u64 initial_b
 {
     sb->allocator = allocator;
     auto ta = allocate<Temp_Allocator>(allocator);
-    sb->temp_allocator = temp_allocator_create(ta, allocator, NOVO_SB_TEMP_SIZE);
+    sb->temp_allocator = temp_allocator_create(ta);
     sb->next_block_size = initial_block_size;
 
     sb->first_block = string_builder_block(sb->allocator, sb->next_block_size);
@@ -35,16 +34,14 @@ void string_builder_free(String_Builder* sb)
 {
     auto ta = (Temp_Allocator*)sb->temp_allocator.user_data;
 
-    if (!(sb->temp_allocator.flags & ALLOCATOR_FLAG_CANT_FREE)) {
-        free(sb->allocator, ta->linear_allocator_data.buffer);
-        free(sb->allocator, ta);
+    arena_free(&ta->arena);
+    free(sb->allocator, ta);
 
-        auto block = sb->first_block;
-        while (block) {
-            auto next = block->next_block;
-            free(sb->allocator, block);
-            block = next;
-        }
+    auto block = sb->first_block;
+    while (block) {
+        auto next = block->next_block;
+        free(sb->allocator, block);
+        block = next;
     }
 }
 
