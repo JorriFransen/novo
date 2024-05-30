@@ -94,10 +94,16 @@ main :: () -> int {
 
     //  invalid1 := <a2; // Disallow dereference
 
-    //  a6 : *[2]int = heap_array(99, 1010); // Allocate array on heap
-    //  assert(a6.length == 2);
-    //  assert(a6.data != a5.data);
-    //  free(cast(*void, a6));
+    printf("\n".data);
+    a6 : *[2]int = heap_array(99, 1010); // Allocate array on heap
+    printf("a6:                    %p\n".data, a6);
+    printf("a6.data:               %p\n".data, a6.data);
+    assert(a6.length == 2);
+    assert(a6.data != a5.data);
+    assert(cast(s64, a6.data) == cast(s64, a6) + sizeof(:*void));
+
+    printf("a6: { %i, %i }\n".data, a6[0], a6[1]);
+    free(cast(*void, a6));
 
     return 0;
 
@@ -135,6 +141,19 @@ init_array :: (a: *[2]int, v1: int, v2: int) {
 
 }
 
-//  heap_array ::  (v0: int, v1: int) -> *[2]int {
-//      return null;
-//  }
+heap_array ::  (v0: int, v1: int) -> *[2]int {
+    // Allocate space for the array, and a pointer to the array
+    alloc : **void = malloc(sizeof(:*[2]int) + sizeof(:[2]int));
+
+    result := cast(*[2]int, alloc);
+    elem_ptr : *void = alloc + 1;
+    <alloc = elem_ptr;
+
+    printf("[heap_array] alloc:    %p\n".data, alloc);
+    printf("[heap_array] result:   %p\n".data, result);
+    printf("[heap_array] elem_ptr: %p\n".data, elem_ptr);
+
+    <result = { v0, v1 };
+
+    return result;
+}
