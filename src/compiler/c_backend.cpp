@@ -646,10 +646,10 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 operand_reg = FETCH32();
 
                     Type* target_type = func->registers[result_reg].type;
-                    assert(target_type->kind == Type_Kind::POINTER);
+                    assert(target_type->kind == Type_Kind::POINTER || target_type->kind == Type_Kind::INTEGER);
 
                     string_builder_append(sb, "    r%u = (", result_reg);
-                    c_backend_emit_c_type(cb, sb, target_type, "");
+                    c_backend_emit_c_type(cb, sb, target_type, "", CTYPE_FLAG_ARRAY_ELEM_POINTER);
                     string_builder_append(sb, ")r%u;", operand_reg);
                     break;
                 }
