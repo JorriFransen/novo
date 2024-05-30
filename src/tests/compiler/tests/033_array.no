@@ -133,6 +133,26 @@ array_basics :: () {
     assert(a6[2] == 3);
 
     free(cast(*void, a6));
+
+
+    a1 = { 1, 2, 3 };
+    a2 = { 11, 22, 33 };
+    assert(a1.data != a2.data);
+
+    a1.data = a2.data;
+    assert(a1.data == a2.data);
+    assert(a1[0] == a2[0]);
+    assert(a1[1] == a2[1]);
+    assert(a1[2] == a2[2]);
+
+    a1[0] = 111;
+    assert(a1[0] == a2[0]);
+    assert(a2[0] == 111);
+
+    a2[1] = 222;
+    assert(a1[1] == a2[1]);
+    assert(a1[1] == 222);
+
 }
 
 add :: (a: int, b: int) -> int { return a + b; }

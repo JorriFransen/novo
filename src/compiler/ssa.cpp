@@ -971,30 +971,49 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
         case AST_Expression_Kind::BINARY: assert(false); break;
 
         case AST_Expression_Kind::MEMBER: {
-            AST_Declaration* field = lvalue_expr->member.member_name->decl;
-            assert(field);
+            Type* base_type = lvalue_expr->member.base->resolved_type;
 
-            assert(field->kind == AST_Declaration_Kind::STRUCT_MEMBER);
+            bool array_base = base_type->kind  == Type_Kind::ARRAY;
+            bool array_ptr_base = base_type->kind == Type_Kind::POINTER && base_type->pointer.base->kind == Type_Kind::ARRAY;
 
-            auto index = field->variable.index;
+            if (array_base || array_ptr_base) {
 
-            Type *base_type = lvalue_expr->member.base->resolved_type;
-            Type *struct_type = nullptr;
+                if (lvalue_expr->member.member_name->atom == g_atom_data) {
+                    if (array_ptr_base) {
+                        return ssa_emit_expression(builder, lvalue_expr->member.base, scope);
+                    } else {
+                        return ssa_emit_lvalue(builder, lvalue_expr->member.base, scope);
+                    }
+                } else assert(false);
 
-            SSA_Register_Handle base_lvalue;
-
-            if (base_type->kind == Type_Kind::STRUCT) {
-                struct_type = base_type;
-                base_lvalue = ssa_emit_lvalue(builder, lvalue_expr->member.base, scope);
             } else {
-                assert(base_type->kind == Type_Kind::POINTER);
-                assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
-                struct_type = base_type->pointer.base;
-                base_lvalue = ssa_emit_expression(builder, lvalue_expr->member.base, scope);
+
+                AST_Declaration* field = lvalue_expr->member.member_name->decl;
+                assert(field);
+
+                assert(field->kind == AST_Declaration_Kind::STRUCT_MEMBER);
+
+                auto index = field->variable.index;
+
+                Type *struct_type = nullptr;
+
+                SSA_Register_Handle base_lvalue;
+
+                if (base_type->kind == Type_Kind::STRUCT) {
+                    struct_type = base_type;
+                    base_lvalue = ssa_emit_lvalue(builder, lvalue_expr->member.base, scope);
+                } else {
+                    assert(base_type->kind == Type_Kind::POINTER);
+                    assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
+                    struct_type = base_type->pointer.base;
+                    base_lvalue = ssa_emit_expression(builder, lvalue_expr->member.base, scope);
+                }
+
+                assert(struct_type);
+                return ssa_emit_struct_offset(builder, base_lvalue, struct_type, index);
             }
 
-            assert(struct_type);
-            return ssa_emit_struct_offset(builder, base_lvalue, struct_type, index);
+            break;
         }
 
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
