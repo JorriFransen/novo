@@ -38,7 +38,7 @@ Resolved_Constant const_resolve(Instance* inst, AST_Expression* expr)
 
                 case '-': {
                     // TODO: FIXME: This should work for all integer sizes
-                    result.integer = -result.integer;
+                    result.integer = -(s64)result.integer;
                     break;
                 }
             }
