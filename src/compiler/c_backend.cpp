@@ -701,7 +701,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     } else {
                         ctype = pointer_type_get(cb->inst, ctype);
                     }
-                    c_backend_emit_c_type(cb, sb, ctype, "");
+                    c_backend_emit_c_type(cb, sb, ctype, "", CTYPE_FLAG_ARRAY_ELEM_POINTER);
                     string_builder_append(sb, ")&(%s);", reg_name);
                     break;
                 }
@@ -739,7 +739,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     }
 
                     string_builder_append(sb, "    *(r%u) = (", ptr_reg);
-                    c_backend_emit_c_type(cb, sb, ptr_type->pointer.base, "");
+                    c_backend_emit_c_type(cb, sb, ptr_type->pointer.base, "", CTYPE_FLAG_ARRAY_ELEM_POINTER);
                     string_builder_append(sb, ")r%u;",  value_reg);
                     break;
                 }

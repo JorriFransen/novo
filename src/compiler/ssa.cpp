@@ -1004,13 +1004,28 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
             AST_Expression* base_expr = lvalue_expr->subscript.base;
             AST_Expression* index_expr = lvalue_expr->subscript.index;
 
-            assert(base_expr->resolved_type->kind == Type_Kind::ARRAY);
-            Type* elem_ptr_type = pointer_type_get(builder->instance, base_expr->resolved_type->array.element_type);
+            Type* array_type = base_expr->resolved_type;
+            bool via_pointer = false;
+            if (array_type->kind == Type_Kind::POINTER) {
+                assert(array_type->pointer.base->kind == Type_Kind::ARRAY);
+                array_type = array_type->pointer.base;
+                via_pointer = true;
+            }
 
-            SSA_Register_Handle base_reg = ssa_emit_expression(builder, base_expr, scope);
+            assert(array_type->kind == Type_Kind::ARRAY);
+            Type* elem_ptr_type = pointer_type_get(builder->instance, array_type->array.element_type);
 
-            if (!(base_expr->flags & AST_EXPR_FLAG_PARAM)) {
+            SSA_Register_Handle base_reg;
+
+
+            if (via_pointer) {
+                base_reg = ssa_emit_expression(builder, base_expr, scope);
                 base_reg = ssa_emit_load_ptr(builder, elem_ptr_type, base_reg);
+            } else {
+                base_reg = ssa_emit_expression(builder, base_expr, scope);
+                if (!(base_expr->flags & AST_EXPR_FLAG_PARAM)) {
+                    base_reg = ssa_emit_load_ptr(builder, elem_ptr_type, base_reg);
+                }
             }
 
             SSA_Register_Handle index_reg = ssa_emit_expression(builder, index_expr, scope);

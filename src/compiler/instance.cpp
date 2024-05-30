@@ -552,7 +552,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             if (t->waiting_for) {
                 auto name = atom_string(t->waiting_for->atom);
                 Source_Pos pos = source_pos(inst, t->waiting_for);
-                instance_error(inst, pos, "Reference to undecared identifier: '%s'", name.data);
+                instance_error(inst, pos, "Reference to undeclared identifier: '%s'", name.data);
                 error_reported = true;
             }
         }
