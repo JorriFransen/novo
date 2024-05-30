@@ -1,12 +1,13 @@
 
-// Test returning array from #run
+// - Default initializers
+// - Test returning array from #run
 
-// Try to remove double memcopy when calling functions like make_array.
-//  There is a memcopy from a temporary in make_arrays frame into a temporary in the callers frame.
-//  The temporary in the callers frame in then copied into the final destination.
+// - Try to remove double memcopy when calling functions like make_array.
+//      There is a memcopy from a temporary in make_arrays frame into a temporary in the callers frame.
+//      The temporary in the callers frame in then copied into the final destination.
 //
-//  In make_array, when returning a comound, emit into the destination instead of a temporary.
-//  in the callers frame, try to pass the final destination directly instead of a temporary.
+//      In make_array, when returning a comound, emit into the destination instead of a temporary.
+//      in the callers frame, try to pass the final destination directly instead of a temporary.
 
 #import "c"
 
@@ -74,11 +75,13 @@ main :: () -> int {
     printf("\n".data);
     printf("a4: { %lld, %lld }\n".data, a4[0], a4[1]);
 
-    //  invalid1 := <a2; // Disallow dereference
+    // Create uninitialized local allocation, pass it's pointer
+    a5 : [2]int;
+    init_array(*a5, 77, 88);
+    printf("\n".data);
+    printf("a5: { %lld, %lld }\n".data, a5[0], a5[1]);
 
-    //  // Create uninitialized local allocation, pass it's pointer
-    //  a4 : [2]int;
-    //  init_array(*a4, 77, 88);
+    //  invalid1 := <a2; // Disallow dereference
 
     //  a5 : *[2]int = heap_array(99, 1010); // Allocate array on heap
     //  assert(a5.length == 2);
@@ -112,4 +115,16 @@ array_value_func_2 :: (a: [2]int) {
 
 make_array :: (v1: int, v2: int) -> [2]int {
     return { v1, v2 };
+}
+
+init_array :: (a: *[2]int, v1: int, v2: int) {
+    //  b := <cast(**int, a);
+    //  <b = v1;
+    //  <(b + 1) = v2;
+
+    (<a)[0] = v1;
+    (<a)[1] = v2;
+
+    <a = { v1, v2 };
+
 }
