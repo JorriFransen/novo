@@ -1,4 +1,5 @@
 
+// - Invalid1 := <a2; // Disallow dereference
 // - Default initializers
 // - Test returning array from #run
 
@@ -92,8 +93,6 @@ main :: () -> int {
     assert(a5.data == ap5.data);
     assert(ap5.data == (*a5).data);
 
-    //  invalid1 := <a2; // Disallow dereference
-
     printf("\n".data);
     a6 : *[2]int = heap_array(99, 1010); // Allocate array on heap
     printf("a6:                    %p\n".data, a6);
@@ -104,6 +103,15 @@ main :: () -> int {
 
     printf("a6: { %i, %i }\n".data, a6[0], a6[1]);
     free(cast(*void, a6));
+
+    assert(a1.data != a2.data);
+    a2.data = a1.data;
+    assert(a1.data == a2.data);
+
+    assert(a3.data != a4.data);
+    a3p := *a3;
+    a3p.data = a4.data;
+    assert(a3.data == a4.data);
 
     return 0;
 
