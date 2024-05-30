@@ -509,7 +509,7 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
     string_builder_append(&local_sb, ")");
 
     String result = string_builder_to_string(&local_sb);
-    c_backend_emit_c_type(cb, sb, c_ret_type, result);
+    c_backend_emit_c_type(cb, sb, c_ret_type, result, CTYPE_FLAG_ARRAY_ELEM_POINTER);
 
     temp_arena_release(tarena);
 }

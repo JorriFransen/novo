@@ -1278,7 +1278,12 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
         }
 
         case AST_Expression_Kind::MEMBER: {
-            if (expr->member.base->resolved_type->kind == Type_Kind::ENUM) {
+            Type* base_type = expr->member.base->resolved_type;
+
+            bool array_base = base_type->kind  == Type_Kind::ARRAY;
+            bool array_ptr_base = base_type->kind == Type_Kind::POINTER && base_type->pointer.base->kind == Type_Kind::ARRAY;
+
+            if (base_type->kind == Type_Kind::ENUM) {
                 AST_Declaration* mem_decl = expr->member.member_name->decl;
                 assert(mem_decl);
                 assert(mem_decl->kind == AST_Declaration_Kind::ENUM_MEMBER);
@@ -1289,11 +1294,14 @@ SSA_Register_Handle ssa_emit_expression(SSA_Builder* builder, AST_Expression* ex
 
                 result_reg = ssa_emit_load_enum(builder, expr->resolved_type, mem_decl->enum_member.index_in_type);
 
-            } else if (expr->member.base->resolved_type->kind == Type_Kind::ARRAY) {
+            } else if (array_base || array_ptr_base) {
+
+                Type* array_type = base_type;
+                if (array_ptr_base) array_type = base_type->pointer.base;
 
                 // TODO: Flag these, or replace with integer literal expressions in typer
                 if (expr->member.member_name->atom == g_atom_length) {
-                    result_reg = ssa_emit_load_immediate(builder, expr->resolved_type, expr->member.base->resolved_type->array.length);
+                    result_reg = ssa_emit_load_immediate(builder, expr->resolved_type, array_type->array.length);
 
                 } else if (expr->member.member_name->atom == g_atom_data) {
 
