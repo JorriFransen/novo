@@ -27,7 +27,9 @@ NAPI Allocator arena_allocator_create(Arena* arena);
 NAPI void arena_create(Arena* arena);
 NAPI void arena_free(Arena* arena);
 
+__attribute((malloc, alloc_size(2), alloc_align(3)))
 NAPI void* arena_alloc(Arena* arena, s64 size, s64 align);
+
 NAPI bool arena_grow(Arena* arena, s64 min_size);
 NAPI void arena_reset(Arena* arena);
 
