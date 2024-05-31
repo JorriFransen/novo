@@ -47,7 +47,6 @@ void instance_init(Instance* inst, Options options)
 
     inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data);
     inst->ast_allocator = arena_allocator_create(&inst->ast_arena);
-    inst->ast_allocator = inst->ast_allocator;
 
     darray_init(default_alloc, &inst->parse_tasks);
     darray_init(default_alloc, &inst->resolve_tasks);

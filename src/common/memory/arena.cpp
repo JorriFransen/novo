@@ -1,6 +1,9 @@
 #include "arena.h"
+
 #include "defines.h"
+#include "logger.h"
 #include "memory/allocator.h"
+#include "nstring.h"
 
 #include <cassert>
 
@@ -26,7 +29,7 @@ Allocator arena_allocator_create(Arena* arena)
     return { arena_allocator_fn, arena, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
-void arena_new(Arena* arena, s64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
+void arena_new(Arena* arena, u64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
 {
 #if NPLATFORM_LINUX
     s64 size = sysconf(_SC_PAGE_SIZE);
@@ -50,7 +53,9 @@ void arena_new(Arena* arena, s64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
     GetSystemInfo(&sys_info);
     s64 size = sys_info.dwPageSize;
 
-    void* base = VirtualAlloc(nullptr, max_size, MEM_RESERVE, PAGE_NOACCESS);
+    assert(max_cap % sys_info.dwPageSize == 0);
+
+    void* base = VirtualAlloc(nullptr, max_cap, MEM_RESERVE, PAGE_NOACCESS);
     assert(base);
 
     void* cbase = VirtualAlloc(base, size, MEM_COMMIT, PAGE_READWRITE);
@@ -59,6 +64,7 @@ void arena_new(Arena* arena, s64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
     arena->data = (u8*)base;
     arena->used = 0;
     arena->capacity = size;
+    arena->max_capacity = max_cap;
     arena->flags = ARENA_FLAG_GROW;
 #endif
 }

@@ -65,13 +65,13 @@ STATIC_ASSERT(false, "Unsupported platform (Apple).");
 #define NNOINLINE(...)
 #endif
 
-#define GIBIBYTE(x) (x##UL * 1024UL * 1024UL * 1024UL)
-#define MEBIBYTE(x) (x##UL * 1024UL * 1024UL)
-#define KIBIBYTE(x) (x##UL * 1024UL)
+#define GIBIBYTE(x) (x##ULL * 1024ULL * 1024ULL * 1024ULL)
+#define MEBIBYTE(x) (x##ULL * 1024ULL * 1024ULL)
+#define KIBIBYTE(x) (x##ULL * 1024ULL)
 
-#define GIGABYTE(x) (x##UL * 1000UL * 1000UL * 1000UL)
-#define MEGABYTE(x) (x##UL * 1000UL * 1000UL)
-#define KILOBYTE(x) (x##UL * 1000UL)
+#define GIGABYTE(x) (x##ULL * 1000ULL * 1000ULL * 1000ULL)
+#define MEGABYTE(x) (x##ULL * 1000ULL * 1000ULL)
+#define KILOBYTE(x) (x##ULL * 1000ULL)
 
 namespace Novo {
 
