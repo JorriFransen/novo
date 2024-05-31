@@ -36,7 +36,6 @@
 
 #elif defined(__linux__) || defined(__gnu_linux__)
 
-//STATIC_ASSERT(false, "Unsupported platform (linux).");
 #define NPLATFORM_LINUX 1
 
 #elif defined(__unix__)
@@ -56,12 +55,14 @@ STATIC_ASSERT(false, "Unsupported platform (Apple).");
 #if defined(__clang__) || defined(__gcc__)
 #define NINLINE __attribute__((always_inline)) inline
 #define NNOINLINE __attribute__((noinline))
+#define N__attribute(x) __attribute(x)
 #elif defined(_MSC_VER)
 #define NINLINE __forceinline
 #define NNOINLINE __declspec(noinline)
+#define N__attribute(...)
 #else
 #define NINLINE static inline
-#define NNOINLINE
+#define NNOINLINE(...)
 #endif
 
 #define GIBIBYTE(x) (x##UL * 1024UL * 1024UL * 1024UL)

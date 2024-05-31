@@ -8,7 +8,7 @@ namespace Novo {
 
 Allocator temp_allocator_create(Temp_Allocator* ta)
 {
-    arena_create(&ta->arena);
+    arena_new(&ta->arena);
     return { temp_allocator_fn, ta, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 

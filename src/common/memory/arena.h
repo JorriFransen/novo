@@ -3,7 +3,14 @@
 #include "defines.h"
 #include "memory/allocator.h"
 
+#if NPLATFORM_LINUX
 #define NOVO_ARENA_MMAP_SIZE GIBIBYTE(64)
+#elif NPLATFORM_WINDOWS// NPLATFORM_LINUX
+#define NOVO_ARENA_MMAP_SIZE GIBIBYTE(2)
+#else // NPLATFORM_LINUX
+STATIC_ASSERT(false, "Unsupported platform");
+#endif // NPLATFORM_LINUX
+
 
 namespace Novo {
 
@@ -24,10 +31,10 @@ struct Arena
 
 NAPI Allocator arena_allocator_create(Arena* arena);
 
-NAPI void arena_create(Arena* arena);
+NAPI void arena_new(Arena* arena, s64 max_size = NOVO_ARENA_MMAP_SIZE);
 NAPI void arena_free(Arena* arena);
 
-__attribute((malloc, alloc_size(2), alloc_align(3)))
+N__attribute((malloc, alloc_size(2), alloc_align(3)))
 NAPI void* arena_alloc(Arena* arena, s64 size, s64 align);
 
 NAPI bool arena_grow(Arena* arena, s64 min_size);
