@@ -26,13 +26,13 @@ Allocator arena_allocator_create(Arena* arena)
     return { arena_allocator_fn, arena, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
-void arena_new(Arena* arena, s64 max_size/*=NOVO_ARENA_MMAP_SIZE*/)
+void arena_new(Arena* arena, s64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
 {
 #if NPLATFORM_LINUX
     s64 size = sysconf(_SC_PAGE_SIZE);
     assert(size != -1);
 
-    void* p = mmap(nullptr, max_size, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    void* p = mmap(nullptr, max_cap, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     assert(p != MAP_FAILED);
 
     int ok = mprotect(p, size, PROT_READ | PROT_WRITE);
@@ -41,6 +41,7 @@ void arena_new(Arena* arena, s64 max_size/*=NOVO_ARENA_MMAP_SIZE*/)
     arena->data = (u8*)p;
     arena->used = 0;
     arena->capacity = size;
+    arena->max_capacity = max_cap;
     arena->flags = ARENA_FLAG_GROW;
 #else
     STATIC_ASSERT(NPLATFORM_WINDOWS);
@@ -69,7 +70,6 @@ void arena_free(Arena* arena)
     }
 
 #if NPLATFORM_LINUX
-    assert(false); // Use madvise()
 
     int ok = munmap(arena->data, arena->max_capacity);
     assert(ok != -1);
@@ -117,7 +117,7 @@ bool arena_grow(Arena* arena, s64 min_size)
     s64 new_cap = arena->capacity * 2;
     while (new_cap < min_size) new_cap *= 2;
 
-    assert(new_cap <= NOVO_ARENA_MMAP_SIZE);
+    assert(new_cap <= NOVO_ARENA_MAX_CAP);
 
 #if NPLATFORM_LINUX
 

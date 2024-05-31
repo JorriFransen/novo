@@ -4,9 +4,9 @@
 #include "memory/allocator.h"
 
 #if NPLATFORM_LINUX
-#define NOVO_ARENA_MMAP_SIZE GIBIBYTE(64)
+#define NOVO_ARENA_MAX_CAP GIBIBYTE(64)
 #elif NPLATFORM_WINDOWS// NPLATFORM_LINUX
-#define NOVO_ARENA_MMAP_SIZE GIBIBYTE(2)
+#define NOVO_ARENA_MAX_CAP GIBIBYTE(2)
 #else // NPLATFORM_LINUX
 STATIC_ASSERT(false, "Unsupported platform");
 #endif // NPLATFORM_LINUX
@@ -26,12 +26,13 @@ struct Arena
     u8* data;
     s64 used;
     s64 capacity;
+    s64 max_capacity;
     Arena_Flags flags;
 };
 
 NAPI Allocator arena_allocator_create(Arena* arena);
 
-NAPI void arena_new(Arena* arena, s64 max_size = NOVO_ARENA_MMAP_SIZE);
+NAPI void arena_new(Arena* arena, s64 max_cap= NOVO_ARENA_MAX_CAP);
 NAPI void arena_free(Arena* arena);
 
 N__attribute((malloc, alloc_size(2), alloc_align(3)))
