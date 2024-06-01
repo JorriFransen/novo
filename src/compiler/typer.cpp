@@ -1218,6 +1218,10 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
             ts->resolved_type = pointer_type_get(inst, ts->base->resolved_type);
             break;
         }
+
+        case AST_Type_Spec_Kind::ARRAY: {
+            assert(false);
+        }
     }
 
     assert(ts->resolved_type);
@@ -1346,6 +1350,7 @@ bool valid_cast(Instance* inst, Type* from_type, Type* to_type, AST_Expression* 
             break;
         }
 
+        case Type_Kind::ARRAY: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
         case Type_Kind::ENUM: assert(false); break;

@@ -18,55 +18,15 @@
 
 #import "c"
 
-Day :: enum u8 {
-    Monday = 33,
-    monday = Monday,
-
-    tuesday = Tuesday;
-    Tuesday;
-
-    Wednesday = 4,
-    wednesday = Wednesday,
-
-    Thursday,
-    Friday,
-    Saturday,
-    Sunday,
-}
-
 main :: () -> s64 {
 
-    assert(Day.Monday == 33);
-    assert(Day.monday == 33);
-    assert(Day.Monday == Day.monday);
+    printf("Array test\n".data);
 
-    assert(Day.Tuesday == 34);
-    assert(Day.tuesday == 34);
-    assert(Day.Tuesday == Day.tuesday);
-
-    assert(Day.Wednesday == 4);
-    assert(Day.wednesday == 4);
-    assert(Day.Wednesday == Day.wednesday);
-
-    assert(Day.Thursday == 5);
-    assert(Day.Friday == 6);
-    assert(Day.Saturday == 7);
-    assert(Day.Sunday == 8);
-
-    cd : Day = Day.Monday;
-    nd := Day.Tuesday;
-    ld : Day = .Sunday;
-
-    assert(cd == Day.Monday);
-    assert(cd == 33);
-
-    assert(nd == Day.Tuesday);
-    assert(nd == 34);
-
-    assert(ld == Day.Sunday);
-    assert(ld == 8);
-
-    printf("HI\n".data);
+    array_test_1();
 
     return 0;
+}
+
+array_test_1 :: () {
+    //  a : [2]int;
 }

@@ -471,6 +471,14 @@ AST_Type_Spec* ast_pointer_type_spec(Instance* inst, AST_Type_Spec *base)
     return result;
 }
 
+AST_Type_Spec* ast_array_type_spec(Instance* inst, AST_Expression* length_expr, AST_Type_Spec* element_ts)
+{
+    AST_Type_Spec* result = ast_type_spec(inst, AST_Type_Spec_Kind::ARRAY);
+    result->array.length = length_expr;
+    result->array.element_ts = element_ts;
+    return result;
+}
+
 AST_Identifier* ast_identifier(Instance* inst, Atom atom)
 {
     auto result = allocate<AST_Identifier>(&inst->ast_allocator);

@@ -56,6 +56,20 @@ Type* pointer_type_new(Instance* inst, Type* base)
     return result;
 }
 
+Type* array_type_new(Instance* inst, u64 length, Type* element_type)
+{
+    assert(length);
+    u64 bit_size = element_type->bit_size * length;
+    Type* result = type_new(inst, Type_Kind::ARRAY, TOK_FLAG_NONE, bit_size, element_type->alignment);
+
+    result->array.length = length;
+    result->array.element_type = element_type;
+
+    darray_append(&inst->array_types, result);
+
+    return result;
+}
+
 Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type, Type_Flags flags)
 {
     auto result = type_new(inst, Type_Kind::FUNCTION, flags, inst->pointer_byte_size * 8, inst->pointer_byte_size);
@@ -123,6 +137,21 @@ Type* pointer_type_get(Instance *inst, Type* base)
     return pointer_type_new(inst, base);
 }
 
+Type* array_type_get(Instance* inst, u64 length, Type* element_type)
+{
+    for (s64 i = 0; i < inst->array_types.count; i++) {
+        Type* atype = inst->array_types[i];
+
+        if (atype->flags != TOK_FLAG_NONE) continue;
+
+        if (atype->array.length == length && atype->array.element_type == element_type) {
+            return atype;
+        }
+    }
+
+    return array_type_new(inst, length, element_type);
+}
+
 Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type, Type_Flags flags)
 {
     for (s64 i = 0; i < inst->function_types.count; i++) {
@@ -169,6 +198,9 @@ bool is_pointer_or_parent_of_pointer(Type* type)
             return true;
         }
 
+        case Type_Kind::ARRAY: {
+            return is_pointer_or_parent_of_pointer(type->array.element_type);
+        }
 
         case Type_Kind::STRUCT: {
             bool result = false;
@@ -242,6 +274,12 @@ void type_to_string(Instance* instance, String_Builder* sb, Type* type)
                 string_builder_append(sb, "*");
                 type_to_string(instance, sb, type->pointer.base);
             }
+            break;
+        }
+
+        case Type_Kind::ARRAY: {
+            string_builder_append(sb, "[%llu]", type->array.length);
+            type_to_string(instance, sb, type->array.element_type);
             break;
         }
 

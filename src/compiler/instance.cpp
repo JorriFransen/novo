@@ -66,6 +66,7 @@ void instance_init(Instance* inst, Options options)
 
     darray_init(&inst->ast_allocator, &inst->function_types);
     darray_init(&inst->ast_allocator, &inst->struct_types);
+    darray_init(&inst->ast_allocator, &inst->array_types);
     darray_init(&inst->ast_allocator, &inst->enum_types);
 
     inst->fatal_error = false;
@@ -572,11 +573,10 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         log_debug("Bytecode vm returned: %llu", inst->entry_run_result.return_value);
     }
 
-    if (builtin_module) {
+    if (builtin_module || inst->options.no_backend)
         return true;
-    } else {
-        return backend_emit(inst);
-    }
+
+    return backend_emit(inst);
 }
 
 u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)
