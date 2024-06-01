@@ -71,6 +71,8 @@ bool fs_read_entire_file(Allocator* allocator, const String_Ref path, String* ou
     out_string->data[size] = '\0';
     out_string->length = size;
 
+    fs_close(&file_handle);
+
     return true;
 }
 
