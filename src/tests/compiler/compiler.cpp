@@ -23,6 +23,8 @@ struct Test_Case
     bool assert_fail = false;
 };
 
+static String test_path_prefix;
+
 static Test_Case test_cases[] = {
     { .file_path = "tests/001_assert_false.no", .assert_fail = true },
     { .file_path = "tests/002_return.no" },
@@ -79,6 +81,16 @@ static bool run_test_case(Test_Case* tc, Options options)
     String filename = fs_filename_strip_extension(ta, tc->file_path);
     options.output = string_format(ta, "build" NPLATFORM_PATH_SEPARATOR "%.*s" NPLATFORM_DEFAULT_EXE_EXTENSION, (int)filename.length, filename.data).data;
 
+    String_Ref test_path = tc->file_path;
+
+    if (!fs_is_file(test_path)) {
+        assert(test_path_prefix.length > 0 && "Expected test_path_prefix to be set");
+        test_path = string_append(ta, test_path_prefix, tc->file_path);
+        assert(fs_is_file(test_path));
+    }
+
+    options.input_file = test_path.data;
+
     Instance inst;
     instance_init(&inst, options);
 
@@ -94,13 +106,13 @@ static bool run_test_case(Test_Case* tc, Options options)
     bool result = false;
 
     if (tc->assert_fail && !run_result.assert_fail) {
-        fprintf(stderr, "Expected assert failure in test '%s', (returned: %llu)\n", tc->file_path, run_result.return_value);
+        fprintf(stderr, "Expected assert failure in test '%s', (returned: %llu)\n", test_path.data, run_result.return_value);
 
     } else if (!tc->assert_fail && run_result.assert_fail) {
-        fprintf(stderr, "Unexpected assert failure in test '%s', (returned: %llu)\n", tc->file_path, run_result.return_value);
+        fprintf(stderr, "Unexpected assert failure in test '%s', (returned: %llu)\n", test_path.data, run_result.return_value);
 
     } else if (!tc->assert_fail && tc->return_code != run_result.return_value) {
-        fprintf(stderr, "Mismatching return code for test file '%s', got: %llu, expected: %llu\n", tc->file_path, run_result.return_value, tc->return_code);
+        fprintf(stderr, "Mismatching return code for test file '%s', got: %llu, expected: %llu\n", test_path.data, run_result.return_value, tc->return_code);
 
     } else {
         result = true;
@@ -118,6 +130,15 @@ int main(int argc, char* argv[]) {
     Options options;
 
     String exe_path = platform_exe_path(ca, argv[0]);
+
+    if (argc > 1) {
+        test_path_prefix = string_copy(ca, argv[1]);
+        assert(fs_is_directory(test_path_prefix));
+    }
+    else {
+        test_path_prefix = {};
+    }
+
     String exe_dir = fs_dirname(ca, exe_path);
     String build_dir_ = string_format(ca, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
     assert(fs_is_directory(build_dir_.data));

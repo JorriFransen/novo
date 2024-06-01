@@ -17,7 +17,6 @@ int main(int argc, char* argv[])
     Arena arena;
     Allocator arena_allocator = arena_allocator_create(&arena);
 
-
     Allocator* allocators[] = {
         c_allocator(),
         &arena_allocator,
@@ -30,6 +29,8 @@ int main(int argc, char* argv[])
             ok = false;
         }
     }
+
+    arena_free(&arena);
 
     return ok ? 0 : 1;
 }

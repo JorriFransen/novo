@@ -3,14 +3,7 @@
 #include "defines.h"
 #include "memory/allocator.h"
 
-#if NPLATFORM_LINUX
 #define NOVO_ARENA_MAX_CAP GIBIBYTE(64)
-#elif NPLATFORM_WINDOWS// NPLATFORM_LINUX
-#define NOVO_ARENA_MAX_CAP GIBIBYTE(64)
-#else // NPLATFORM_LINUX
-STATIC_ASSERT(false, "Unsupported platform");
-#endif // NPLATFORM_LINUX
-
 
 namespace Novo {
 
