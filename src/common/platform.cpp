@@ -220,6 +220,9 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
             } while (read_count > 0);
         }
 
+        close(PARENT_STDOUT_FD);
+        close(PARENT_STDERR_FD);
+
         Command_Result result = {};
         result.exit_code = WEXITSTATUS(exit_status);
         result.success = result.exit_code == 0;
