@@ -80,6 +80,8 @@ void ssa_program_free(SSA_Program* program)
     darray_free(&program->functions);
     darray_free(&program->constant_references);
     darray_free(&program->globals);
+
+    hash_table_free(&program->instruction_origin_positions);
 }
 
 void ssa_function_init(Instance* inst, SSA_Program* program, SSA_Function* func, AST_Declaration *decl)
