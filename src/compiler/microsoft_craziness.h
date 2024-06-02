@@ -250,7 +250,7 @@ extern "C"
 #define concat2(a, b) concat(a, b, NULL, NULL)
 #define concat3(a, b, c) concat(a, b, c, NULL)
 #define concat4(a, b, c, d) concat(a, b, c, d)
-    wchar_t* concat(wchar_t* a, wchar_t* b, wchar_t* c, wchar_t* d) {
+    wchar_t* concat(const wchar_t* a, const wchar_t* b, const wchar_t* c, const wchar_t* d) {
         // Concatenate up to 4 wide strings together. Allocated with malloc.
         // If you don't like that, use a programming language that actually
         // helps you with using custom allocators. Or just edit the code.
@@ -308,7 +308,7 @@ extern "C"
     }
 
 
-    wchar_t* find_windows_kit_root_with_key(HKEY key, wchar_t* version) {
+    wchar_t* find_windows_kit_root_with_key(HKEY key, const wchar_t* version) {
         // Given a key to an already opened registry entry,
         // get the value stored under the 'version' subkey.
         // If that's not the right terminology, hey, I never do registry stuff.
@@ -562,11 +562,11 @@ extern "C"
         if (rc != S_OK)  return;
 
         // Hardcoded search for 4 prior Visual Studio versions. Is there something better to do here?
-        wchar_t* versions[] = { L"14.0", L"12.0", L"11.0", L"10.0" };
+        const wchar_t* versions[] = { L"14.0", L"12.0", L"11.0", L"10.0" };
         const int NUM_VERSIONS = sizeof(versions) / sizeof(versions[0]);
 
         for (int i = 0; i < NUM_VERSIONS; i++) {
-            wchar_t* v = versions[i];
+            const wchar_t* v = versions[i];
 
             DWORD dw_type;
             DWORD cb_data;
