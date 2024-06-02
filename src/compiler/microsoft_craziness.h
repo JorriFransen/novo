@@ -152,6 +152,7 @@ extern "C"
         free(result->windows_sdk_um_library_path);
         free(result->windows_sdk_ucrt_library_path);
         free(result->vs_exe_path);
+        free(result->vs_tools_path);
         free(result->vs_library_path);
     }
 
@@ -511,6 +512,7 @@ extern "C"
 
             if (os_file_exists(library_file)) {
                 wchar_t* link_exe_path = concat4(bstr_inst_path, L"\\VC\\Tools\\MSVC\\", version, L"\\bin\\Hostx64\\x64");
+                free(library_file);
                 free(version);
 
                 result->vs_tools_path = concat2(bstr_inst_path, L"\\VC\\Tools");
@@ -520,6 +522,7 @@ extern "C"
                 break;
             }
 
+            free(library_file);
             free(version);
 
             /*
