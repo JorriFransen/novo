@@ -22,17 +22,4 @@ int main(int argc, char* argv[])
 
     instance_free(&instance);
     return 0;
-
-    // String_Ref command[] = { "test.bat" };
-    // Command_Result run_result = platform_run_command(command, temp_allocator());
-    //
-    // if (run_result.result_string.length) {
-    //     printf("stdout: '%.*s'", (int)run_result.result_string.length, run_result.result_string.data);
-    // }
-    //
-    // if (run_result.error_string.length) {
-    //     printf("\nstderr: '%.*s'", (int)run_result.error_string.length, run_result.error_string.data);
-    // }
-
-    return 0;
 }
