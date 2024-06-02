@@ -1,5 +1,5 @@
 
-project('novo', 'cpp',
+project('novo', ['c', 'cpp'],
         version: 'dev',
         default_options: ['cpp_std=c++20', 'werror=true', 'unity=off', 'unity_size=8' ])
 
@@ -70,7 +70,7 @@ compiler_source = [
   'src/compiler/typer.cpp', 'src/compiler/typer.h',
   'src/compiler/vm.cpp', 'src/compiler/vm.h',
 
-  'src/compiler/microsoft_craziness.cpp', 'src/compiler/microsoft_craziness.h'
+  'src/compiler/microsoft_craziness.c', 'src/compiler/microsoft_craziness.h'
 ]
 
 compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT', link_args: link_args, dependencies: [dyncall_dep])

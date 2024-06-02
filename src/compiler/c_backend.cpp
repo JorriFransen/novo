@@ -20,6 +20,8 @@
 
 namespace Novo {
 
+typedef MC_Find_Result Windows_SDK_Info;
+
 struct C_Backend {
 
     Instance* inst;
