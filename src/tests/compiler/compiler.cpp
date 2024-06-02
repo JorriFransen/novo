@@ -154,24 +154,28 @@ int main(int argc, char* argv[]) {
 
     auto mark = temp_allocator_get_mark();
 
-    for (s64 i = 0; i < test_count; i++) {
+    s64 max_it = 1;
+    for (s64 it = 0; it < max_it; it++) {
+        for (s64 i = 0; i < test_count; i++) {
 
-        auto tc = &test_cases[i];
+            auto tc = &test_cases[i];
 
-        printf("Running: '%s'...", tc->file_path);
-        fflush(stdout);
+            printf("Running: '%s'...", tc->file_path);
+            fflush(stdout);
 
-        bool result = run_test_case(tc, options);
+            bool result = run_test_case(tc, options);
 
-        printf("%s\n", result ? "OK" : "FAIL");
-        fflush(stdout);
+            printf("%s\n", result ? "OK" : "FAIL");
+            fflush(stdout);
 
-        if (result) test_success_count++;
+            if (result) test_success_count++;
 
-        temp_allocator_reset(mark);
+            temp_allocator_reset(mark);
+        }
+
+        printf("\n%lld/%lld tests successful\n", test_success_count, test_count);
+
     }
 
-    printf("\n%lld/%lld tests successful\n", test_success_count, test_count);
-
-    return test_success_count == test_count ? 0 : 1;
+    return test_success_count == test_count * max_it ? 0 : 1;
 }
