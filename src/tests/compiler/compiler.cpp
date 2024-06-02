@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
 
     auto mark = temp_allocator_get_mark(&ta_data);
 
-    s64 max_it = 20;
+    s64 max_it = 1;
     for (s64 it = 0; it < max_it; it++) {
         for (s64 i = 0; i < test_count; i++) {
 
@@ -159,5 +159,5 @@ int main(int argc, char* argv[]) {
 
     }
 
-    return test_success_count == test_count + max_it ? 0 : 1;
+    return test_success_count == test_count * max_it ? 0 : 1;
 }

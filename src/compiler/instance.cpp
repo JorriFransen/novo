@@ -44,8 +44,8 @@ void instance_init(Instance* inst, Options options)
 
     auto default_alloc = inst->default_allocator;
 
-    inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data, default_alloc, MEBIBYTE(1));
-    inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, KIBIBYTE(64));
+    inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data, default_alloc, MEBIBYTE(24));
+    inst->ast_allocator = linear_allocator_create(&inst->ast_allocator_data, default_alloc, MEBIBYTE(24));
     inst->scope_allocator = inst->ast_allocator;
 
     darray_init(default_alloc, &inst->parse_tasks);

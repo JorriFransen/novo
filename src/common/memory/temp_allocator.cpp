@@ -65,7 +65,7 @@ Allocator g_temp_allocator;
 Allocator* temp_allocator()
 {
     if (!g_temp_allocator_initialized) {
-        g_temp_allocator = temp_allocator_create(&g_temp_allocator_data, c_allocator(), MEBIBYTE(1));
+        g_temp_allocator = temp_allocator_create(&g_temp_allocator_data, c_allocator(), MEBIBYTE(24));
         g_temp_allocator_initialized = true;
     }
 
