@@ -214,7 +214,15 @@ void instance_free(Instance* inst)
     darray_free(&inst->function_types);
     darray_free(&inst->struct_types);
 
+    free(inst->default_allocator, inst->compiler_exe_dir.data);
+    free(inst->default_allocator, inst->support_lib_s_path.data);
+    free(inst->default_allocator, inst->support_lib_d_path.data);
+    free(inst->default_allocator, inst->module_dir.data);
+    free(inst->default_allocator, inst->builtin_module_path.data);
+
     ssa_program_free(inst->ssa_program);
+    free(c_allocator(), inst->ssa_program);
+
     vm_free(&inst->vm);
 
     temp_allocator_free(&inst->temp_allocator_data);
@@ -305,6 +313,9 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             if (parsed_file) {
                 add_resolve_tasks(inst, parsed_file, inst->global_scope, nullptr);
             } else {
+
+                free(c_allocator(), task.content.data);
+
                 assert(task.insert.scope);
                 add_resolve_tasks(inst, nodes, task.insert.scope, task.insert.fn_decl, task.insert.bc_deps);
                 task.insert.stmt->insert.nodes_to_insert = nodes;
