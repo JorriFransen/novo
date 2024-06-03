@@ -16,11 +16,10 @@
 
 #if NPLATFORM_WINDOWS
 #include "microsoft_craziness.h"
+typedef MC_Find_Result Windows_SDK_Info;
 #endif // NPLATFORM_WINDOWS
 
 namespace Novo {
-
-typedef MC_Find_Result Windows_SDK_Info;
 
 struct C_Backend {
 

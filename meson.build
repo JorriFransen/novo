@@ -36,6 +36,7 @@ common_source = [
   'src/common/memory/temp_allocator.cpp', 'src/common/memory/temp_allocator.h',
 ]
 
+
 common_include_dirs = ['src/common/']
 common_includes = include_directories(common_include_dirs)
 common_lib = library('novo_common', sources: common_source, include_directories: common_includes, cpp_args: '-DNEXPORT', link_args: link_args)
@@ -69,9 +70,14 @@ compiler_source = [
   'src/compiler/type.cpp', 'src/compiler/type.h',
   'src/compiler/typer.cpp', 'src/compiler/typer.h',
   'src/compiler/vm.cpp', 'src/compiler/vm.h',
-
-  'src/compiler/microsoft_craziness.c', 'src/compiler/microsoft_craziness.h'
 ]
+
+if host_machine.system() == 'windows'
+    compiler_source = [ compiler_source, 
+      'src/compiler/microsoft_craziness.c', 'src/compiler/microsoft_craziness.h'
+    ]
+endif
+
 
 compiler_lib = library('novo_compiler', sources: compiler_source, include_directories: compiler_includes, link_with: common_lib, cpp_args: '-DNEXPORT', link_args: link_args, dependencies: [dyncall_dep])
 
