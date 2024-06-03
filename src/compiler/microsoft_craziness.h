@@ -481,7 +481,6 @@ extern "C"
             if (hr != S_OK)  continue;
 
             wchar_t* tools_filename = concat2(bstr_inst_path, L"\\VC\\Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt");
-            SysFreeString(bstr_inst_path);
 
             FILE* f;
             errno_t open_result = _wfopen_s(&f, tools_filename, L"rt");
@@ -512,16 +511,20 @@ extern "C"
 
             if (os_file_exists(library_file)) {
                 wchar_t* link_exe_path = concat4(bstr_inst_path, L"\\VC\\Tools\\MSVC\\", version, L"\\bin\\Hostx64\\x64");
-                free(library_file);
-                free(version);
 
                 result->vs_tools_path = concat2(bstr_inst_path, L"\\VC\\Tools");
                 result->vs_exe_path = link_exe_path;
                 result->vs_library_path = library_path;
                 found_visual_studio_2017 = true;
+
+                free(library_file);
+                free(version);
+                SysFreeString(bstr_inst_path);
+
                 break;
             }
 
+            SysFreeString(bstr_inst_path);
             free(library_file);
             free(version);
 
