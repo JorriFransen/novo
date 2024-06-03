@@ -3,7 +3,7 @@
 #include "defines.h"
 #include "memory/allocator.h"
 
-#define NOVO_ARENA_MAX_CAP GIBIBYTE(64)
+#define NOVO_ARENA_MAX_CAP GIBIBYTE(4)
 
 namespace Novo {
 

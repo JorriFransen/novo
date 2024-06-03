@@ -470,7 +470,8 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
     WaitForMultipleObjects(2, read_threads, TRUE, INFINITE);
     CloseHandle(stdout_read_handle);
     CloseHandle(stderr_read_handle);
-
+    CloseHandle(read_threads[0]);
+    CloseHandle(read_threads[1]);
 
     DWORD exit_code = GetExitCodeProcess(process_info.hProcess, &exit_code);
     result.exit_code = exit_code;

@@ -40,6 +40,23 @@ bool c_backend_emit(Instance* inst)
 
 #if NPLATFORM_WINDOWS
     cb_data.wsdk_info = find_visual_studio_and_windows_sdk();
+
+    // cb_data.wsdk_info.windows_sdk_version = 10;
+    // cb_data.wsdk_info.windows_sdk_root =  (wchar_t*)L"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0";
+    // cb_data.wsdk_info.windows_sdk_um_library_path =  (wchar_t*)L"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64";
+    // cb_data.wsdk_info.windows_sdk_ucrt_library_path =  (wchar_t*)L"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64";
+    // cb_data.wsdk_info.vs_exe_path =  (wchar_t*)L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\bin\\Hostx64\\x64";
+    // cb_data.wsdk_info.vs_tools_path =  (wchar_t*)L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools";
+    // cb_data.wsdk_info.vs_library_path =  (wchar_t*)L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\lib\\x64";
+
+    // log_warn("windows_sdk_version: %i", cb_data.wsdk_info.windows_sdk_version);
+    // log_warn("windows_sdk_root: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.windows_sdk_root).data);
+    // log_warn("windows_sdk_um_library_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.windows_sdk_um_library_path).data);
+    // log_warn("windows_sdk_ucrt_library_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.windows_sdk_ucrt_library_path).data);
+    // log_warn("vs_exe_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.vs_exe_path).data);
+    // log_warn("vs_tools_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.vs_tools_path).data);
+    // log_warn("vs_library_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.vs_library_path).data);
+
     assert(cb_data.wsdk_info.windows_sdk_version);
 
     String_Ref tools_path = wide_string_to_regular(temp_allocator(), cb_data.wsdk_info.vs_tools_path);
