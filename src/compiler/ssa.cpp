@@ -2083,9 +2083,9 @@ Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref n
 
     } while (!unique);
 
+    Atom result = atom_get(name);
     temp_allocator_reset(&inst->temp_allocator_data, mark);
-
-    return atom_get(name);
+    return result;
 }
 
 String ssa_to_string(Instance* inst, Allocator* allocator, SSA_Program* program)

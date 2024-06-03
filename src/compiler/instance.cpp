@@ -337,13 +337,12 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             if (success) {
                 progress = true;
 
-                darray_remove_unordered(&inst->resolve_tasks, i);
-                i--;
-
                 add_type_task(inst, task.node, infer_node(), task.scope, task.fn_decl, task.bytecode_deps);
 
-                stack_free(&task.loop_control_stack);
+                stack_free(&task_ptr->loop_control_stack);
 
+                darray_remove_unordered(&inst->resolve_tasks, i);
+                i--;
             }
         }
 

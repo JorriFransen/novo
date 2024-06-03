@@ -32,6 +32,7 @@ void stack_init(Allocator* allocator, Stack<Element_Type>* stack, s64 initial_ca
         stack->sp = 0;
     } else {
         stack->buffer = nullptr;
+        stack->sp = -1;
     }
 
     stack->capacity = initial_cap;
