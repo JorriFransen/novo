@@ -197,11 +197,13 @@ R"POSTAMBLE(int main(int argc, char** argv) {
     string_builder_append(&sb, "/* End postamble */\n");
 
     String c_str = string_builder_to_string(&sb);
+    string_builder_free(&sb);
 
     assert(inst->options.output);
 
     String c_filename = string_format(&inst->temp_allocator, "%s_cback.c", inst->options.output);
     fs_write_entire_file(c_filename, c_str);
+    free(inst->default_allocator, c_str.data);
 
 #if NPLATFORM_WINDOWS
     String_Ref link_flags = "-lmsvcrtd -Wl,-nodefaultlib:libcmt,-nodefaultlib:libcmtd,-nodefaultlib:libmsvcrt";
