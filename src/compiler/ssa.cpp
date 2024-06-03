@@ -77,6 +77,9 @@ void ssa_program_free(SSA_Program* program)
 
     }
 
+    darray_free(&program->constant_memory);
+    darray_free(&program->constants);
+    darray_free(&program->constant_patch_offsets);
     darray_free(&program->functions);
     darray_free(&program->constant_references);
     darray_free(&program->globals);

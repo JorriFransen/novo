@@ -89,6 +89,7 @@ void vm_free(VM* vm)
 
     if (vm->constant_memory) free(vm->allocator, vm->constant_memory);
     if (vm->global_memory) free(vm->allocator, vm->global_memory);
+    
     ffi_free(&vm->ffi);
 }
 
