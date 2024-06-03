@@ -210,6 +210,12 @@ void instance_free(Instance* inst)
     darray_free(&inst->ssa_tasks);
     darray_free(&inst->run_tasks);
 
+    for (s64 i = 0; i < inst->imported_files.count; i++) {
+        if (inst->imported_files[i].newline_offsets.data) {
+            darray_free(&inst->imported_files[i].newline_offsets);
+        }
+    }
+
     darray_free(&inst->imported_files);
     darray_free(&inst->function_types);
     darray_free(&inst->struct_types);
