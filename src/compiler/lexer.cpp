@@ -13,6 +13,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
+#include <memory/arena.h>
 
 namespace Novo {
 
@@ -240,16 +241,22 @@ case (first_char): {                                                \
 
     if (length) {
 
+            Temp_Arena tarena = temp_arena(nullptr);
+            Allocator ta = arena_allocator_create(tarena.arena);
+
             if (lex->token.kind == TOK_STRING) {
                 const char* err_char = nullptr;
-                String str_lit = convert_escape_characters_to_special_characters(&lex->instance->temp_allocator, String_Ref(start, length), &err_char);
+                String str_lit = convert_escape_characters_to_special_characters(&ta, String_Ref(start, length), &err_char);
                 if (err_char) {
                     instance_fatal_error(lex->instance, source_pos(lex), "Invalid escape sequence in string literal: '\\%c'", *err_char);
                     lex->token.kind = TOK_ERROR;
+                    temp_arena_release(tarena);
                     return false;
                 }
 
                 lex->token.atom = atom_get(str_lit);
+
+                temp_arena_release(tarena);
 
             } else {
 

@@ -1,8 +1,9 @@
 #include "typer.h"
 
 #include <containers/darray.h>
+#include <defines.h>
 #include <memory/allocator.h>
-#include <memory/temp_allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 
 #include "ast.h"
@@ -57,6 +58,8 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
         assert(decl->resolved_type);
         return true;
     }
+
+    Temp_Arena tarena = temp_arena(nullptr);
 
     switch (decl->kind) {
         case AST_Declaration_Kind::INVALID: assert(false); break;
@@ -143,7 +146,11 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
             }
 
-            auto struct_members = temp_array_create<Type_Struct_Member>(&inst->temp_allocator, fields.count);
+
+            Temp_Arena tar = temp_arena_create(tarena.arena);
+            Allocator ta = arena_allocator_create(tar.arena);
+
+            auto struct_members = darray_create<Type_Struct_Member>(&ta, fields.count);
 
             for (s64 i = 0; i < fields.count; i++) {
                 auto field = fields[i];
@@ -157,7 +164,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
 
             decl->resolved_type = struct_type_new(inst, decl->ident->atom, struct_members, struct_scope);
 
-            temp_array_destroy(&struct_members);
+            temp_arena_release(tar);
             break;
         }
 
@@ -220,11 +227,14 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
             }
 
-            auto enum_members = temp_array_create<Type_Enum_Member>(&inst->temp_allocator, members.count);
-            enum_members.array.count = members.count;
+            Temp_Arena tar= temp_arena_create(tarena.arena);
+            Allocator ta = arena_allocator_create(tar.arena);
 
-            auto member_resolved = temp_array_create<bool>(&inst->temp_allocator, members.count);
-            member_resolved.array.count = members.count;
+            auto enum_members = darray_create<Type_Enum_Member>(&ta, members.count);
+            enum_members.count = members.count;
+
+            auto member_resolved = darray_create<bool>(&ta, members.count);
+            member_resolved.count = members.count;
 
             bool done = false;
             while (!done) {
@@ -280,8 +290,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
 
             decl->resolved_type = enum_type_new(inst, decl->ident->atom, strict_type, enum_members, enum_scope);
 
-            temp_array_destroy(&enum_members);
-            temp_array_destroy(&member_resolved);
+            temp_arena_release(tar);
             break;
         }
 
@@ -298,8 +307,10 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                     return false;
                 }
 
-                auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-                auto param_types = temp_array_create<Type*>(&inst->temp_allocator, decl->function.params.count);
+                Temp_Arena tar = temp_arena_create(tarena.arena);
+                Allocator ta = arena_allocator_create(tar.arena);
+
+                auto param_types = darray_create<Type*>(&ta, decl->function.params.count);
 
                 for (s64 i = 0; i < decl->function.params.count; i++) {
                     darray_append(&param_types, decl->function.params[i]->resolved_type);
@@ -313,7 +324,6 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
 
                 decl->resolved_type = function_type_get(inst, param_types, return_type, flags);
-                temp_allocator_reset(&inst->temp_allocator_data, mark);
             }
 
             // Check the body, we might be able to type this function already, but might not be ready to move on to ssa...
@@ -328,6 +338,8 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
 
         case AST_Declaration_Kind::BUILTIN_TYPE: assert(false); break;
     }
+
+    temp_arena_release(tarena);
 
     assert(decl->resolved_type);
     decl->flags |= AST_DECL_FLAG_TYPED;

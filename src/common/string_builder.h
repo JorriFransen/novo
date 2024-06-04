@@ -15,7 +15,6 @@ struct String_Builder_Block;
 struct String_Builder
 {
     Allocator* allocator;
-    Allocator temp_allocator;
 
     s64 next_block_size;
 

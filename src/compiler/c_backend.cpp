@@ -10,6 +10,8 @@
 #include <cassert>
 #include <filesystem.h>
 #include <logger.h>
+#include <memory/allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 #include <platform.h>
 #include <string_builder.h>
@@ -217,8 +219,12 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     assert(inst->options.output);
 
-    String c_filename = string_format(&inst->temp_allocator, "%s_cback.c", inst->options.output);
+    Temp_Arena tarena = temp_arena((Arena*)&sb.allocator->user_data);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    String c_filename = string_format(&ta, "%s_cback.c", inst->options.output);
     fs_write_entire_file(c_filename, c_str);
+
     free(inst->default_allocator, c_str.data);
 
 #if NPLATFORM_WINDOWS
@@ -234,7 +240,9 @@ R"POSTAMBLE(int main(int argc, char** argv) {
                           link_flags,
                         };
 
-    Command_Result c_res = platform_run_command(commands, &inst->temp_allocator);
+    Command_Result c_res = platform_run_command(commands, &ta); // ta is debug allocator here
+
+    temp_arena_release(tarena);
 
     if (!c_res.success) {
         log_error("C backend errors:\n%s", c_res.error_string.data);
@@ -318,12 +326,8 @@ void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *ty
 
 void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name)
 {
-    auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
-
     String result = c_backend_emit_c_type(cb, type, name);
     string_builder_append(sb, "%.*s", (int)result.length, result.data);
-
-    temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
 }
 
 String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
@@ -334,39 +338,47 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
         name = "novo_main";
     }
 
-    Allocator* ta = &cb->inst->temp_allocator;
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    String result = {};
 
     switch (type->kind) {
         case Type_Kind::INVALID: assert(false); break;
 
         case Type_Kind::VOID: {
-            return string_format(ta, "void %.*s", (int)name.length, name.data);
+            result = string_format(&ta, "void %.*s", (int)name.length, name.data);
+            break;
         }
 
         case Type_Kind::INTEGER: {
-            return string_format(ta,
-                                 name.length ? "%c%ld %.*s" : "%c%ld%.*s",
-                                 type->integer.sign ? 's' : 'u',
-                                 type->bit_size,
-                                 (int)name.length, name.data);
+            result = string_format(&ta,
+                                   name.length ? "%c%ld %.*s" : "%c%ld%.*s",
+                                   type->integer.sign ? 's' : 'u',
+                                   type->bit_size,
+                                   (int)name.length, name.data);
+            break;
         }
 
         case Type_Kind::BOOLEAN: {
-            return string_format(ta, "bool %.*s", (int)name.length, name.data);
+            result = string_format(&ta, "bool %.*s", (int)name.length, name.data);
+            break;
         }
 
         case Type_Kind::POINTER: {
             if (type == cb->inst->builtin_type_cstring) {
-                return string_format(ta, "const char (*%.*s)", (int)name.length, name.data);
+                result = string_format(&ta, "const char (*%.*s)", (int)name.length, name.data);
             } else {
-                if (name.length) return c_backend_emit_c_type(cb, type->pointer.base, string_format(ta, "(*%.*s)", (int)name.length, name.data));
-                else             return c_backend_emit_c_type(cb, type->pointer.base, "*");
+                if (name.length) result = c_backend_emit_c_type(cb, type->pointer.base, string_format(&ta, "(*%.*s)", (int)name.length, name.data));
+                else             result = c_backend_emit_c_type(cb, type->pointer.base, "*");
             }
+
+            break;
         }
 
         case Type_Kind::FUNCTION: {
             String_Builder sb;
-            string_builder_init(&sb, ta);
+            string_builder_init(&sb, &ta);
 
             string_builder_append(&sb, "(%s%.*s)(", (type->flags & TYPE_FLAG_FOREIGN_VARARG) ? "*" : "",
                                   (int)name.length, name.data);
@@ -386,12 +398,13 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
 
             String result = string_builder_to_string(&sb);
 
-            return c_backend_emit_c_type(cb, type->function.return_type, result);
+            result = c_backend_emit_c_type(cb, type->function.return_type, result);
+            break;
         }
 
         case Type_Kind::STRUCT: {
             String_Builder sb;
-            string_builder_init(&sb, ta);
+            string_builder_init(&sb, &ta);
 
             String struct_name = atom_string(type->structure.name);
 
@@ -399,12 +412,13 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
 
             if (name.length) string_builder_append(&sb, " %.*s", (int)name.length, name.data);
 
-            return string_builder_to_string(&sb);
+            result = string_builder_to_string(&sb);
+            break;
         }
 
         case Type_Kind::ENUM: {
             String_Builder sb;
-            string_builder_init(&sb, ta);
+            string_builder_init(&sb, &ta);
 
             String enum_name = atom_string(type->enumeration.name);
 
@@ -412,22 +426,22 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
 
             if (name.length) string_builder_append(&sb, " %.*s", (int)name.length, name.data);
 
-            return string_builder_to_string(&sb);
+            result = string_builder_to_string(&sb);
             break;
         }
     }
 
-    assert(false);
-    return {};
+    assert(result.length);
+    return result;
 }
 
 void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Function* func)
 {
-    auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
-    auto ta = &cb->inst->temp_allocator;
+    Temp_Arena tarena = temp_arena((Arena*)sb->allocator->user_data);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     String_Builder local_sb;
-    string_builder_init(&local_sb, ta);
+    string_builder_init(&local_sb, &ta);
 
     String_Ref name = atom_string(func->name);
     if (string_equal(name, "main")) {
@@ -477,7 +491,7 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
 
     c_backend_emit_c_type(cb, sb, c_ret_type, result);
 
-    temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
+    temp_arena_release(tarena);
 }
 
 template <typename T>
@@ -492,8 +506,8 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
     assert(fn_index < cb->inst->ssa_program->functions.count);
     SSA_Function* func = &cb->inst->ssa_program->functions[fn_index];
 
-    auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
-    auto ta = &cb->inst->temp_allocator;
+    Temp_Arena tarena = temp_arena((Arena*)sb->allocator->user_data);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     string_builder_append(sb, "{\n");
 
@@ -540,7 +554,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
         }
 
         if (bi > 0) {
-            String_Ref block_name = c_backend_block_name(cb, func, bi);
+            String_Ref block_name = c_backend_block_name(cb, func, bi, tarena.arena);
             string_builder_append(sb, "%.*s:\n", (int)block_name.length, block_name.data);
         }
 
@@ -956,8 +970,8 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 true_block = FETCH32();
                     u32 false_block = FETCH32();
 
-                    String_Ref tname = c_backend_block_name(cb, func, true_block);
-                    String_Ref fname = c_backend_block_name(cb, func, false_block);
+                    String_Ref tname = c_backend_block_name(cb, func, true_block, tarena.arena);
+                    String_Ref fname = c_backend_block_name(cb, func, false_block, tarena.arena);
 
                     string_builder_append(sb, "    if (r%u) goto %.*s;\n", cond_reg, (int)tname.length, tname.data);
                     string_builder_append(sb, "    else goto %.*s;", (int)fname.length, fname.data);
@@ -968,7 +982,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                 case SSA_OP_JMP: {
                     u32 target_block = FETCH32();
 
-                    String_Ref tname = c_backend_block_name(cb, func, target_block);
+                    String_Ref tname = c_backend_block_name(cb, func, target_block, tarena.arena);
 
                     string_builder_append(sb, "    goto %.*s;", (int)tname.length, tname.data);
                     break;
@@ -987,7 +1001,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     String file_name = atom_string(file.name);
                     Line_Info li = line_info(file.newline_offsets, pos.offset);
 
-                    String escaped_fname = convert_special_characters_to_escape_characters(ta, file_name);
+                    String escaped_fname = convert_special_characters_to_escape_characters(&ta, file_name);
 
                     string_builder_append(sb, "    novo_c_assert(r%u, r%u, \"%.*s\", %u, %u);", cond_reg, string_reg,
                                           (int)escaped_fname.length, escaped_fname.data, li.line, li.offset);
@@ -1012,7 +1026,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
 
     string_builder_append(sb, "}\n");
 
-    temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
+    temp_arena_release(tarena);
 
 #undef FETCH
 #undef FETCH16
@@ -1076,23 +1090,28 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
 
             String _str = atom_string(const_expr->string_literal);
 
-            auto mark = temp_allocator_get_mark(&cb->inst->temp_allocator_data);
-            String str = convert_special_characters_to_escape_characters(&cb->inst->temp_allocator, _str);
-            temp_allocator_reset(&cb->inst->temp_allocator_data, mark);
+            Temp_Arena tarena = temp_arena((Arena*)sb->allocator->user_data);
+            Allocator ta = arena_allocator_create(tarena.arena);
+
+            String str = convert_special_characters_to_escape_characters(&ta, _str);
 
             string_builder_append(sb, "(u8*) \"%.*s\"", (int)str.length, str.data);
             string_builder_append(sb, ", %lld }", _str.length);
+
+            temp_arena_release(tarena);
             break;
         }
 
     }
 }
 
-String_Ref c_backend_block_name(C_Backend* cb, SSA_Function* func, s64 block_index)
+String_Ref c_backend_block_name(C_Backend* cb, SSA_Function* func, s64 block_index, Arena* arena)
 {
     assert(block_index >= 0 && block_index < func->blocks.count);
 
-    String result = string_copy(&cb->inst->temp_allocator, atom_string(func->blocks[block_index].name));
+    Allocator ta = arena_allocator_create(arena);
+
+    String result = string_copy(&ta, atom_string(func->blocks[block_index].name));
 
     for (s64 i = 0; i < result.length; i++) {
         if (result[i] == '.') result[i] = '_';

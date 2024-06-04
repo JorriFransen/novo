@@ -1,6 +1,6 @@
 #include "string_builder.h"
 
-#include "memory/temp_allocator.h"
+#include "memory/arena.h"
 
 #include <cstring>
 
@@ -22,8 +22,6 @@ static String_Builder_Block* string_builder_block(Allocator* allocator, u64 size
 void string_builder_init(String_Builder* sb, Allocator* allocator, u64 initial_block_size/*=NOVO_SB_INITAL_BLOCK_SIZE*/)
 {
     sb->allocator = allocator;
-    auto ta = allocate<Temp_Allocator>(allocator);
-    sb->temp_allocator = temp_allocator_create(ta);
     sb->next_block_size = initial_block_size;
 
     sb->first_block = string_builder_block(sb->allocator, sb->next_block_size);
@@ -32,11 +30,6 @@ void string_builder_init(String_Builder* sb, Allocator* allocator, u64 initial_b
 
 void string_builder_free(String_Builder* sb)
 {
-    auto ta = (Temp_Allocator*)sb->temp_allocator.user_data;
-
-    arena_free(&ta->arena);
-    free(sb->allocator, ta);
-
     auto block = sb->first_block;
     while (block) {
         auto next = block->next_block;
@@ -70,10 +63,10 @@ void string_builder_append(String_Builder* sb, const String_Ref fmt, ...)
 
 void string_builder_append_va(String_Builder* sb, const String_Ref fmt, va_list args)
 {
-    auto ta = (Temp_Allocator*)sb->temp_allocator.user_data;
-    auto mark = temp_allocator_get_mark(ta);
+    Temp_Arena tarena = temp_arena((Arena*)sb->allocator->user_data);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
-    String temp_result = string_format_va_list(&sb->temp_allocator, fmt, args);
+    String temp_result = string_format_va_list(&ta, fmt, args);
 
     auto remaining = sb->current_block->end - sb->current_block->cursor;
 
@@ -113,7 +106,7 @@ void string_builder_append_va(String_Builder* sb, const String_Ref fmt, va_list 
         }
     }
 
-    temp_allocator_reset(ta, mark);
+    temp_arena_release(tarena);
 }
 
 static String_Builder_Block* string_builder_block(Allocator* allocator, u64 size)

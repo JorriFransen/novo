@@ -25,12 +25,12 @@ namespace Novo {
 
 Allocator arena_allocator_create(Arena* arena)
 {
-    arena_new(arena);
     return { arena_allocator_fn, arena, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
-void arena_new(Arena* arena, u64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
+void arena_new(const char* label, Arena* arena, u64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
 {
+    log_info("-- arena_new(), max_cap: %llumb, label: '%s'", max_cap / MEBIBYTE(1), label);
 #if NPLATFORM_LINUX
     s64 size = sysconf(_SC_PAGE_SIZE);
     assert(size != -1);
@@ -94,26 +94,31 @@ void arena_free(Arena* arena)
 
 void* arena_alloc(Arena* arena, s64 size, s64 align)
 {
+    s64 aligned_size = size;
     if (!(arena->flags & ARENA_FLAG_NOALIGN)) {
-        size = size + (align - 1);
+        aligned_size = size + (align - 1);
     }
 
-    void* p = arena->data + arena->used;
+    void* start = arena->data + arena->used;
 
-    if (arena->used + size > arena->capacity) {
-        if (!arena_grow(arena, size)) {
+    if (arena->used + aligned_size > arena->capacity) {
+        if (!arena_grow(arena, aligned_size)) {
             assert(false && !"Growing arena failed!");
             return nullptr;
         }
     }
 
-    arena->used += size;
+    arena->used += aligned_size;
+
+    void* result = start;
 
     if (!(arena->flags & ARENA_FLAG_NOALIGN)) {
-        return (void*)get_aligned((u64)p, align);
-    } else {
-        return p;
+        result = (void*)get_aligned((u64)start, align);
     }
+
+    memset(result, 0, size);
+
+    return result;
 }
 
 bool arena_grow(Arena* arena, s64 min_size)
@@ -170,6 +175,57 @@ NAPI FN_ALLOCATOR(arena_allocator_fn)
 
     assert(false);
     return nullptr;
+}
+
+Temp_Arena temp_arena_create(Arena* arena)
+{
+    Temp_Arena result;
+    result.arena = arena;
+    result.reset_to = arena->used;
+    return result;
+}
+
+void temp_arena_release(Temp_Arena ta)
+{
+    assert(ta.arena->used >= ta.reset_to);
+    ta.arena->used = ta.reset_to;
+}
+
+Arena g_temp_arena_a;
+Arena g_temp_arena_b;
+Arena* g_temp_arena_next = nullptr;
+
+Temp_Arena temp_arena(Arena* dont_use)
+{
+    if (!g_temp_arena_next) {
+        // First use, initialize
+
+        arena_new("temp_arena_a", &g_temp_arena_a);
+        arena_new("temp_arena_b", &g_temp_arena_b);
+        g_temp_arena_next = &g_temp_arena_a;
+    }
+
+    Arena* use_arena = nullptr;
+
+    if (dont_use == &g_temp_arena_a) {
+        use_arena = &g_temp_arena_b;
+        g_temp_arena_next = &g_temp_arena_a;
+    } else if (dont_use == &g_temp_arena_b) {
+        use_arena = &g_temp_arena_a;
+        g_temp_arena_next = &g_temp_arena_b;
+    } else {
+        use_arena = g_temp_arena_next;
+        if (&g_temp_arena_a == g_temp_arena_next) {
+            g_temp_arena_next = &g_temp_arena_b;
+        } else {
+            assert(&g_temp_arena_b == g_temp_arena_next);
+            g_temp_arena_next = &g_temp_arena_a;
+        }
+    }
+
+    assert(use_arena);
+
+    return temp_arena_create(use_arena);
 }
 
 }

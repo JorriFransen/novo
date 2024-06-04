@@ -5,7 +5,6 @@
 #include <defines.h>
 #include <memory/allocator.h>
 #include <memory/arena.h>
-#include <memory/temp_allocator.h>
 #include <nstring.h>
 
 #include "atom.h"
@@ -45,11 +44,10 @@ struct Instance
 
     Allocator* default_allocator = c_allocator();
 
-    Temp_Allocator temp_allocator_data;
-    Allocator temp_allocator;
-
     Arena ast_arena;
+    Arena temp_arena; // This is reset after each instance cycle, used utility functions like temp_type_string()
     Allocator ast_allocator;
+    Allocator temp_allocator;
 
     DArray<Parse_Task> parse_tasks;
     DArray<Resolve_Task> resolve_tasks;

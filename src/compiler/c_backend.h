@@ -10,6 +10,7 @@ namespace Novo {
 
 template <typename T> struct Stack;
 
+struct Arena;
 struct AST_Expression;
 struct Instance;
 struct SSA_Function;
@@ -30,6 +31,6 @@ NAPI void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Fu
 NAPI void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack);
 
 NAPI void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_Expression* const_expr);
-NAPI String_Ref c_backend_block_name(C_Backend* cb, SSA_Function* func, s64 block_index);
+NAPI String_Ref c_backend_block_name(C_Backend* cb, SSA_Function* func, s64 block_index, Arena* arena);
 
 }
