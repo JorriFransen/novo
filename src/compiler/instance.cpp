@@ -4,6 +4,7 @@
 #include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
+#include <memory/arena.h>
 #include <nstring.h>
 #include <platform.h>
 
@@ -41,12 +42,12 @@ void instance_init(Instance* inst, Options options)
 
     fs_chdir(inst->cwd);
 
-
     auto default_alloc = inst->default_allocator;
 
-
-    inst->temp_allocator = temp_allocator_create(&inst->temp_allocator_data);
+    arena_new("ast_arena instance_init", &inst->ast_arena);
+    arena_new("temp_arena instance_init", &inst->temp_arena);
     inst->ast_allocator = arena_allocator_create(&inst->ast_arena);
+    inst->temp_allocator = arena_allocator_create(&inst->temp_arena);
 
     darray_init(default_alloc, &inst->parse_tasks);
     darray_init(default_alloc, &inst->resolve_tasks);
@@ -99,10 +100,13 @@ void instance_init(Instance* inst, Options options)
     log_trace("Dynamic support lib: '%s'", inst->support_lib_d_path.data);
     assert(fs_is_file(inst->support_lib_d_path));
 
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
     String current_search_dir = inst->compiler_exe_dir;
     bool module_dir_found = false;
     while (!module_dir_found) {
-        String parent_dir = platform_dirname(&inst->temp_allocator, current_search_dir);
+        String parent_dir = platform_dirname(&ta, current_search_dir);
 
 #if NPLATFORM_LINUX
         if (parent_dir.length == 0 || string_equal(parent_dir, "/")) break;
@@ -110,7 +114,7 @@ void instance_init(Instance* inst, Options options)
         if (parent_dir.length <= 3) break;
 #endif // NPLATFORM_LINUX
 
-        String candidate = string_format(&inst->temp_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "modules", (int)parent_dir.length, parent_dir.data);
+        String candidate = string_format(&ta, "%.*s" NPLATFORM_PATH_SEPARATOR "modules", (int)parent_dir.length, parent_dir.data);
 
         if (fs_is_directory(candidate)) {
             module_dir_found = true;
@@ -120,6 +124,8 @@ void instance_init(Instance* inst, Options options)
 
         current_search_dir = parent_dir;
     }
+
+    temp_arena_release(tarena);
 
     if (!module_dir_found) log_fatal("Unable to find module diretory!");
     log_trace("Module dir: '%s'", inst->module_dir.data);
@@ -231,7 +237,6 @@ void instance_free(Instance* inst)
 
     vm_free(&inst->vm);
 
-    temp_allocator_free(&inst->temp_allocator_data);
     arena_free(&inst->ast_arena);
 
     hash_table_free(&inst->ident_positions);
@@ -289,6 +294,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     while (progress) {
 
         progress = false;
+
+        arena_reset(&inst->temp_arena);
 
         for (s64 i = 0; i < inst->parse_tasks.count; i++) {
             Parse_Task task = inst->parse_tasks[i];
@@ -500,12 +507,15 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                 if (task->kind == Run_Task_Kind::INSERT) {
 
-                    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-                    String insert_string = vm_string_from_result(inst, &inst->temp_allocator, run_result);
+                    Temp_Arena tarena = temp_arena(nullptr);
+                    Allocator ta = arena_allocator_create(tarena.arena);
 
-                    // TODO: dynamic allocator
+                    String insert_string = vm_string_from_result(inst, &ta, run_result);
+
+                    // TODO: @ARENA
                     insert_string = fix_special_characters_in_insert_string(inst, c_allocator(), insert_string);
-                    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+                    temp_arena_release(tarena);
 
                     Source_Pos pos = source_pos(inst, task->node);
 
@@ -567,10 +577,15 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
     if (!builtin_module && inst->options.print_ast) {
 
+        Temp_Arena tarena = temp_arena(nullptr);
+        Allocator ta = arena_allocator_create(tarena.arena);
+
         for (s64 i = 0; i < inst->imported_files.count; i++) {
             assert(inst->imported_files[i].ast);
-            String ast_str = ast_to_string(inst, inst->imported_files[i].ast, &inst->temp_allocator);
+            String ast_str = ast_to_string(inst, inst->imported_files[i].ast, &ta);
             printf("\n%s", ast_str.data);
+
+            temp_arena_release(tarena);
         }
 
     }
@@ -614,24 +629,25 @@ u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)
     File_Handle fhandle;
     fs_open(inst->inserted_strings_path, FILE_MODE_WRITE, &fhandle);
 
-    u64 offset_offset;
+     u64 offset_offset;
     fs_size(&fhandle, &offset_offset);
 
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
 
     Imported_File inserted_from_file = inst->imported_files[insert_pos.file_index];
     Line_Info insert_li = line_info(inserted_from_file.newline_offsets, insert_pos.offset);
 
-    String comment_string = string_format(&inst->temp_allocator, "// Inserted from: %s:%u:%u\n",
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    String comment_string = string_format(&ta, "// Inserted from: %s:%u:%u\n",
                                           atom_string(inserted_from_file.name).data, insert_li.line, insert_li.offset);
 
+    temp_arena_release(tarena);
 
     Imported_File* insert_file = &inst->imported_files[inst->insert_file_index];
 
     fs_append(&fhandle, comment_string);
     offset_offset += comment_string.length;
-
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
 
     u32 result = offset_offset;
 

@@ -1,9 +1,10 @@
 #include "ssa.h"
 
+#include <containers/darray.h>
 #include <containers/stack.h>
 #include <defines.h>
 #include <hash.h>
-#include <memory/temp_allocator.h>
+#include <memory/arena.h>
 #include <string_builder.h>
 
 #include "ast.h"
@@ -234,8 +235,10 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
     local_builder.function_index = fn_index;
     local_builder.block_index = 0;
 
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-    stack_init(&inst->temp_allocator, &local_builder.break_info_stack, 0);
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    stack_init(&ta, &local_builder.break_info_stack, 0);
 
     SSA_Builder* builder = &local_builder;
 
@@ -311,7 +314,7 @@ bool ssa_emit_function(Instance* inst, SSA_Program* program, AST_Declaration* de
         }
     }
 
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
+    temp_arena_release(tarena);
 
     return true;
 }
@@ -363,12 +366,13 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
     Source_Pos pos = source_pos(inst, node);
     Imported_File file = inst->imported_files[pos.file_index];
 
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-
-    String initial_name = string_format(&inst->temp_allocator, "run_wrapper.%s.%u.%u", atom_string(file.name).data, pos.offset, pos.length);
+    String initial_name = string_format(&ta, "run_wrapper.%s.%u.%u", atom_string(file.name).data, pos.offset, pos.length);
     Atom name = ssa_unique_function_name(inst, program, initial_name);
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+    temp_arena_release(tarena);
 
     SSA_Function local_func;
     s64 fn_index = program->functions.count;
@@ -385,7 +389,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
     local_builder.function_index = fn_index;
     local_builder.block_index = 0;
 
-    stack_init(&inst->temp_allocator, &local_builder.break_info_stack, 0);
+    stack_init(&ta, &local_builder.break_info_stack, 0);
 
     SSA_Builder* builder = &local_builder;
 
@@ -415,7 +419,7 @@ s64 ssa_emit_run_wrapper(Instance* inst, SSA_Program* program, AST_Node node, Sc
         ssa_emit_reg(builder, result_reg);
     }
 
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
+    temp_arena_release(tarena);
 
     return fn_index;
 }
@@ -1916,13 +1920,16 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
 
     s64 byte_size = const_expr->resolved_type->bit_size / 8;
 
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
     bool own_bytes = false;
-    Temp_Array<u8> temp_bytes;
+    DArray<u8> temp_bytes;
     if (!bytes) {
         own_bytes = true;
 
-        temp_bytes = temp_array_create<u8>(&inst->temp_allocator, byte_size);
-        bytes = &temp_bytes.array;
+        temp_bytes = darray_create<u8>(&ta, byte_size);
+        bytes = &temp_bytes;
     }
 
     s64 old_byte_count = bytes->count;
@@ -2017,7 +2024,7 @@ u32 ssa_emit_constant(Instance* inst, SSA_Program* program, AST_Expression* cons
             }
         }
 
-        temp_array_destroy(&temp_bytes);
+        temp_arena_release(tarena);
     }
 
     return result;
@@ -2067,7 +2074,8 @@ Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref n
     bool unique = true;
     u64 counter = 1;
 
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     do {
         for (s64 i = 0; i < program->functions.count; i++) {
@@ -2078,13 +2086,15 @@ Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref n
         }
 
         if (!unique) {
-            name = string_format(&inst->temp_allocator, "%.*s.%llu", (int)original_name.length, original_name.data, counter++);
+            name = string_format(&ta, "%.*s.%llu", (int)original_name.length, original_name.data, counter++);
         }
 
     } while (!unique);
 
     Atom result = atom_get(name);
-    temp_allocator_reset(&inst->temp_allocator_data, mark);
+
+    temp_arena_release(tarena);
+
     return result;
 }
 

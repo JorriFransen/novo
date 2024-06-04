@@ -2,6 +2,7 @@
 
 #include <containers/darray.h>
 #include <memory/allocator.h>
+#include <memory/arena.h>
 #include <string_builder.h>
 
 #include "ast.h"
@@ -123,7 +124,7 @@ Type* pointer_type_get(Instance *inst, Type* base)
     return pointer_type_new(inst, base);
 }
 
-Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* return_type, Type_Flags flags)
+Type* function_type_get(Instance* inst, Array_Ref<Type*> param_types, Type* return_type, Type_Flags flags)
 {
     for (s64 i = 0; i < inst->function_types.count; i++) {
 
@@ -131,7 +132,7 @@ Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* ret
 
         if (fn_type->flags != flags) continue;
         if (fn_type->function.return_type != return_type) continue;
-        if (fn_type->function.param_types.count != param_types.array.count) continue;
+        if (fn_type->function.param_types.count != param_types.count) continue;
 
         bool param_match = true;
         for (s64 pi = 0; pi < fn_type->function.param_types.count; pi++) {
@@ -147,7 +148,8 @@ Type* function_type_get(Instance* inst, Temp_Array<Type*> param_types, Type* ret
         return fn_type;
     }
 
-    Type* new_type = function_type_new(inst, temp_array_finalize(&inst->ast_allocator, &param_types), return_type, flags);
+    auto members = darray_copy(&inst->ast_allocator, param_types);
+    Type* new_type = function_type_new(inst, members, return_type, flags);
     darray_append(&inst->function_types, new_type);
     return new_type;
 }
@@ -214,7 +216,9 @@ String temp_type_string(Instance* inst, Type* type)
 
     type_to_string(inst, &sb, type);
 
-    return string_builder_to_string(&sb);
+    String result = string_builder_to_string(&sb, &inst->temp_allocator);
+
+    return result;
 }
 
 void type_to_string(Instance* instance, String_Builder* sb, Type* type)

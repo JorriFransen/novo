@@ -2,7 +2,6 @@
 
 #include <containers/darray.h>
 #include <defines.h>
-#include <memory/temp_allocator.h>
 #include <nstring.h>
 
 #include "ast.h"
@@ -13,6 +12,7 @@ namespace Novo {
 
 enum Token_Kind : u32;
 
+struct Arena;
 struct Instance;
 struct Scope;
 
@@ -21,7 +21,6 @@ struct Parser
     Instance* instance;
     Lexer lexer;
 
-    Temp_Allocator_Mark file_read_mark;
     String_Ref cwd;
 
     s64 next_index_in_function;
@@ -41,7 +40,7 @@ enum class Parse_Context : u32
     LOCAL_STATEMENT_SCOPE,
 };
 
-NAPI Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_index);
+NAPI Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_index, Arena* temp_content_arena);
 NAPI Parser parser_create(Instance* inst, const String_Ref name, const String_Ref content, s64 import_index, u32 offset);
 
 NAPI AST_File* parse_file(Instance* instance, const String_Ref file_path, s64 import_index);

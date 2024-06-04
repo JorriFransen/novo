@@ -4,6 +4,7 @@
 #include <filesystem.h>
 #include <logger.h>
 #include <memory/allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 #include <platform.h>
 
@@ -86,7 +87,6 @@ struct Cmd_Opt_Parser
 
 Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullptr*/)
 {
-    Allocator* ta = temp_allocator();
 
     const char *prog_name = argv[0];
 
@@ -135,17 +135,22 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
         exit(1);
     }
 
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
     String_Ref out_file_name = cop.result.output;
     if (!out_file_name.length) {
-        out_file_name = fs_filename_strip_extension(ta, cop.result.input_file);
+        out_file_name = fs_filename_strip_extension(&ta, cop.result.input_file);
         NSTRING_ASSERT_ZERO_TERMINATION(out_file_name);
     }
 
     if (!string_ends_with(out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION)) {
-        out_file_name = string_append(ta, out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION);
+        out_file_name = string_append(&ta, out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION);
     }
 
     cop.result.output = string_copy(c_allocator(), out_file_name).data;
+
+    temp_arena_release(tarena);
 
     return cop.result;
 }

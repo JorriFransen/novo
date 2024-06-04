@@ -5,7 +5,7 @@
 #include <containers/darray.h>
 #include <containers/hash_table.h>
 #include <memory/allocator.h>
-#include <memory/temp_allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 
 #include "ast.h"
@@ -927,11 +927,12 @@ AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem)
 
             if (type == inst->type_string) {
 
-                auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+                Temp_Arena tarena = temp_arena(nullptr);
+                Allocator ta = arena_allocator_create(tarena.arena);
 
-                String temp_str = vm_string_from_memory(inst, &inst->temp_allocator, mem);
+                String temp_str = vm_string_from_memory(inst, &ta, mem);
                 Atom str = atom_get(temp_str);
-                temp_allocator_reset(&inst->temp_allocator_data, mark);
+                temp_arena_release(tarena);
 
                 return ast_string_literal_expression(inst, str);
 

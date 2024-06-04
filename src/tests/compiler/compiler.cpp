@@ -2,7 +2,7 @@
 #include <defines.h>
 #include <filesystem.h>
 #include <logger.h>
-#include <memory/temp_allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 #include <platform.h>
 
@@ -74,18 +74,19 @@ static bool run_test_case(Test_Case* tc, Options options)
     // options.verbose = true;
     // options.trace = true;
 
-    auto ta = temp_allocator();
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     fs_mkdir("build");
 
-    String filename = fs_filename_strip_extension(ta, tc->file_path);
-    options.output = string_format(ta, "build" NPLATFORM_PATH_SEPARATOR "%.*s" NPLATFORM_DEFAULT_EXE_EXTENSION, (int)filename.length, filename.data).data;
+    String filename = fs_filename_strip_extension(&ta, tc->file_path);
+    options.output = string_format(&ta, "build" NPLATFORM_PATH_SEPARATOR "%.*s" NPLATFORM_DEFAULT_EXE_EXTENSION, (int)filename.length, filename.data).data;
 
     String_Ref test_path = tc->file_path;
 
     if (!fs_is_file(test_path)) {
         assert(test_path_prefix.length > 0 && "Expected test_path_prefix to be set");
-        test_path = string_append(ta, test_path_prefix, tc->file_path);
+        test_path = string_append(&ta, test_path_prefix, tc->file_path);
         assert(fs_is_file(test_path));
     }
 
@@ -120,6 +121,8 @@ static bool run_test_case(Test_Case* tc, Options options)
 
     instance_free(&inst);
 
+    temp_arena_release(tarena);
+
     return result;
 }
 
@@ -152,8 +155,6 @@ int main(int argc, char* argv[]) {
     s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
     s64 test_success_count = 0;
 
-    auto mark = temp_allocator_get_mark();
-
     s64 max_it = 1;
     for (s64 it = 0; it < max_it; it++) {
         for (s64 i = 0; i < test_count; i++) {
@@ -169,8 +170,6 @@ int main(int argc, char* argv[]) {
             fflush(stdout);
 
             if (result) test_success_count++;
-
-            temp_allocator_reset(mark);
         }
 
         printf("\n%lld/%lld tests successful\n", test_success_count, test_count);

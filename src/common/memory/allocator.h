@@ -36,10 +36,6 @@ NAPI Allocator* c_allocator();
 
 NAPI FN_ALLOCATOR(c_allocator_fn);
 
-#define FN_DEFAULT_ALLOCATE(f) void* f(s64 size)
-typedef FN_DEFAULT_ALLOCATE(FN_Default_Allocate);
-NAPI FN_DEFAULT_ALLOCATE(allocate);
-
 #define FN_ALLOCATE(f) void* f(Allocator* allocator, s64 size)
 typedef FN_ALLOCATE(FN_Allocate);
 NAPI FN_ALLOCATE(allocate);
