@@ -31,13 +31,16 @@ struct C_Backend {
     Windows_SDK_Info wsdk_info;
 #endif // NPLATFORM_WINDOWS
 
-    String clang_path;
+    String_Ref clang_path;
 };
 
 bool c_backend_emit(Instance* inst)
 {
     C_Backend cb_data;
     cb_data.inst = inst;
+
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
 #if NPLATFORM_WINDOWS
     cb_data.wsdk_info = find_visual_studio_and_windows_sdk();
@@ -60,14 +63,14 @@ bool c_backend_emit(Instance* inst)
 
     assert(cb_data.wsdk_info.windows_sdk_version);
 
-    String_Ref tools_path = wide_string_to_regular(temp_allocator(), cb_data.wsdk_info.vs_tools_path);
+    String_Ref tools_path = wide_string_to_regular(&ta, cb_data.wsdk_info.vs_tools_path);
 
-    cb_data.clang_path = string_format(inst->default_allocator, "%.*s\\Llvm\\x64\\bin\\clang.exe",
+    cb_data.clang_path = string_format(&ta, "%.*s\\Llvm\\x64\\bin\\clang.exe",
                             (int)tools_path.length, tools_path.data);
     assert(fs_is_file(cb_data.clang_path));
 
 #else
-    cb_data.clang_path = string_copy(inst->default_allocator, "clang");
+    cb_data.clang_path = "clang";
 #endif // NPLATFORM_WINDOWS
 
     C_Backend* cb = &cb_data;
@@ -219,9 +222,6 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     assert(inst->options.output);
 
-    Temp_Arena tarena = temp_arena((Arena*)&sb.allocator->user_data);
-    Allocator ta = arena_allocator_create(tarena.arena);
-
     String c_filename = string_format(&ta, "%s_cback.c", inst->options.output);
     fs_write_entire_file(c_filename, c_str);
 
@@ -242,8 +242,6 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     Command_Result c_res = platform_run_command(commands, &ta); // ta is debug allocator here
 
-    temp_arena_release(tarena);
-
     if (!c_res.success) {
         log_error("C backend errors:\n%s", c_res.error_string.data);
     } else if (inst->options.verbose && c_res.error_string.length) {
@@ -262,11 +260,11 @@ R"POSTAMBLE(int main(int argc, char** argv) {
 
     platform_free_command_result(&c_res);
 
+    temp_arena_release(tarena);
 
 #if NPLATFORM_WINDOWS
     free_resources(&cb->wsdk_info);
 #endif // NPLATFORM_WINDOWS
-    free(inst->default_allocator, cb->clang_path.data);
 
     return c_res.success;
 }
