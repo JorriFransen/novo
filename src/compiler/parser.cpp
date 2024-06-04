@@ -3,7 +3,8 @@
 #include <containers/darray.h>
 #include <containers/hash_table.h>
 #include <defines.h>
-#include <memory/temp_allocator.h>
+#include <memory/allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 #include <platform.h>
 
@@ -22,13 +23,14 @@ namespace Novo {
 
 #define expect_token(p, k) if (!expect_token_internal((p), (k))) return {};
 
-Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_index)
+Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_index, Arena* temp_content_arena)
 {
     String file_content;
 
-    auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+    Allocator allocator = arena_allocator_create(temp_content_arena);
 
-    bool read_ok = fs_read_entire_file(&inst->temp_allocator, file_path, &file_content);
+    // TODO: @ARENA: Use arena with freelist?
+    bool read_ok = fs_read_entire_file(&allocator, file_path, &file_content);
     assert(read_ok);
 
     Parser parser;
@@ -37,11 +39,11 @@ Parser parser_create(Instance* inst, const String_Ref file_path, s64 import_inde
     lexer_create(inst, &parser.lexer);
     lexer_init_stream(&parser.lexer, file_content, file_path, import_index, 0);
 
-    parser.file_read_mark = mark;
-    parser.cwd = fs_dirname(&inst->temp_allocator, file_path);
-    if (!string_ends_with(parser.cwd, NPLATFORM_PATH_SEPARATOR)) {
-        parser.cwd = string_append(&inst->temp_allocator, parser.cwd, NPLATFORM_PATH_SEPARATOR);
+    String cwd = fs_dirname(&allocator, file_path);
+    if (!string_ends_with(file_path, NPLATFORM_PATH_SEPARATOR)) {
+        cwd = string_append(&allocator, cwd, NPLATFORM_PATH_SEPARATOR);
     }
+    parser.cwd = string_copy(&inst->ast_allocator, cwd);
 
     parser.next_index_in_function = 0;
     parser.parsing_function_body = false;
@@ -58,13 +60,16 @@ Parser parser_create(Instance* inst, const String_Ref name, const String_Ref con
     lexer_create(inst, &parser.lexer);
     lexer_init_stream(&parser.lexer, content, name, import_index, offset);
 
-    parser.file_read_mark = 0;
-
     String_Ref file_path = atom_string(inst->imported_files[import_index].name);
-    parser.cwd = fs_dirname(&inst->temp_allocator, file_path);
-    if (!string_ends_with(parser.cwd, NPLATFORM_PATH_SEPARATOR)) {
-        parser.cwd = string_append(&inst->temp_allocator, parser.cwd, NPLATFORM_PATH_SEPARATOR);
+
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    String cwd = fs_dirname(&ta, file_path);
+    if (!string_ends_with(file_path, NPLATFORM_PATH_SEPARATOR)) {
+        cwd = string_append(&ta, cwd, NPLATFORM_PATH_SEPARATOR);
     }
+    parser.cwd = string_copy(&inst->ast_allocator, cwd);
 
     parser.next_index_in_function = 0;
     parser.parsing_function_body = false;
@@ -75,13 +80,15 @@ Parser parser_create(Instance* inst, const String_Ref name, const String_Ref con
 
 AST_File* parse_file(Instance* inst, const String_Ref file_path, s64 import_index)
 {
-    Parser parser = parser_create(inst, file_path, import_index);
+    Temp_Arena tarena = temp_arena(nullptr);
 
-    DArray<AST_Node> nodes = parse_nodes(inst, &parser, inst->global_scope, Parse_Context::FILE_SCOPE);
+    Parser parser = parser_create(inst, file_path, import_index, tarena.arena);
+
+    DArray<AST_Node> nodes = parse_file_nodes(inst, &parser, inst->global_scope);
 
     AST_File* result = ast_file(inst, nodes);
 
-    temp_allocator_reset(&inst->temp_allocator_data, parser.file_read_mark);
+    temp_arena_release(tarena);
 
     return result;
 }
@@ -89,9 +96,7 @@ AST_File* parse_file(Instance* inst, const String_Ref file_path, s64 import_inde
 DArray<AST_Node> parse_string(Instance* inst, const String_Ref name, const String_Ref content, Scope* scope, Parse_Context context, s64 import_index, u32 offset)
 {
     Parser parser = parser_create(inst, name, content, import_index, offset);
-
     auto result = parse_nodes(inst, &parser, scope, context);
-
     return result;
 }
 
@@ -109,7 +114,10 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
 {
     Lexer* lexer = &parser->lexer;
 
-    auto nodes = temp_array_create<AST_Node>(&inst->temp_allocator, 4);
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    auto nodes = darray_create<AST_Node>(&ta, 16);
 
     while (!is_token(lexer, TOK_EOF) && !is_token(lexer, TOK_ERROR)) {
 
@@ -141,11 +149,12 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
                         String import_path;
                         bool found = false;
 
-                        auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
+                        Temp_Arena tarena = temp_arena(nullptr);
+                        Allocator ta = arena_allocator_create(tarena.arena);
 
                         for (s64 i = 0; i < candidate_dirs.count; i++) {
 
-                            String candidate_path = string_format(&inst->temp_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%.*s.no",
+                            String candidate_path = string_format(&ta, "%.*s" NPLATFORM_PATH_SEPARATOR "%.*s.no",
                                                                   (int)candidate_dirs[i].length, candidate_dirs[i].data,
                                                                   (int)module_name.length, module_name.data) ;
                             if (fs_is_file(candidate_path)) {
@@ -155,7 +164,7 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
                             }
                         }
 
-                        temp_allocator_reset(&inst->temp_allocator_data, mark);
+                        temp_arena_release(tarena);
 
                         assert(found);
 
@@ -232,7 +241,9 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
         }
     }
 
-    DArray<AST_Node> result = temp_array_finalize(&inst->ast_allocator, &nodes);
+    DArray<AST_Node> result = darray_copy(&inst->ast_allocator, &nodes);
+
+    temp_arena_release(tarena);
 
     return result;
 }
@@ -241,7 +252,10 @@ DArray<AST_Node> parse_statement_nodes(Instance* inst, Parser* parser, Scope* sc
 {
     Lexer* lexer = &parser->lexer;
 
-    auto nodes = temp_array_create<AST_Node>(&inst->temp_allocator, 4);
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    auto nodes = darray_create<AST_Node>(&ta, 8);
 
     while (!is_token(lexer, TOK_EOF) && !is_token(lexer, TOK_ERROR)) {
 
@@ -249,7 +263,9 @@ DArray<AST_Node> parse_statement_nodes(Instance* inst, Parser* parser, Scope* sc
         darray_append(&nodes, ast_node(stmt));
     }
 
-    DArray<AST_Node> result = temp_array_finalize(&inst->ast_allocator, &nodes);
+    DArray<AST_Node> result = darray_copy(&inst->ast_allocator, &nodes);
+
+    temp_arena_release(tarena);
 
     return result;
 }
@@ -363,7 +379,10 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
 
     expect_token(parser, '{');
 
-    auto fields = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 8);
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    auto fields = darray_create<AST_Declaration*>(&ta, 8);
     Scope* struct_scope = scope_new(parser->instance, Scope_Kind::STRUCT, scope);
 
     while (!is_token(parser, '}')) {
@@ -409,8 +428,9 @@ AST_Declaration* parse_struct_declaration(Parser* parser, AST_Identifier* ident,
     pos = source_pos(pos, source_pos(&parser->lexer));
     expect_token(parser, '}');
 
-    auto fields_array = temp_array_finalize(&parser->instance->ast_allocator, &fields);
+    auto fields_array = darray_copy(&parser->instance->ast_allocator, &fields);
 
+    temp_arena_release(tarena);
 
     AST_Declaration* result = ast_struct_declaration(parser->instance, ident, fields_array, struct_scope);
     save_source_pos(parser->instance, result, pos);
@@ -430,7 +450,10 @@ AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, S
 
     expect_token(parser, '{');
 
-    auto members = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 8);
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    auto members = darray_create<AST_Declaration*>(&ta, 8);
     Scope* enum_scope = scope_new(parser->instance, Scope_Kind::ENUM, scope);
 
     while (!match_token(parser, '}')) {
@@ -475,7 +498,9 @@ AST_Declaration* parse_enum_declaration(Parser* parser, AST_Identifier* ident, S
 
     pos = source_pos(pos, source_pos(&parser->lexer));
 
-    auto members_array = temp_array_finalize(&parser->instance->ast_allocator, &members);
+    auto members_array = darray_copy(&parser->instance->ast_allocator, &members);
+
+    temp_arena_release(tarena);
 
     AST_Declaration* result = ast_enum_declaration(parser->instance, ident, strict_ts, members_array, enum_scope);
     save_source_pos(parser->instance, result, pos);
@@ -488,7 +513,10 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
     Source_Pos pos = source_pos(parser->instance, ident);
 
-    auto params = temp_array_create<AST_Declaration*>(&parser->instance->temp_allocator, 2);
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    auto params = darray_create<AST_Declaration*>(&ta, 8);
     Scope* fn_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
     u32 arg_index = 0;
@@ -496,7 +524,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
 
     expect_token(parser, '(');
     while (!is_token(parser, ')')) {
-        if (params.array.count) {
+        if (params.count) {
             expect_token(parser, ',');
         }
 
@@ -528,7 +556,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         expect_token(parser, ')');
     }
 
-    auto params_array = temp_array_finalize(&parser->instance->ast_allocator, &params);
+    auto params_array = darray_copy(&parser->instance->ast_allocator, &params);
 
     AST_Type_Spec* return_ts = nullptr;
 
@@ -548,7 +576,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
             instance_fatal_error(parser->instance, pos, "Expected '#foreign' while parsing foreign vararg function, got '}'");
         }
 
-        auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 4);
+        auto stmts = darray_create<AST_Statement*>(&ta, 16);
 
         assert(parser->next_index_in_function == 0); // TODO: push/pop when dealing with nested functions
         assert(!parser->parsing_function_body);
@@ -574,7 +602,7 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
         parser->parsing_function_body = false;
         parser->current_function_name = 0;
 
-        body_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
+        body_array = darray_copy(&parser->instance->ast_allocator, &stmts);
     } else {
 
         expect_token(parser, '#');
@@ -602,6 +630,8 @@ AST_Declaration* parse_function_declaration(Parser* parser, AST_Identifier* iden
     if (c_vararg && ! (flags & AST_DECL_FLAG_FOREIGN)) {
         instance_fatal_error(parser->instance, source_pos(&parser->lexer), "Expected directive '#foreign' while parsing foreign varargs function");
     }
+
+    temp_arena_release(tarena);
 
     AST_Declaration* result = ast_function_declaration(parser->instance, ident, params_array, body_array, return_ts, fn_scope);
     result->flags |= flags;
@@ -633,6 +663,9 @@ AST_Expression* parse_leaf_expression(Parser* parser)
     }
 
     AST_Expression* result = nullptr;
+
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     switch ((u32)ct.kind) {
 
@@ -826,11 +859,11 @@ AST_Expression* parse_leaf_expression(Parser* parser)
         case '{': {
             next_token(&parser->lexer);
 
-            auto exprs = temp_array_create<AST_Expression*>(&parser->instance->temp_allocator, 4);
+            auto exprs = darray_create<AST_Expression*>(&ta, 16);
 
             while (!is_token(parser, '}')) {
 
-                if (exprs.array.count) {
+                if (exprs.count) {
                     expect_token(parser, ',');
                 }
 
@@ -841,7 +874,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
             pos = source_pos(pos, source_pos(&parser->lexer));
             expect_token(parser, '}');
 
-            DArray<AST_Expression*> expr_array = temp_array_finalize(&parser->instance->ast_allocator, &exprs);
+            DArray<AST_Expression*> expr_array = darray_copy(&parser->instance->ast_allocator, &exprs);
 
             result = ast_compound_expression(parser->instance, expr_array);
 
@@ -916,17 +949,18 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
     save_source_pos(parser->instance, result, pos);
 
+    temp_arena_release(tarena);
+
     while (is_token(parser, '(') || is_token(parser, '.')) {
 
         switch ((u32)parser->lexer.token.kind) {
             case '(': {
                 next_token(&parser->lexer);
 
-                auto args_temp = temp_array_create<AST_Expression*>(&parser->instance->temp_allocator);
-
+                auto args_temp = darray_create<AST_Expression*>(&ta);
 
                 while (!is_token(parser, ')')) {
-                    if (args_temp.array.count) {
+                    if (args_temp.count) {
                         expect_token(parser, ',');
                     }
 
@@ -937,7 +971,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
                 pos = source_pos(pos, source_pos(&parser->lexer));
                 next_token(&parser->lexer);
 
-                auto args = temp_array_finalize(&parser->instance->ast_allocator, &args_temp);
+                auto args = darray_copy(&parser->instance->ast_allocator, &args_temp);
 
                 result = ast_call_expression(parser->instance, result, args);
 
@@ -962,7 +996,9 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
         assert(result);
 
-    result->flags |= parser->new_expr_flags;
+        result->flags |= parser->new_expr_flags;
+
+        temp_arena_release(tarena);
     }
 
     return result;
@@ -1008,11 +1044,14 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
     Source_Pos pos = source_pos(&parser->lexer);
 
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
     if (match_token(parser, '{')) {
 
         Scope* block_scope = scope_new(parser->instance, Scope_Kind::FUNCTION_LOCAL, scope);
 
-        auto stmts = temp_array_create<AST_Statement*>(&parser->instance->temp_allocator, 8);
+        auto stmts = darray_create<AST_Statement*>(&ta, 16);
         while (!is_token(parser, '}')) {
             AST_Statement* stmt = parse_statement(parser, block_scope, true);
             darray_append(&stmts, stmt);
@@ -1021,9 +1060,11 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
         pos = source_pos(pos, source_pos(&parser->lexer));
         expect_token(parser, '}');
 
-        auto stmt_array = temp_array_finalize(&parser->instance->ast_allocator, &stmts);
+        auto stmt_array = darray_copy(&parser->instance->ast_allocator, &stmts);
+
         AST_Statement* result = ast_block_statement(parser->instance, stmt_array, block_scope);
         save_source_pos(parser->instance, result, pos);
+        temp_arena_release(tarena);
         return result;
 
     } else if (match_token(parser, '#')) {
@@ -1056,11 +1097,13 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
                 pos = source_pos(pos, source_pos(parser->instance, expr));
                 save_source_pos(parser->instance, insert_stmt, pos);
 
+                temp_arena_release(tarena);
                 return insert_stmt;
             }
         }
 
     } else if (is_token(parser, TOK_KEYWORD)) {
+        temp_arena_release(tarena);
         return parse_keyword_statement(parser, scope);
     }
 
@@ -1115,6 +1158,7 @@ AST_Statement* parse_statement(Parser* parser, Scope* scope, bool eat_semi)
 
     save_source_pos(parser->instance, result, pos);
 
+    temp_arena_release(tarena);
     return result;
 }
 
@@ -1126,6 +1170,9 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
 
     assert(ct.kind == TOK_KEYWORD);
     next_token(&parser->lexer);
+
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     switch (ct.keyword) {
 
@@ -1140,7 +1187,7 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
             AST_Expression* cond = parse_expression(parser);
             AST_Statement* then_stmt = parse_statement(parser, scope, true);
 
-            auto if_blocks = temp_array_create<AST_If_Block>(&parser->instance->temp_allocator);
+            auto if_blocks = darray_create<AST_If_Block>(&ta, 8);
 
             darray_append(&if_blocks, { cond, then_stmt });
 
@@ -1165,10 +1212,10 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
             if (else_stmt) {
                 pos = source_pos(pos, source_pos(parser->instance, else_stmt));
             } else {
-                pos = source_pos(pos, source_pos(parser->instance, if_blocks[if_blocks.array.count - 1].then));
+                pos = source_pos(pos, source_pos(parser->instance, if_blocks[if_blocks.count - 1].then));
             }
 
-            auto if_blocks_array = temp_array_finalize(&parser->instance->ast_allocator, &if_blocks);
+            auto if_blocks_array = darray_copy(&parser->instance->ast_allocator, &if_blocks);
 
             result = ast_if_statement(parser->instance, if_blocks_array, else_stmt);
             break;
@@ -1272,6 +1319,8 @@ AST_Statement* parse_keyword_statement(Parser* parser, Scope* scope)
 
     assert(result);
     save_source_pos(parser->instance, result, pos);
+
+    temp_arena_release(tarena);
     return result;
 }
 

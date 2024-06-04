@@ -2,7 +2,6 @@
 
 #include "defines.h"
 #include "memory/allocator.h"
-#include "memory/temp_allocator.h"
 
 #include <cassert>
 #include <cstring>
@@ -74,6 +73,13 @@ void darray_init(Allocator* backing_allocator, DArray<Element_Type>* out_array, 
     out_array->count = 0;
     out_array->capacity = capacity;
     out_array->backing_allocator = backing_allocator;
+}
+
+template <typename Element_Type>
+DArray<Element_Type> darray_create(Allocator* backing_allocator, s64 capacity = NOVO_DARRAY_DEFAULT_CAPACITY) {
+    DArray<Element_Type> result;
+    darray_init(backing_allocator, &result, capacity);
+    return result;
 }
 
 template <typename Element_Type>
@@ -223,58 +229,6 @@ void darray_remove_ordered(DArray< Element_Type>* array, s64 index)
     memmove(&array->data[index], &array->data[index + 1], copy_size);
 
     array->count -= 1;
-}
-
-template <typename T>
-struct Temp_Array
-{
-    Temp_Allocator_Mark mark;
-    DArray<T> array;
-
-    T& operator[](s64 index) {
-        return array.operator[](index);
-    }
-
-    const T& operator[](s64 index) const {
-        return array.operator[](index);
-    }
-};
-
-template <typename T>
-static Temp_Array<T> temp_array_create(Allocator* allocator, s64 cap = 0)
-{
-    Temp_Array<T> result;
-
-    auto tas = (Temp_Allocator*)allocator->user_data;
-    assert(tas);
-
-    result.mark = temp_allocator_get_mark(tas);
-    darray_init(allocator, &result.array, cap);
-    return result;
-}
-
-template <typename T>
-static void temp_array_destroy(Temp_Array<T>* ta)
-{
-    if (ta->array.backing_allocator) {
-        auto tas = (Temp_Allocator*)ta->array.backing_allocator->user_data;
-        assert(tas);
-
-        temp_allocator_reset(tas, ta->mark);
-    }
-}
-
-template <typename T>
-static DArray<T> temp_array_finalize(Allocator* allocator, Temp_Array<T>* ta)
-{
-    auto result = darray_copy(allocator, &ta->array);
-    temp_array_destroy(ta);
-    return result;
-}
-
-template <typename T>
-static void darray_append(Temp_Array<T>* ta, T element) {
-    darray_append(&ta->array, element);
 }
 
 #define QS_SWAP(a, b) { \

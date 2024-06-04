@@ -3,7 +3,7 @@
 #include <containers/darray.h>
 #include <containers/hash_table.h>
 #include <defines.h>
-#include <memory/temp_allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 #include <string_builder.h>
 
@@ -643,11 +643,13 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
         case AST_Expression_Kind::STRING_LITERAL: {
             auto str = atom_string(expr->string_literal);
 
-            auto mark = temp_allocator_get_mark(&inst->temp_allocator_data);
-            str = convert_special_characters_to_escape_characters(&inst->temp_allocator, str);
-            temp_allocator_reset(&inst->temp_allocator_data, mark);
+            Temp_Arena tarena = temp_arena(nullptr);
+            Allocator ta = arena_allocator_create(tarena.arena);
 
+            str = convert_special_characters_to_escape_characters(&ta, str);
             string_builder_append(sb, "EXPR_STR: \"%s\"\n", str.data);
+
+            temp_arena_release(tarena);
             break;
         }
     }

@@ -54,11 +54,6 @@ FN_ALLOCATOR(c_allocator_fn)
     return nullptr;
 }
 
-FN_DEFAULT_ALLOCATE(allocate)
-{
-    return allocate(c_allocator(), size);
-}
-
 FN_ALLOCATE(allocate)
 {
     auto ptr = allocator->fn(Allocator_Mode::ALLOCATE, size, 1, 0, nullptr, allocator->user_data, 0);

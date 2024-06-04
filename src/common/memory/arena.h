@@ -23,9 +23,15 @@ struct Arena
     Arena_Flags flags;
 };
 
+struct Temp_Arena
+{
+    Arena* arena;
+    s64 reset_to;
+};
+
 NAPI Allocator arena_allocator_create(Arena* arena);
 
-NAPI void arena_new(Arena* arena, u64 max_cap = NOVO_ARENA_MAX_CAP);
+NAPI void arena_new(const char* label, Arena* arena, u64 max_cap = NOVO_ARENA_MAX_CAP);
 NAPI void arena_free(Arena* arena);
 
 N__attribute((malloc, alloc_size(2), alloc_align(3)))
@@ -35,6 +41,11 @@ NAPI bool arena_grow(Arena* arena, s64 min_size);
 NAPI void arena_reset(Arena* arena);
 
 NAPI FN_ALLOCATOR(arena_allocator_fn);
+
+NAPI Temp_Arena temp_arena_create(Arena* arena);
+NAPI void temp_arena_release(Temp_Arena ta);
+NAPI Temp_Arena temp_arena(Arena* dont_use);
+NAPI Allocator temp_arena_allocator(Arena* dont_use);
 
 }
 
