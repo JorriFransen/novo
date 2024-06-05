@@ -13,6 +13,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
+#include <memory/allocator.h>
 #include <memory/arena.h>
 
 namespace Novo {
@@ -38,7 +39,7 @@ void lexer_init_stream(Lexer* lexer, const String_Ref stream, const String_Ref s
 
     DArray<u32>* newline_offsets = &lexer->instance->imported_files[import_index].newline_offsets;
     if (!newline_offsets->data) {
-        darray_init(&lexer->instance->ast_allocator, newline_offsets);
+        darray_init(c_allocator(), newline_offsets);
     }
 
     lexer->stream_start = stream.data;
