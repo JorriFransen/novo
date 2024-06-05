@@ -240,7 +240,7 @@ R"POSTAMBLE(int main(int argc, char** argv) {
                           link_flags,
                         };
 
-    Command_Result c_res = platform_run_command(commands, &ta); // ta is debug allocator here
+    Command_Result c_res = platform_run_command(commands, tarena.arena);
 
     if (!c_res.success) {
         log_error("C backend errors:\n%s", c_res.error_string.data);
@@ -257,8 +257,6 @@ R"POSTAMBLE(int main(int argc, char** argv) {
     if (c_res.success && !inst->options.keep_c_backend_output) {
         fs_remove(c_filename);
     }
-
-    platform_free_command_result(&c_res);
 
     temp_arena_release(tarena);
 

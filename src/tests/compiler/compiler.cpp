@@ -128,29 +128,26 @@ static bool run_test_case(Test_Case* tc, Options options)
 
 int main(int argc, char* argv[]) {
 
-    auto ca = c_allocator();
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     Options options;
 
-    String exe_path = platform_exe_path(ca, argv[0]);
+    String exe_path = platform_exe_path(&ta, argv[0]);
 
     if (argc > 1) {
-        test_path_prefix = string_copy(ca, argv[1]);
+        test_path_prefix = string_copy(&ta, argv[1]);
         assert(fs_is_directory(test_path_prefix));
     }
     else {
         test_path_prefix = {};
     }
 
-    String exe_dir = fs_dirname(ca, exe_path);
-    String build_dir_ = string_format(ca, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
+    String exe_dir = fs_dirname(&ta, exe_path);
+    String build_dir_ = string_format(&ta, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
     assert(fs_is_directory(build_dir_.data));
 
-    options.exe_dir = fs_realpath(ca, build_dir_);
-
-    free(ca, build_dir_.data);
-    free(ca, exe_dir.data);
-    free(ca, exe_path.data);
+    options.exe_dir = fs_realpath(&ta, build_dir_);
 
     s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
     s64 test_success_count = 0;
@@ -176,5 +173,6 @@ int main(int argc, char* argv[]) {
 
     }
 
+    temp_arena_release(tarena);
     return test_success_count == test_count * max_it ? 0 : 1;
 }

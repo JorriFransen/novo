@@ -2,6 +2,7 @@
 
 #include "logger.h"
 #include "memory/allocator.h"
+#include "memory/arena.h"
 #include "src/compiler/ssa.h"
 #include "string_builder.h"
 
@@ -27,17 +28,6 @@ static_assert(false, "Unsupported platform")
 
 namespace Novo
 {
-
-void platform_free_command_result(Command_Result *cres)
-{
-    if (cres->result_string.length) {
-        free(c_allocator(), cres->result_string.data);
-    }
-
-    if (cres->error_string.length) {
-        free(c_allocator(), cres->error_string.data);
-    }
-}
 
 #if NPLATFORM_LINUX
 
@@ -106,9 +96,14 @@ void platform_mkdir(const String_Ref path)
 // TODO: I expect this has the same problem as the old windows version (deadlocking with full pipe(s)).
 //       Use threads for now, like on windows. If/when the windows version changes to overlapped/async io,
 //       this should be able to work in a similar way.
-Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
+Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena* output_arena)
 {
     assert(command_line.count);
+
+    Temp_Arena tarena = temp_arena(output_arena);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    Allocator output_allocator = arena_allocator_create(output_arena);
 
 #define NUM_PIPES   3
 #define READ_FD     0
@@ -124,8 +119,6 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
 #define CHILD_STDOUT_FD ( pipes[STDOUT_PIPE][WRITE_FD] )
 #define CHILD_STDIN_FD  ( pipes[STDIN_PIPE][READ_FD] )
 #define CHILD_STDERR_FD ( pipes[STDERR_PIPE][WRITE_FD] )
-
-    auto ca = c_allocator();
 
     int pipes[NUM_PIPES][2];
 
@@ -157,7 +150,7 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
         close(PARENT_STDIN_FD);
         close(PARENT_STDERR_FD);
 
-        char** argv = allocate_array<char*>(ca, command_line.count + 1);
+        char** argv = allocate_array<char*>(&ta, command_line.count + 1);
 
         for (s64 i = 0; i < command_line.count; i++) {
             argv[i] = (char*)command_line[i].data;
@@ -167,7 +160,7 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
 
         execvp(argv[0], (char* const*)argv);
 
-        String cmd_line_string = string_append(ca, command_line);
+        String cmd_line_string = string_append(&ta, command_line);
         log_fatal("execv error: '%s'", cmd_line_string.data);
         exit(1);
 
@@ -183,8 +176,8 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
 
 
         String_Builder stdout_sb, stderr_sb;
-        string_builder_init(&stdout_sb, ca);
-        string_builder_init(&stderr_sb, ca);
+        string_builder_init(&stdout_sb, &ta);
+        string_builder_init(&stderr_sb, &ta);
 
         int exit_status;
 
@@ -228,15 +221,17 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
         result.success = result.exit_code == 0;
 
         if (stdout_written) {
-            result.result_string = string_builder_to_string(&stdout_sb, ca);
+            result.result_string = string_builder_to_string(&stdout_sb, &output_allocator);
         }
 
         if (stderr_written) {
-            result.error_string = string_builder_to_string(&stderr_sb, ca);
+            result.error_string = string_builder_to_string(&stderr_sb, &output_allocator);
         }
 
         string_builder_free(&stdout_sb);
         string_builder_free(&stderr_sb);
+
+        temp_arena_release(tarena);
 
         return result;
     }
@@ -343,13 +338,15 @@ void platform_mkdir(const String_Ref path)
 struct Read_Thread_Data
 {
     HANDLE read_handle;
+    Arena* arena;
     String_Builder* sb;
 };
 
 static DWORD WINAPI read_cmd_stdout(LPVOID data) {
 
     Read_Thread_Data* info = (Read_Thread_Data*)data;
-    Allocator* ca = c_allocator();
+
+    Allocator allocator = arena_allocator_create(info->arena);
 
     const size_t buf_size = 1024;
     char buf[buf_size + 1];
@@ -362,28 +359,28 @@ static DWORD WINAPI read_cmd_stdout(LPVOID data) {
 
         // NOTE: Using c allocator for thread safety
         // TODO: Change platform_windows_normalize_line_endings to modify the fixed buffer in place
-        String str = platform_windows_normalize_line_endings(ca, String_Ref(buf, read_count));
+        String str = platform_windows_normalize_line_endings(&allocator, String_Ref(buf, read_count));
 
         string_builder_append(info->sb, "%.*s", (int)str.length, str.data);
-        free(ca, str.data);
 
         read_result = ReadFile(info->read_handle, buf, buf_size, &read_count, nullptr);
     }
 
+    assert(GetLastError() == ERROR_BROKEN_PIPE); // If an anonymous pipe is being used and the write handle has been closed, when ReadFile attempts to read using the pipe's corresponding read handle, the function returns FALSE and GetLastError returns ERROR_BROKEN_PIPE.
+
     return 0;
 }
 
-// This is using 2 threads to read from the spawned processes stdin and stdout.
-// String builders are used (with c_allocator() for thread safety) to combine and return the read reads.
 // TODO: Use a thread save arena/dynamic allocator for the string builders.
 // TODO: MAYBE use overlapped/async io and named pipes, get rid of the threading completely.
-Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
+Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena* output_arena)
 {
     assert(command_line.count);
 
-    auto ta = temp_allocator();
-    auto ca = c_allocator();
-    auto mark = temp_allocator_get_mark();
+    Temp_Arena tarena = temp_arena(output_arena);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    Allocator output_allocator = arena_allocator_create(output_arena);
 
     // Used for the pipes
     SECURITY_ATTRIBUTES sec_attr;
@@ -415,8 +412,8 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
     PROCESS_INFORMATION process_info;
     ZeroMemory(&process_info, sizeof(process_info));
 
-    auto arg_str_ = string_append(ta, command_line, " ");
-    Wide_String arg_str(ta, arg_str_);
+    auto arg_str_ = string_append(&ta, command_line, " ");
+    Wide_String arg_str(&ta, arg_str_);
 
     Command_Result result = {};
 
@@ -436,7 +433,7 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
             (LPSTR)&message_buf, 0, nullptr);
 
 
-        result.error_string = string_copy(c_allocator(), String_Ref(message_buf, size));
+        result.error_string = string_copy(&output_allocator, String_Ref(message_buf, size));
         LocalFree(message_buf);
 
         result.success = false;
@@ -452,18 +449,22 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
     CloseHandle(stderr_write_handle);
 
     String_Builder stdout_sb;
-    string_builder_init(&stdout_sb, ca); // NOTE: Using c allocator for thread safety
+    string_builder_init(&stdout_sb, &ta);
 
     String_Builder stderr_sb;
-    string_builder_init(&stderr_sb, ca); // NOTE: Using c allocator for thread safety
+    string_builder_init(&stderr_sb, &ta);
 
     HANDLE read_threads[2];
 
-    Read_Thread_Data stdout_thread_data = { stdout_read_handle, &stdout_sb };
+    Arena stdout_arena;
+    arena_new("stdout_read platform_run_command", &stdout_arena, GIBIBYTE(1));
+    Read_Thread_Data stdout_thread_data = { stdout_read_handle, &stdout_arena, &stdout_sb };
     read_threads[0]= CreateThread(nullptr, 0, read_cmd_stdout, &stdout_thread_data, 0, nullptr);
     assert(read_threads[0]);
 
-    Read_Thread_Data stderr_thread_data = { stderr_read_handle, &stderr_sb };
+    Arena stderr_arena;
+    arena_new("stderr_read platform_run_command", &stderr_arena, GIBIBYTE(1));
+    Read_Thread_Data stderr_thread_data = { stderr_read_handle, &stderr_arena, &stderr_sb };
     read_threads[1] = CreateThread(nullptr, 0, read_cmd_stdout, &stderr_thread_data, 0, nullptr);
     assert(read_threads[1]);
 
@@ -476,13 +477,12 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line)
     DWORD exit_code = GetExitCodeProcess(process_info.hProcess, &exit_code);
     result.exit_code = exit_code;
     result.success = result.exit_code == 0;
-    result.result_string = string_builder_to_string(&stdout_sb, ca);
-    result.error_string = string_builder_to_string(&stderr_sb, ca);
+    result.result_string = string_builder_to_string(&stdout_sb, &output_allocator);
+    result.error_string = string_builder_to_string(&stderr_sb, &output_allocator);
 
-    string_builder_free(&stdout_sb);
-    string_builder_free(&stderr_sb);
-
-    temp_allocator_reset(mark);
+    arena_free(&stdout_arena);
+    arena_free(&stderr_arena);
+    temp_arena_release(tarena);
 
     return result;
 }
@@ -529,11 +529,15 @@ String platform_windows_normalize_line_endings(Allocator* allocator, const Strin
 static_assert(false, "Unsupported platform")
 #endif // NPLATFORM_LINUX
 
-Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Allocator* debug_allocator) {
+Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Arena* output_arena, bool verbose/*=true*/) {
 
-    if (debug_allocator) {
+    if (verbose) {
+
+        Temp_Arena tarena = temp_arena(output_arena);
+        Allocator ta = arena_allocator_create(tarena.arena);
+
         String_Builder sb;
-        string_builder_init(&sb, debug_allocator);
+        string_builder_init(&sb, &ta);
 
         string_builder_append(&sb, "Executing external command: '");
 
@@ -549,9 +553,11 @@ Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Allocato
         String msg = string_builder_to_string(&sb);
 
         log_debug("%.*s", (int)msg.length, msg.data);
+
+        temp_arena_release(tarena);
     }
 
-    return _platform_run_command_(command_line);
+    return _platform_run_command_(command_line, output_arena);
 }
 
 }
