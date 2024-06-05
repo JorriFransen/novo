@@ -339,7 +339,7 @@ struct Read_Thread_Data
 {
     HANDLE read_handle;
     Arena* arena;
-    String_Builder* sb;
+    String_Builder sb;
 };
 
 static DWORD WINAPI read_cmd_stdout(LPVOID data) {
@@ -347,6 +347,7 @@ static DWORD WINAPI read_cmd_stdout(LPVOID data) {
     Read_Thread_Data* info = (Read_Thread_Data*)data;
 
     Allocator allocator = arena_allocator_create(info->arena);
+    string_builder_init(&info->sb, &allocator, 1024);
 
     const size_t buf_size = 1024;
     char buf[buf_size + 1];
@@ -357,11 +358,10 @@ static DWORD WINAPI read_cmd_stdout(LPVOID data) {
 
         buf[read_count] = '\0';
 
-        // NOTE: Using c allocator for thread safety
         // TODO: Change platform_windows_normalize_line_endings to modify the fixed buffer in place
         String str = platform_windows_normalize_line_endings(&allocator, String_Ref(buf, read_count));
 
-        string_builder_append(info->sb, "%.*s", (int)str.length, str.data);
+        string_builder_append(&info->sb, "%.*s", (int)str.length, str.data);
 
         read_result = ReadFile(info->read_handle, buf, buf_size, &read_count, nullptr);
     }
@@ -448,23 +448,17 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena*
     CloseHandle(stdout_write_handle);
     CloseHandle(stderr_write_handle);
 
-    String_Builder stdout_sb;
-    string_builder_init(&stdout_sb, &ta);
-
-    String_Builder stderr_sb;
-    string_builder_init(&stderr_sb, &ta);
-
     HANDLE read_threads[2];
 
     Arena stdout_arena;
     arena_new("stdout_read platform_run_command", &stdout_arena, GIBIBYTE(1));
-    Read_Thread_Data stdout_thread_data = { stdout_read_handle, &stdout_arena, &stdout_sb };
+    Read_Thread_Data stdout_thread_data = { stdout_read_handle, &stdout_arena };
     read_threads[0]= CreateThread(nullptr, 0, read_cmd_stdout, &stdout_thread_data, 0, nullptr);
     assert(read_threads[0]);
 
     Arena stderr_arena;
     arena_new("stderr_read platform_run_command", &stderr_arena, GIBIBYTE(1));
-    Read_Thread_Data stderr_thread_data = { stderr_read_handle, &stderr_arena, &stderr_sb };
+    Read_Thread_Data stderr_thread_data = { stderr_read_handle, &stderr_arena };
     read_threads[1] = CreateThread(nullptr, 0, read_cmd_stdout, &stderr_thread_data, 0, nullptr);
     assert(read_threads[1]);
 
@@ -477,8 +471,8 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena*
     DWORD exit_code = GetExitCodeProcess(process_info.hProcess, &exit_code);
     result.exit_code = exit_code;
     result.success = result.exit_code == 0;
-    result.result_string = string_builder_to_string(&stdout_sb, &output_allocator);
-    result.error_string = string_builder_to_string(&stderr_sb, &output_allocator);
+    result.result_string = string_builder_to_string(&stdout_thread_data.sb, &output_allocator);
+    result.error_string = string_builder_to_string(&stderr_thread_data.sb, &output_allocator);
 
     arena_free(&stdout_arena);
     arena_free(&stderr_arena);
