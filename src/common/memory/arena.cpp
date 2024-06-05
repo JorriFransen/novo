@@ -192,9 +192,9 @@ void temp_arena_release(Temp_Arena ta)
     ta.arena->used = ta.reset_to;
 }
 
-Arena g_temp_arena_a;
-Arena g_temp_arena_b;
-Arena* g_temp_arena_next = nullptr;
+N__tls Arena g_temp_arena_a;
+N__tls Arena g_temp_arena_b;
+N__tls Arena* g_temp_arena_next = nullptr;
 
 Temp_Arena temp_arena(Arena* dont_use)
 {

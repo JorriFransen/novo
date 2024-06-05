@@ -53,16 +53,26 @@ STATIC_ASSERT(false, "Unsupported platform (Apple).");
 
 
 #if defined(__clang__) || defined(__gcc__)
-#define NINLINE __attribute__((always_inline)) inline
-#define NNOINLINE __attribute__((noinline))
-#define N__attribute(x) __attribute(x)
+
+#define    NINLINE __attribute__((always_inline)) inline
+#define    NNOINLINE __attribute__((noinline))
+#define    N__attribute(x) __attribute(x)
+#define    N__tls __thread
+
 #elif defined(_MSC_VER)
-#define NINLINE __forceinline
-#define NNOINLINE __declspec(noinline)
-#define N__attribute(...)
+
+#define    NINLINE __forceinline
+#define    NNOINLINE __declspec(noinline)
+#define    N__attribute(...)
+#define    N__tls __declspec( thread )
+
 #else
-#define NINLINE static inline
-#define NNOINLINE(...)
+
+#define    NINLINE static inline
+#define    NNOINLINE(...)
+#define    N__attribute(...)
+#define    N__tls
+
 #endif
 
 #define GIBIBYTE(x) (x##ULL * 1024ULL * 1024ULL * 1024ULL)
