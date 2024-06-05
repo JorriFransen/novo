@@ -9,6 +9,7 @@
 
 #include "atom.h"
 #include "options.h"
+#include "ssa.h"
 #include "vm.h"
 
 namespace Novo {
@@ -65,7 +66,7 @@ struct Instance
 
     bool fatal_error;
 
-    SSA_Program* ssa_program;
+    SSA_Program ssa_program;
     VM vm;
     VM_Result entry_run_result;
 

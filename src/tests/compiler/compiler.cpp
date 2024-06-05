@@ -100,7 +100,7 @@ static bool run_test_case(Test_Case* tc, Options options)
         return false;
     }
 
-    assert(inst.ssa_program->entry_fn_index >= 0);
+    assert(inst.ssa_program.entry_fn_index >= 0);
 
     VM_Result run_result = inst.entry_run_result;
 

@@ -148,6 +148,7 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
         out_file_name = string_append(&ta, out_file_name, NPLATFORM_DEFAULT_EXE_EXTENSION);
     }
 
+    // TODO: Move extension stripping to instance init
     cop.result.output = string_copy(c_allocator(), out_file_name).data;
 
     temp_arena_release(tarena);

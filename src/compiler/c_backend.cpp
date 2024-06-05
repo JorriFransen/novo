@@ -75,7 +75,7 @@ bool c_backend_emit(Instance* inst)
 
     C_Backend* cb = &cb_data;
 
-    SSA_Program* program = inst->ssa_program;
+    SSA_Program* program = &inst->ssa_program;
 
     String_Builder sb;
     string_builder_init(&sb, &ta);
@@ -130,9 +130,9 @@ typedef u64 p_uint_t;
 
     // Constants
     string_builder_append(&sb, "/* Constants */\n");
-    for (s64 i = 0; i < inst->ssa_program->constants.count; i++) {
+    for (s64 i = 0; i < inst->ssa_program.constants.count; i++) {
 
-        SSA_Constant const_info = inst->ssa_program->constants[i];
+        SSA_Constant const_info = inst->ssa_program.constants[i];
 
         if (const_info.from_expression == nullptr) {
             continue;
@@ -152,8 +152,8 @@ typedef u64 p_uint_t;
 
     // Globals
     string_builder_append(&sb, "/* Global declarations */\n");
-    for (s64 i = 0; i < inst->ssa_program->globals.count; i++) {
-        SSA_Global* global = &inst->ssa_program->globals[i];
+    for (s64 i = 0; i < inst->ssa_program.globals.count; i++) {
+        SSA_Global* global = &inst->ssa_program.globals[i];
 
         char cname[32];
         string_format(cname, "g%u", i);
@@ -162,10 +162,10 @@ typedef u64 p_uint_t;
         string_builder_append(&sb, " = ");
 
         if (global->type->kind == Type_Kind::STRUCT) {
-            SSA_Constant const_info = inst->ssa_program->constants[global->initializer_constant_index];
+            SSA_Constant const_info = inst->ssa_program.constants[global->initializer_constant_index];
             c_backend_emit_constant_expression(cb, &sb, const_info.from_expression);
         } else {
-            string_builder_append(&sb, "c%u", inst->ssa_program->constants[global->initializer_constant_index].offset);
+            string_builder_append(&sb, "c%u", inst->ssa_program.constants[global->initializer_constant_index].offset);
         }
         string_builder_append(&sb, ";\n");
     }
@@ -493,8 +493,8 @@ static T _fetch_(SSA_Block* block, s64* offset) {
 
 void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_index, Stack<u32> *arg_stack)
 {
-    assert(fn_index < cb->inst->ssa_program->functions.count);
-    SSA_Function* func = &cb->inst->ssa_program->functions[fn_index];
+    assert(fn_index < cb->inst->ssa_program.functions.count);
+    SSA_Function* func = &cb->inst->ssa_program.functions[fn_index];
 
     Temp_Arena tarena = temp_arena((Arena*)sb->allocator->user_data);
     Allocator ta = arena_allocator_create(tarena.arena);
@@ -847,7 +847,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 result_reg = FETCH32();
                     u32 fn_index = FETCH32();
 
-                    SSA_Function* callee = &cb->inst->ssa_program->functions[fn_index];
+                    SSA_Function* callee = &cb->inst->ssa_program.functions[fn_index];
                     String callee_name = atom_string(callee->name);
 
                     assert(!callee->foreign);
@@ -885,7 +885,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 fn_index = FETCH32();
                     u16 arg_count = FETCH16();
 
-                    SSA_Function* callee = &cb->inst->ssa_program->functions[fn_index];
+                    SSA_Function* callee = &cb->inst->ssa_program.functions[fn_index];
                     assert(callee->foreign);
 
                     String callee_name = atom_string(callee->name);
@@ -984,7 +984,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 string_reg = FETCH32();
 
                     Source_Pos pos;
-                    bool found = hash_table_find(&cb->inst->ssa_program->instruction_origin_positions, { offset, fn_index, (u32)bi }, &pos);
+                    bool found = hash_table_find(&cb->inst->ssa_program.instruction_origin_positions, { offset, fn_index, (u32)bi }, &pos);
                     assert(found);
 
                     Imported_File file = cb->inst->imported_files[pos.file_index];
@@ -1003,7 +1003,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
             if (!no_print)  {
                 if (no_op) string_builder_append(sb, "    // ");
                 else string_builder_append(sb, " // ");
-                ssa_print_instruction(cb->inst, sb, cb->inst->ssa_program, func, ip, block->bytes);
+                ssa_print_instruction(cb->inst, sb, &cb->inst->ssa_program, func, ip, block->bytes);
             }
 #else // NOVO_C_BACKEND_PRINT_SSA_COMMENTS
             if (!no_print && !no_op) string_builder_append(sb, "\n");
