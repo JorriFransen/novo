@@ -4,6 +4,7 @@
 #include <memory/allocator.h>
 
 #include <assert.h>
+#include <memory/arena.h>
 #include <nstring.h>
 
 using namespace Novo;
@@ -12,12 +13,15 @@ static bool int_eq_fn(int a, int b) {
     return a == b;
 }
 
-static void create_and_free()
+static void create_and_free(Arena* arena)
 {
+
+    Allocator allocator = arena_allocator_create(arena);
+
     // Default key compare
     {
         Hash_Table<int, const char *> table;
-        hash_table_create(c_allocator(), &table);
+        hash_table_create(&allocator, &table);
 
         assert(table.hashes);
         assert(table.keys);
@@ -26,7 +30,7 @@ static void create_and_free()
         assert(table.capacity == NOVO_HASH_TABLE_INITIAL_CAPACITY);
 
         assert((void *)table.keys_equal == (void *)default_hash_table_equal<int>);
-        assert(table.allocator == c_allocator());
+        assert(table.allocator == &allocator);
 
         hash_table_free(&table);
 
@@ -43,7 +47,7 @@ static void create_and_free()
     // Custom key compare
     {
         Hash_Table<int, const char *> table;
-        hash_table_create(c_allocator(), &table, int_eq_fn);
+        hash_table_create(&allocator, &table, int_eq_fn);
 
         assert(table.hashes);
         assert(table.keys);
@@ -52,7 +56,7 @@ static void create_and_free()
         assert(table.capacity == NOVO_HASH_TABLE_INITIAL_CAPACITY);
 
         assert((void *)table.keys_equal == (void *)int_eq_fn);
-        assert(table.allocator == c_allocator());
+        assert(table.allocator == &allocator);
 
         hash_table_free(&table);
 
@@ -67,10 +71,12 @@ static void create_and_free()
     }
 }
 
-static void add_and_find()
+static void add_and_find(Arena* arena)
 {
+    Allocator allocator = arena_allocator_create(arena);
+
     Hash_Table<int, const char *> table;
-    hash_table_create(c_allocator(), &table);
+    hash_table_create(&allocator, &table);
 
     auto s1 = "Really?";
     hash_table_add(&table, 42, s1);
@@ -95,10 +101,12 @@ static void add_and_find()
     hash_table_free(&table);
 }
 
-static void grow()
+static void grow(Arena* arena)
 {
+    Allocator allocator = arena_allocator_create(arena);
+
     Hash_Table<int, int> table;
-    hash_table_create(c_allocator(), &table);
+    hash_table_create(&allocator, &table);
 
     assert(table.capacity == NOVO_HASH_TABLE_INITIAL_CAPACITY);
 
@@ -127,8 +135,17 @@ static void grow()
 }
 
 int main(int argc, char* argv[]) {
-    create_and_free();
-    add_and_find();
-    grow();
+
+    Temp_Arena tarena = temp_arena(nullptr);
+
+    create_and_free(tarena.arena);
+    temp_arena_release(tarena);
+
+    add_and_find(tarena.arena);
+    temp_arena_release(tarena);
+
+    grow(tarena.arena);
+    temp_arena_release(tarena);
+
     return 0;
 }
