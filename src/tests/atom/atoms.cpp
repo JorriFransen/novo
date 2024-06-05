@@ -1,6 +1,7 @@
 
 #include <defines.h>
 #include <memory/allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 
 #include "atom.h"
@@ -9,10 +10,8 @@
 
 using namespace Novo;
 
-static void single_match()
+static void single_match(Allocator* allocator)
 {
-    auto allocator = c_allocator();
-
     initialize_atoms(allocator, 4);
 
     auto cstr = "test string";
@@ -32,10 +31,8 @@ static void single_match()
     free_atoms();
 }
 
-static void multiple_match()
+static void multiple_match(Allocator *allocator)
 {
-    auto allocator = c_allocator();
-
     initialize_atoms(allocator, 8);
 
     Atom a1 = atom_get("a1");
@@ -84,10 +81,8 @@ static void multiple_match()
     free_atoms();
 }
 
-static void growing()
+static void growing(Allocator* allocator)
 {
-    auto allocator = c_allocator();
-
     initialize_atoms(allocator, 2);
 
     assert(g_atoms.capacity == 2);
@@ -136,8 +131,19 @@ static void growing()
 }
 
 int main(int argc, char* argv[]) {
-    single_match();
-    multiple_match();
-    growing();
+
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator allocator = arena_allocator_create(tarena.arena);
+
+    single_match(&allocator);
+    temp_arena_release(tarena);
+
+    multiple_match(&allocator);
+    temp_arena_release(tarena);
+
+    growing(&allocator);
+    temp_arena_release(tarena);
+
+
     return 0;
 }

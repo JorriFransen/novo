@@ -25,6 +25,7 @@ static_assert(false, "Unsupported platform!");
 namespace Novo {
 
 struct Allocator;
+struct Arena;
 
 NAPI String platform_dirname(Allocator* allocator, String_Ref path);
 NAPI String platform_filename(Allocator* allocator, String_Ref path);
@@ -43,8 +44,7 @@ struct Command_Result
     String error_string;
 };
 
-NAPI Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Allocator* debug_allocator);
-NAPI void platform_free_command_result(Command_Result *cres);
+NAPI Command_Result platform_run_command(Array_Ref<String_Ref> command_line, Arena* output_arena, bool verbose = true);
 
 #if NPLATFORM_WINDOWS
 String platform_windows_normalize_line_endings(Allocator* allocator, const String_Ref str);
