@@ -631,7 +631,7 @@ u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)
     File_Handle fhandle;
     fs_open(inst->inserted_strings_path, FILE_MODE_WRITE, &fhandle);
 
-     u64 offset_offset;
+    u64 offset_offset;
     fs_size(&fhandle, &offset_offset);
 
 
@@ -644,7 +644,6 @@ u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)
     String comment_string = string_format(&ta, "// Inserted from: %s:%u:%u\n",
                                           atom_string(inserted_from_file.name).data, insert_li.line, insert_li.offset);
 
-    temp_arena_release(tarena);
 
     Imported_File* insert_file = &inst->imported_files[inst->insert_file_index];
 
@@ -663,6 +662,8 @@ u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)
     darray_append(&insert_file->newline_offsets, (u32)offset_offset + 1);
 
     fs_close(&fhandle);
+
+    temp_arena_release(tarena);
 
     return result;
 }
