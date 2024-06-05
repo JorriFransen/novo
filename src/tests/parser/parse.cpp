@@ -4,6 +4,7 @@
 #include <defines.h>
 #include <filesystem.h>
 #include <memory/allocator.h>
+#include <memory/arena.h>
 #include <nstring.h>
 
 #include <ast_print.h>
@@ -26,18 +27,15 @@ int main(int argc, char* argv[])
     options.trace = true;
     options.verbose = true;
 
-    auto ca = c_allocator();
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
-    String exe_path = platform_exe_path(ca, argv[0]);
-    String exe_dir = fs_dirname(ca, exe_path);
-    String build_dir_ = string_format(ca, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
+    String exe_path = platform_exe_path(&ta, argv[0]);
+    String exe_dir = fs_dirname(&ta, exe_path);
+    String build_dir_ = string_format(&ta, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
     assert(fs_is_directory(build_dir_.data));
 
-    options.exe_dir = fs_realpath(ca, build_dir_);
-
-    free(ca, build_dir_.data);
-    free(ca, exe_dir.data);
-    free(ca, exe_path.data);
+    options.exe_dir = fs_realpath(&ta, build_dir_);
 
     instance_init(&instance, options);
 
@@ -51,7 +49,7 @@ int main(int argc, char* argv[])
     auto file = parse_file(&instance, "test.no", 0);
     assert(file);
 
-    auto ast_str = ast_to_string(&instance, file, c_allocator());
+    auto ast_str = ast_to_string(&instance, file, &ta);
 
     auto expected_ast_str = R"(test.no:002:001-007:001: FUNC_DECL: 'main'
 test.no:002:015-0000003:  RETURN_TS:
@@ -129,6 +127,8 @@ test.no:019:025-0000001:      EXPR_INT: 2
     assert(string_equal(ast_str, expected_ast_str));
 
     printf("%s", ast_str.data);
+
+    temp_arena_release(tarena);
 
     return 0;
 }

@@ -165,7 +165,8 @@ NAPI FN_ALLOCATOR(arena_allocator_fn)
         }
 
         case Allocator_Mode::REALLOCATE: assert(false); break;
-        case Allocator_Mode::FREE: assert(false); break;
+
+        case Allocator_Mode::FREE: return nullptr;
 
         case Allocator_Mode::FREE_ALL: {
             arena_reset(arena);
