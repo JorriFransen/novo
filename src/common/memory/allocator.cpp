@@ -31,6 +31,7 @@ FN_ALLOCATOR(c_allocator_fn)
         // Store the pointer returned by malloc
         ptr[-1] = mem;
 
+        memset(ptr, 0, size);
         return ptr;
     }
 
@@ -57,14 +58,12 @@ FN_ALLOCATOR(c_allocator_fn)
 FN_ALLOCATE(allocate)
 {
     auto ptr = allocator->fn(Allocator_Mode::ALLOCATE, size, 1, 0, nullptr, allocator->user_data, 0);
-    memset(ptr, 0, size);
     return ptr;
 }
 
 FN_ALLOCATE_ALIGNED(allocate_aligned)
 {
     auto ptr = allocator->fn(Allocator_Mode::ALLOCATE, size, align, 0, nullptr, allocator->user_data, 0);
-    memset(ptr, 0, size);
     return ptr;
 }
 
