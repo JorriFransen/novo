@@ -47,6 +47,9 @@ void instance_init(Instance* inst, Options options)
     inst->ast_allocator = arena_allocator_create(&inst->ast_arena);
     inst->temp_allocator = arena_allocator_create(&inst->temp_arena);
 
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
     darray_init(c_allocator(), &inst->parse_tasks);
     darray_init(c_allocator(), &inst->resolve_tasks);
     darray_init(c_allocator(), &inst->type_tasks);
@@ -77,29 +80,26 @@ void instance_init(Instance* inst, Options options)
 
     if (inst->options.exe_dir.length) {
         assert(fs_is_realpath(inst->options.exe_dir));
-        inst->compiler_exe_dir = fs_realpath(c_allocator(), inst->options.exe_dir);
+        inst->compiler_exe_dir = fs_realpath(&inst->ast_allocator, inst->options.exe_dir);
     } else {
-        String compiler_exe_path = platform_exe_path(c_allocator(), options.argv_0);
+        String compiler_exe_path = platform_exe_path(&ta, options.argv_0);
         log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
 
-        inst->compiler_exe_dir = platform_dirname(c_allocator(), compiler_exe_path);
+        inst->compiler_exe_dir = platform_dirname(&inst->ast_allocator, compiler_exe_path);
     }
 
     assert(fs_is_directory(inst->compiler_exe_dir));
     log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
 
-    inst->support_lib_s_path = string_format(c_allocator(), "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_STATIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_STATIC_LIB_EXTENSION,
+    inst->support_lib_s_path = string_format(&inst->ast_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_STATIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_STATIC_LIB_EXTENSION,
                                              (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
     log_trace("Static support lib: '%s'", inst->support_lib_s_path.data);
     assert(fs_is_file(inst->support_lib_s_path));
 
-    inst->support_lib_d_path = string_format(c_allocator(), "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_DYNAMIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_DYNAMIC_LIB_EXTENSION,
+    inst->support_lib_d_path = string_format(&inst->ast_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_DYNAMIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_DYNAMIC_LIB_EXTENSION,
                                              (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
     log_trace("Dynamic support lib: '%s'", inst->support_lib_d_path.data);
     assert(fs_is_file(inst->support_lib_d_path));
-
-    Temp_Arena tarena = temp_arena(nullptr);
-    Allocator ta = arena_allocator_create(tarena.arena);
 
     String current_search_dir = inst->compiler_exe_dir;
     bool module_dir_found = false;
@@ -116,19 +116,17 @@ void instance_init(Instance* inst, Options options)
 
         if (fs_is_directory(candidate)) {
             module_dir_found = true;
-            inst->module_dir = string_copy(c_allocator(), candidate);
+            inst->module_dir = string_copy(&inst->ast_allocator, candidate);
             break;
         }
 
         current_search_dir = parent_dir;
     }
 
-    temp_arena_release(tarena);
-
     if (!module_dir_found) log_fatal("Unable to find module diretory!");
     log_trace("Module dir: '%s'", inst->module_dir.data);
 
-    inst->builtin_module_path = string_format(c_allocator(), "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
+    inst->builtin_module_path = string_format(&inst->ast_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
     assert(fs_is_file(inst->builtin_module_path));
     log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
 
@@ -203,6 +201,8 @@ void instance_init(Instance* inst, Options options)
     hash_table_create(c_allocator(), &inst->stmt_positions);
     hash_table_create(c_allocator(), &inst->expr_positions);
     hash_table_create(c_allocator(), &inst->ts_positions);
+
+    temp_arena_release(tarena);
 }
 
 void instance_free(Instance* inst)
@@ -223,12 +223,6 @@ void instance_free(Instance* inst)
     darray_free(&inst->imported_files);
     darray_free(&inst->function_types);
     darray_free(&inst->struct_types);
-
-    free(c_allocator(), inst->compiler_exe_dir.data);
-    free(c_allocator(), inst->support_lib_s_path.data);
-    free(c_allocator(), inst->support_lib_d_path.data);
-    free(c_allocator(), inst->module_dir.data);
-    free(c_allocator(), inst->builtin_module_path.data);
 
     ssa_program_free(inst->ssa_program);
     free(c_allocator(), inst->ssa_program);
