@@ -61,21 +61,11 @@ FN_ALLOCATE(allocate)
     return ptr;
 }
 
-FN_DEFAULT_ALLOCATE_ALIGNED(allocate_aligned)
-{
-    return allocate_aligned(c_allocator(), size, align);
-}
-
 FN_ALLOCATE_ALIGNED(allocate_aligned)
 {
     auto ptr = allocator->fn(Allocator_Mode::ALLOCATE, size, align, 0, nullptr, allocator->user_data, 0);
     memset(ptr, 0, size);
     return ptr;
-}
-
-FN_DEFAULT_FREE(free)
-{
-    free(c_allocator(), ptr);
 }
 
 FN_FREE(free)
