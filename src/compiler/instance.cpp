@@ -282,6 +282,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     add_parse_task(inst, path_atom);
 
     Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
 
     bool progress = true;
 
@@ -579,21 +580,16 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
     if (!builtin_module && inst->options.print_ast) {
 
-        Temp_Arena tarena = temp_arena(nullptr);
-        Allocator ta = arena_allocator_create(tarena.arena);
-
         for (s64 i = 0; i < inst->imported_files.count; i++) {
             assert(inst->imported_files[i].ast);
             String ast_str = ast_to_string(inst, inst->imported_files[i].ast, &ta);
             printf("\n%s", ast_str.data);
-
-            temp_arena_release(tarena);
         }
 
     }
 
     if (!builtin_module && inst->options.print_bytecode) {
-        String ssa_str = ssa_to_string(inst, c_allocator(), inst->ssa_program);
+        String ssa_str = ssa_to_string(inst, &ta, inst->ssa_program);
         printf("\n%s\n", ssa_str.data);
     }
 
@@ -604,6 +600,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         }
         log_debug("Bytecode vm returned: %llu", inst->entry_run_result.return_value);
     }
+
+    temp_arena_release(tarena);
 
     if (builtin_module || inst->options.no_backend)
         return true;
