@@ -54,12 +54,12 @@ bool c_backend_emit(Instance* inst)
     // cb_data.wsdk_info.vs_library_path =  (wchar_t*)L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\lib\\x64";
 
     // log_warn("windows_sdk_version: %i", cb_data.wsdk_info.windows_sdk_version);
-    // log_warn("windows_sdk_root: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.windows_sdk_root).data);
-    // log_warn("windows_sdk_um_library_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.windows_sdk_um_library_path).data);
-    // log_warn("windows_sdk_ucrt_library_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.windows_sdk_ucrt_library_path).data);
-    // log_warn("vs_exe_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.vs_exe_path).data);
-    // log_warn("vs_tools_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.vs_tools_path).data);
-    // log_warn("vs_library_path: %s", wide_string_to_regular(c_allocator(), cb_data.wsdk_info.vs_library_path).data);
+    // log_warn("windows_sdk_root: %s", wide_string_to_regular(__some_allocator___, cb_data.wsdk_info.windows_sdk_root).data);
+    // log_warn("windows_sdk_um_library_path: %s", wide_string_to_regular(__some_allocator___, cb_data.wsdk_info.windows_sdk_um_library_path).data);
+    // log_warn("windows_sdk_ucrt_library_path: %s", wide_string_to_regular(__some_allocator___, cb_data.wsdk_info.windows_sdk_ucrt_library_path).data);
+    // log_warn("vs_exe_path: %s", wide_string_to_regular(__some_allocator___, cb_data.wsdk_info.vs_exe_path).data);
+    // log_warn("vs_tools_path: %s", wide_string_to_regular(__some_allocator___, cb_data.wsdk_info.vs_tools_path).data);
+    // log_warn("vs_library_path: %s", wide_string_to_regular(__some_allocator___, cb_data.wsdk_info.vs_library_path).data);
 
     assert(cb_data.wsdk_info.windows_sdk_version);
 
@@ -78,7 +78,7 @@ bool c_backend_emit(Instance* inst)
     SSA_Program* program = inst->ssa_program;
 
     String_Builder sb;
-    string_builder_init(&sb, inst->default_allocator);
+    string_builder_init(&sb, &ta);
 
     const char* preamble =
 R"PREAMBLE(typedef unsigned char       u8;
@@ -185,8 +185,7 @@ typedef u64 p_uint_t;
     string_builder_append(&sb, "/* End function declarations */\n\n");
 
     Stack<u32> arg_stack;
-    stack_init(c_allocator(), &arg_stack);
-
+    stack_init(&ta, &arg_stack, 32);
 
     // Function definitions
     string_builder_append(&sb, "/* Function definitions */\n");
@@ -206,8 +205,6 @@ typedef u64 p_uint_t;
     }
     string_builder_append(&sb, "/* End function definitions */\n\n");
 
-    stack_free(&arg_stack);
-
     const char* postamble =
 R"POSTAMBLE(int main(int argc, char** argv) {
     return novo_main();
@@ -218,14 +215,11 @@ R"POSTAMBLE(int main(int argc, char** argv) {
     string_builder_append(&sb, "/* End postamble */\n");
 
     String c_str = string_builder_to_string(&sb);
-    string_builder_free(&sb);
 
     assert(inst->options.output);
 
     String c_filename = string_format(&ta, "%s_cback.c", inst->options.output);
     fs_write_entire_file(c_filename, c_str);
-
-    free(inst->default_allocator, c_str.data);
 
 #if NPLATFORM_WINDOWS
     String_Ref link_flags = "-lmsvcrtd -Wl,-nodefaultlib:libcmt,-nodefaultlib:libcmtd,-nodefaultlib:libmsvcrt";

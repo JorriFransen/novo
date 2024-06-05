@@ -164,7 +164,7 @@ AST_Statement* ast_statement(Instance* inst, AST_Statement_Kind kind)
 AST_Statement* ast_import_statement(Instance* inst, String_Ref path)
 {
     auto result = ast_statement(inst, AST_Statement_Kind::IMPORT);
-    result->import_path = path;
+    result->import_path = string_copy(&inst->ast_allocator, path);
     return result;
 }
 

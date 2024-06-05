@@ -345,9 +345,9 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             }
 
             stack_push(&task->loop_control_stack, stmt);
-
             bool while_result = resolve_statement(inst, task, stmt->while_stmt.stmt, scope);
             stack_pop(&task->loop_control_stack);
+
             if (!while_result) {
                 return false;
             }
@@ -374,6 +374,7 @@ bool resolve_statement(Instance* inst, Resolve_Task* task, AST_Statement* stmt, 
             stack_push(&task->loop_control_stack, stmt);
             bool for_stmt_result = resolve_statement(inst, task, stmt->for_stmt.stmt, for_scope);
             stack_pop(&task->loop_control_stack);
+
             if (!for_stmt_result) {
                 return false;
             }

@@ -42,18 +42,16 @@ void instance_init(Instance* inst, Options options)
 
     fs_chdir(inst->cwd);
 
-    auto default_alloc = inst->default_allocator;
-
     arena_new("ast_arena instance_init", &inst->ast_arena);
     arena_new("temp_arena instance_init", &inst->temp_arena);
     inst->ast_allocator = arena_allocator_create(&inst->ast_arena);
     inst->temp_allocator = arena_allocator_create(&inst->temp_arena);
 
-    darray_init(default_alloc, &inst->parse_tasks);
-    darray_init(default_alloc, &inst->resolve_tasks);
-    darray_init(default_alloc, &inst->type_tasks);
-    darray_init(default_alloc, &inst->ssa_tasks);
-    darray_init(default_alloc, &inst->run_tasks);
+    darray_init(c_allocator(), &inst->parse_tasks);
+    darray_init(c_allocator(), &inst->resolve_tasks);
+    darray_init(c_allocator(), &inst->type_tasks);
+    darray_init(c_allocator(), &inst->ssa_tasks);
+    darray_init(c_allocator(), &inst->run_tasks);
 
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
@@ -72,30 +70,30 @@ void instance_init(Instance* inst, Options options)
     inst->fatal_error = false;
 
     if (!g_atoms_initialized) {
-        initialize_atoms(default_alloc, 128);
+        initialize_atoms(c_allocator(), 128);
         initialize_keywords();
         g_atoms_initialized = true;
     }
 
     if (inst->options.exe_dir.length) {
         assert(fs_is_realpath(inst->options.exe_dir));
-        inst->compiler_exe_dir = fs_realpath(inst->default_allocator, inst->options.exe_dir);
+        inst->compiler_exe_dir = fs_realpath(c_allocator(), inst->options.exe_dir);
     } else {
-        String compiler_exe_path = platform_exe_path(inst->default_allocator, options.argv_0);
+        String compiler_exe_path = platform_exe_path(c_allocator(), options.argv_0);
         log_trace("Compiler exe path: '%s'", compiler_exe_path.data);
 
-        inst->compiler_exe_dir = platform_dirname(inst->default_allocator, compiler_exe_path);
+        inst->compiler_exe_dir = platform_dirname(c_allocator(), compiler_exe_path);
     }
 
     assert(fs_is_directory(inst->compiler_exe_dir));
     log_trace("Compiler exe dir: '%s'", inst->compiler_exe_dir.data);
 
-    inst->support_lib_s_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_STATIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_STATIC_LIB_EXTENSION,
+    inst->support_lib_s_path = string_format(c_allocator(), "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_STATIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_STATIC_LIB_EXTENSION,
                                              (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
     log_trace("Static support lib: '%s'", inst->support_lib_s_path.data);
     assert(fs_is_file(inst->support_lib_s_path));
 
-    inst->support_lib_d_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_DYNAMIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_DYNAMIC_LIB_EXTENSION,
+    inst->support_lib_d_path = string_format(c_allocator(), "%.*s" NPLATFORM_PATH_SEPARATOR NPLATFORM_DYNAMIC_LIB_PREFIX "novo_runtime_support" NPLATFORM_DYNAMIC_LIB_EXTENSION,
                                              (int)inst->compiler_exe_dir.length, inst->compiler_exe_dir.data);
     log_trace("Dynamic support lib: '%s'", inst->support_lib_d_path.data);
     assert(fs_is_file(inst->support_lib_d_path));
@@ -118,7 +116,7 @@ void instance_init(Instance* inst, Options options)
 
         if (fs_is_directory(candidate)) {
             module_dir_found = true;
-            inst->module_dir = string_copy(inst->default_allocator, candidate);
+            inst->module_dir = string_copy(c_allocator(), candidate);
             break;
         }
 
@@ -130,7 +128,7 @@ void instance_init(Instance* inst, Options options)
     if (!module_dir_found) log_fatal("Unable to find module diretory!");
     log_trace("Module dir: '%s'", inst->module_dir.data);
 
-    inst->builtin_module_path = string_format(inst->default_allocator, "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
+    inst->builtin_module_path = string_format(c_allocator(), "%.*s" NPLATFORM_PATH_SEPARATOR "%s", (int)inst->module_dir.length, inst->module_dir.data, "builtin.no");
     assert(fs_is_file(inst->builtin_module_path));
     log_trace("Builtin module path: '%s'", inst->builtin_module_path.data);
 
@@ -226,11 +224,11 @@ void instance_free(Instance* inst)
     darray_free(&inst->function_types);
     darray_free(&inst->struct_types);
 
-    free(inst->default_allocator, inst->compiler_exe_dir.data);
-    free(inst->default_allocator, inst->support_lib_s_path.data);
-    free(inst->default_allocator, inst->support_lib_d_path.data);
-    free(inst->default_allocator, inst->module_dir.data);
-    free(inst->default_allocator, inst->builtin_module_path.data);
+    free(c_allocator(), inst->compiler_exe_dir.data);
+    free(c_allocator(), inst->support_lib_s_path.data);
+    free(c_allocator(), inst->support_lib_d_path.data);
+    free(c_allocator(), inst->module_dir.data);
+    free(c_allocator(), inst->builtin_module_path.data);
 
     ssa_program_free(inst->ssa_program);
     free(c_allocator(), inst->ssa_program);
@@ -289,6 +287,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     Atom path_atom = atom_get(first_file_name);
     add_parse_task(inst, path_atom);
 
+    Temp_Arena tarena = temp_arena(nullptr);
+
     bool progress = true;
 
     while (progress) {
@@ -339,7 +339,13 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             Resolve_Task* task_ptr = &inst->resolve_tasks[i];
             auto task = *task_ptr;
 
+            Temp_Arena loop_control_arena = temp_arena_create(tarena.arena);
+            Allocator lc_alloc = arena_allocator_create(loop_control_arena.arena);
+
+            stack_init(&lc_alloc, &task_ptr->loop_control_stack, 32);
+
             bool success = resolve_node(inst, task_ptr, &task_ptr->node, task_ptr->scope);
+            temp_arena_release(loop_control_arena);
 
             if (success) {
                 progress = true;
@@ -534,6 +540,8 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             i--;
         }
     }
+
+    temp_arena_release(tarena);
 
     bool all_done = inst->parse_tasks.count == 0 &&
                     inst->resolve_tasks.count == 0 &&
