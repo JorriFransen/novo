@@ -507,15 +507,15 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                 if (task->kind == Run_Task_Kind::INSERT) {
 
-                    Temp_Arena tarena = temp_arena(nullptr);
-                    Allocator ta = arena_allocator_create(tarena.arena);
+                    Temp_Arena tar = temp_arena_create(tarena.arena);
+                    Allocator ta = arena_allocator_create(tar.arena);
 
                     String insert_string = vm_string_from_result(inst, &ta, run_result);
 
                     // TODO: @ARENA
                     insert_string = fix_special_characters_in_insert_string(inst, c_allocator(), insert_string);
 
-                    temp_arena_release(tarena);
+                    temp_arena_release(tar);
 
                     Source_Pos pos = source_pos(inst, task->node);
 
