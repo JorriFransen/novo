@@ -290,14 +290,13 @@ void add_run_task(Instance* inst, AST_Node node, Scope* scope, DArray<AST_Node>*
 
 Resolve_Task resolve_task_create(Instance* inst, AST_Node node, Scope* scope, AST_Declaration* fn_decl, DArray<AST_Node> *bc_deps)
 {
+
     Resolve_Task result;
     result.node = node;
     result.scope = scope;
     result.fn_decl = fn_decl;
     result.waiting_for = nullptr;
-
-    // TODO: Dynamic allocator?
-    stack_init(c_allocator(), &result.loop_control_stack, 0);
+    result.loop_control_stack = {};
 
     result.bytecode_deps = bc_deps;
 

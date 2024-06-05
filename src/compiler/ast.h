@@ -176,7 +176,7 @@ struct AST_Statement
 
     union
     {
-        String_Ref import_path;
+        String import_path;
         AST_Declaration* declaration;
         AST_Expression* call;
         AST_Expression* return_expr;

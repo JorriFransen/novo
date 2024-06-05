@@ -42,8 +42,6 @@ struct Instance
 
     String_Ref cwd = "./";
 
-    Allocator* default_allocator = c_allocator();
-
     Arena ast_arena;
     Arena temp_arena; // This is reset after each instance cycle, used utility functions like temp_type_string()
     Allocator ast_allocator;

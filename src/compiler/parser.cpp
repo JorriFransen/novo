@@ -158,7 +158,7 @@ DArray<AST_Node> parse_file_nodes(Instance* inst, Parser* parser, Scope* scope)
                                                                   (int)candidate_dirs[i].length, candidate_dirs[i].data,
                                                                   (int)module_name.length, module_name.data) ;
                             if (fs_is_file(candidate_path)) {
-                                import_path = string_copy(inst->default_allocator, candidate_path);
+                                import_path = string_copy(&ta, candidate_path);
                                 found = true;
                                 break;
                             }
