@@ -133,8 +133,7 @@ void instance_init(Instance* inst, Options options)
     inst->builtin_module_loaded = false;
 
     // TODO: Custom allocator
-    inst->ssa_program = allocate<SSA_Program>(c_allocator());
-    ssa_program_init(inst->ssa_program, c_allocator());
+    ssa_program_init(&inst->ssa_program, c_allocator());
 
     // TODO: Custom allocator
     vm_init(&inst->vm, c_allocator(), inst);
@@ -224,8 +223,7 @@ void instance_free(Instance* inst)
     darray_free(&inst->function_types);
     darray_free(&inst->struct_types);
 
-    ssa_program_free(inst->ssa_program);
-    free(c_allocator(), inst->ssa_program);
+    ssa_program_free(&inst->ssa_program);
 
     vm_free(&inst->vm);
 
@@ -400,7 +398,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                         if (decl->kind == AST_Declaration_Kind::FUNCTION) {
 
-                            if (ssa_find_function(inst->ssa_program, decl->ident->atom, nullptr)) {
+                            if (ssa_find_function(&inst->ssa_program, decl->ident->atom, nullptr)) {
                                 darray_remove_ordered(task.bytecode_deps, i);
                                 i--;
                             }
@@ -409,7 +407,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                             assert(decl->kind == AST_Declaration_Kind::VARIABLE);
                             assert(decl->flags & AST_DECL_FLAG_GLOBAL);
 
-                            if (ssa_find_global_variable(inst->ssa_program, decl->ident->atom, nullptr)) {
+                            if (ssa_find_global_variable(&inst->ssa_program, decl->ident->atom, nullptr)) {
                                 darray_remove_ordered(task.bytecode_deps, i);
                                 i--;
                             }
@@ -441,7 +439,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
             if (task.kind == SSA_Task_Kind::RUN || task.kind == SSA_Task_Kind::INSERT) {
 
-                s64 wrapper_index = ssa_emit_run_wrapper(inst, inst->ssa_program, task.node, task.scope);
+                s64 wrapper_index = ssa_emit_run_wrapper(inst, &inst->ssa_program, task.node, task.scope);
                 success = wrapper_index >= 0;
 
                 if (success) {
@@ -449,18 +447,18 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 }
 
             } else if (task.kind == SSA_Task_Kind::GLOBAL_VAR) {
-                success = ssa_emit_global_variable(inst, inst->ssa_program, task.node.declaration);
+                success = ssa_emit_global_variable(inst, &inst->ssa_program, task.node.declaration);
                 assert(success);
 
             } else if (task.kind == SSA_Task_Kind::CONSTANT) {
 
-                u32 const_index = ssa_emit_constant(inst, inst->ssa_program, task.node.declaration->constant.value);
-                darray_append(&inst->ssa_program->constant_references, { task.node, const_index });
+                u32 const_index = ssa_emit_constant(inst, &inst->ssa_program, task.node.declaration->constant.value);
+                darray_append(&inst->ssa_program.constant_references, { task.node, const_index });
                 success = true;
 
             } else {
                 assert(task.kind == SSA_Task_Kind::FUNCTION);
-                success = ssa_emit_function(inst, inst->ssa_program, task.node.declaration);
+                success = ssa_emit_function(inst, &inst->ssa_program, task.node.declaration);
                 assert(success);
             }
 
@@ -480,7 +478,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
         for (s64 i = 0; i < inst->run_tasks.count; i++) {
             Run_Task* task = &inst->run_tasks[i];
 
-            VM_Result run_result = vm_run(&inst->vm, inst->ssa_program, task->wrapper_index);
+            VM_Result run_result = vm_run(&inst->vm, &inst->ssa_program, task->wrapper_index);
             assert(!run_result.assert_fail);
 
             if (task->node.kind == AST_Node_Kind::EXPRESSION) {
@@ -589,12 +587,12 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     }
 
     if (!builtin_module && inst->options.print_bytecode) {
-        String ssa_str = ssa_to_string(inst, &ta, inst->ssa_program);
+        String ssa_str = ssa_to_string(inst, &ta, &inst->ssa_program);
         printf("\n%s\n", ssa_str.data);
     }
 
-    if (!builtin_module && inst->ssa_program->entry_fn_index >= 0) {
-        inst->entry_run_result = vm_run(&inst->vm, inst->ssa_program);
+    if (!builtin_module && inst->ssa_program.entry_fn_index >= 0) {
+        inst->entry_run_result = vm_run(&inst->vm, &inst->ssa_program);
         if (inst->entry_run_result.assert_fail) {
             log_warn("Bytecode vm quit after failed assert");
         }
