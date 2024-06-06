@@ -241,7 +241,7 @@ extern "C"
     bool os_file_exists(wchar_t* name) {
         // @Robustness: What flags do we really want to check here?
 
-        auto attrib = GetFileAttributesW(name);
+        DWORD attrib = GetFileAttributesW(name);
         if (attrib == INVALID_FILE_ATTRIBUTES) return false;
         if (attrib & FILE_ATTRIBUTE_DIRECTORY) return false;
 
@@ -256,13 +256,13 @@ extern "C"
         // If you don't like that, use a programming language that actually
         // helps you with using custom allocators. Or just edit the code.
 
-        auto len_a = wcslen(a);
-        auto len_b = wcslen(b);
+        size_t len_a = wcslen(a);
+        size_t len_b = wcslen(b);
 
-        auto len_c = 0;
+        size_t len_c = 0;
         if (c) len_c = wcslen(c);
 
-        auto len_d = 0;
+        size_t len_d = 0;
         if (d) len_d = wcslen(d);
 
         wchar_t* result = (wchar_t*)malloc((len_a + len_b + len_c + len_d + 1) * 2);
@@ -315,7 +315,7 @@ extern "C"
         // If that's not the right terminology, hey, I never do registry stuff.
 
         DWORD required_length;
-        auto rc = RegQueryValueExW(key, version, NULL, NULL, NULL, &required_length);
+        LSTATUS rc = RegQueryValueExW(key, version, NULL, NULL, NULL, &required_length);
         if (rc != 0)  return NULL;
 
         DWORD length = required_length + 2;  // The +2 is for the maybe optional zero later on. Probably we are over-allocating.
@@ -339,7 +339,7 @@ extern "C"
         // Find the Windows 10 subdirectory with the highest version number.
 
         int i0, i1, i2, i3;
-        auto success = swscanf_s(short_name, L"%d.%d.%d.%d", &i0, &i1, &i2, &i3);
+        int success = swscanf_s(short_name, L"%d.%d.%d.%d", &i0, &i1, &i2, &i3);
         if (success < 4) return;
 
         if (i0 < data->best_version[0]) return;
@@ -370,7 +370,7 @@ extern "C"
         // Find the Windows 8 subdirectory with the highest version number.
 
         int i0, i1;
-        auto success = swscanf_s(short_name, L"winv%d.%d", &i0, &i1);
+        int success = swscanf_s(short_name, L"winv%d.%d", &i0, &i1);
         if (success < 2) return;
 
         if (i0 < data->best_version[0]) return;
@@ -444,7 +444,7 @@ extern "C"
     }
 
     bool find_visual_studio_2017_by_fighting_through_microsoft_craziness(MC_Find_Result* result) {
-        HRESULT rc = CoInitialize(NULL);
+        /*HRESULT rc =*/ CoInitialize(NULL);
         // "Subsequent valid calls return false." So ignore false.
         // if rc != S_OK  return false;
 
