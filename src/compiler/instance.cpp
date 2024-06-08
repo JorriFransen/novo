@@ -42,8 +42,8 @@ void instance_init(Instance* inst, Options options)
 
     fs_chdir(inst->cwd);
 
-    arena_new("ast_arena instance_init", &inst->ast_arena);
-    arena_new("temp_arena instance_init", &inst->temp_arena);
+    arena_new(&inst->ast_arena);
+    arena_new(&inst->temp_arena);
     inst->ast_allocator = arena_allocator_create(&inst->ast_arena);
     inst->temp_allocator = arena_allocator_create(&inst->temp_arena);
 

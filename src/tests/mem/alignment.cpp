@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 
 
     Arena arena;
-    arena_new("test", &arena);
+    arena_new(&arena);
     Allocator arena_allocator = arena_allocator_create(&arena);
 
     Allocator* allocators[] = {

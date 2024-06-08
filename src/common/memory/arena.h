@@ -31,7 +31,7 @@ struct Temp_Arena
 
 NAPI Allocator arena_allocator_create(Arena* arena);
 
-NAPI void arena_new(const char* label, Arena* arena, u64 max_cap = NOVO_ARENA_MAX_CAP);
+NAPI void arena_new(Arena* arena, u64 max_cap = NOVO_ARENA_MAX_CAP);
 NAPI void arena_free(Arena* arena);
 
 N__attribute((malloc, alloc_size(2), alloc_align(3)))

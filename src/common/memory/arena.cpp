@@ -1,7 +1,6 @@
 #include "arena.h"
 
 #include "defines.h"
-#include "logger.h"
 #include "memory/allocator.h"
 #include "nstring.h"
 
@@ -28,9 +27,8 @@ Allocator arena_allocator_create(Arena* arena)
     return { arena_allocator_fn, arena, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
-void arena_new(const char* label, Arena* arena, u64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
+void arena_new(Arena* arena, u64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
 {
-    log_info("-- arena_new(), max_cap: %llumb, label: '%s'", max_cap / MEBIBYTE(1), label);
 #if NPLATFORM_LINUX
     s64 size = sysconf(_SC_PAGE_SIZE);
     assert(size != -1);
@@ -201,8 +199,8 @@ Temp_Arena temp_arena(Arena* dont_use)
     if (!g_temp_arena_next) {
         // First use, initialize
 
-        arena_new("temp_arena_a", &g_temp_arena_a);
-        arena_new("temp_arena_b", &g_temp_arena_b);
+        arena_new(&g_temp_arena_a);
+        arena_new(&g_temp_arena_b);
         g_temp_arena_next = &g_temp_arena_a;
     }
 
