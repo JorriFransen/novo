@@ -562,7 +562,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
             DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
 
             // TODO: Dynamic allocator
-            task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
+            task->bytecode_deps = allocate(c_allocator(), DArray<AST_Node>);
             darray_init(c_allocator(), task->bytecode_deps);
 
             if (!type_expression(inst, task, run_expr, scope, nullptr)) {
@@ -594,7 +594,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
 
             DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
 
-            task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
+            task->bytecode_deps = allocate(c_allocator(), DArray<AST_Node>);
             darray_init(c_allocator(), task->bytecode_deps);
 
             if (!type_expression(inst, task, insert_expr, scope, inst->type_string)) {
@@ -1030,7 +1030,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             DArray<AST_Node> *old_bc_deps = task->bytecode_deps;
 
-            task->bytecode_deps = allocate<DArray<AST_Node>>(c_allocator());
+            task->bytecode_deps = allocate(c_allocator(), DArray<AST_Node>);
             darray_init(c_allocator(), task->bytecode_deps);
 
             if (!type_expression(inst, task, run_expr, scope, suggested_type)) {

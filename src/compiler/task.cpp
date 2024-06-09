@@ -124,7 +124,7 @@ void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_
             Scope* fn_scope = decl->function.scope;
 
             // TODO: Dynamic allocator
-            auto fn_deps = allocate<DArray<AST_Node>>(c_allocator());
+            auto fn_deps = allocate(c_allocator(), DArray<AST_Node>);
             darray_init(c_allocator(), fn_deps, 0);
 
             for (s64 i = 0; i < decl->function.params.count; i++) {

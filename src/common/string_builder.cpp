@@ -113,7 +113,7 @@ static String_Builder_Block* string_builder_block(Allocator* allocator, u64 size
 {
     u64 alloc_size = sizeof(String_Builder_Block) + size;
 
-    auto result = (String_Builder_Block*)allocate(allocator, alloc_size);
+    auto result = (String_Builder_Block*)allocate_unaligned(allocator, alloc_size);
     result->cursor = (char*)&result[1];
     result->end = &result->cursor[size];
     result->next_block = nullptr;
@@ -139,7 +139,7 @@ String string_builder_to_string(String_Builder* sb, Allocator* allocator)
     if (size <= 0) return {};
 
     String result = {
-        allocate_array<char>(allocator, size + 1),
+        allocate_array(allocator, char, size + 1),
         size,
     };
 

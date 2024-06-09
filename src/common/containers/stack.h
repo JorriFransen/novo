@@ -28,7 +28,7 @@ void stack_init(Allocator* allocator, Stack<Element_Type>* stack, s64 initial_ca
     assert(initial_cap >= 0);
 
     if (initial_cap) {
-        stack->buffer = allocate_array<Element_Type>(allocator, initial_cap);
+        stack->buffer = allocate_array(allocator, Element_Type, initial_cap);
         stack->sp = 0;
     } else {
         stack->buffer = nullptr;
@@ -55,7 +55,7 @@ void stack_ensure_capacity(Stack<Element_Type>* stack)
 {
     if (stack->sp >= stack->capacity || stack->sp == -1) {
         auto new_cap = max(stack->capacity * 2, (s64)1);
-        auto new_buf = allocate_array<Element_Type>(stack->allocator, new_cap);
+        auto new_buf = allocate_array(stack->allocator, Element_Type, new_cap);
         memcpy(new_buf, stack->buffer, stack->capacity * sizeof(Element_Type));
 
         if (stack->buffer) {

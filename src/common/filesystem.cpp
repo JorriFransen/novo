@@ -62,7 +62,7 @@ bool fs_read_entire_file(Allocator* allocator, const String_Ref path, String* ou
     bool size_result = fs_size(&file_handle, &size);
     assert(size_result);
 
-    out_string->data = allocate_array<char>(allocator, size + 1);
+    out_string->data = allocate_array(allocator, char, size + 1);
     assert(out_string->data);
 
     u64 read_size = fs_read(&file_handle, size, (u8*)out_string->data, &read_size);

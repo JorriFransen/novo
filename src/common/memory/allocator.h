@@ -38,7 +38,7 @@ NAPI FN_ALLOCATOR(c_allocator_fn);
 
 #define FN_ALLOCATE(f) void* f(Allocator* allocator, s64 size)
 typedef FN_ALLOCATE(FN_Allocate);
-NAPI FN_ALLOCATE(allocate);
+NAPI FN_ALLOCATE(allocate_unaligned);
 
 #define FN_ALLOCATE_ALIGNED(f) void* f(Allocator* allocator, s64 size, u64 align)
 typedef FN_ALLOCATE_ALIGNED(FN_Allocate_Aligned);
@@ -52,14 +52,10 @@ NAPI FN_FREE(free);
 typedef FN_FREE_ALL(FN_Free_All);
 NAPI FN_FREE_ALL(free_all);
 
-template <typename ET>
-ET* allocate_array(Allocator* allocator, s64 size) {
-    return (ET*)allocate(allocator, size * sizeof(ET));
-}
+#define allocate(allocator, type) \
+    (type*)(allocate_unaligned((allocator), sizeof(type)));
 
-template <typename T>
-T* allocate(Allocator* allocator) {
-    return (T*)allocate(allocator, sizeof(T));
-}
+#define allocate_array(allocator, type, length) \
+    (type*)(allocate_aligned((allocator), sizeof(type) * (length), alignof(type)))
 
 }

@@ -16,7 +16,7 @@ namespace Novo {
 
 Type* type_new(Instance* instance, Type_Kind kind, Type_Flags flags, u32 bit_size, u32 alignment)
 {
-    auto result = allocate<Type>(&instance->ast_allocator);
+    auto result = allocate(&instance->ast_allocator, Type);
     result->kind = kind;
     result->flags = flags;
     result->bit_size = bit_size;

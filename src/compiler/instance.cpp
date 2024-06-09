@@ -715,7 +715,7 @@ String fix_special_characters_in_insert_string(Instance* inst, Allocator* alloca
 
     s64 new_length = str.length + escape_count;
     String result {
-        .data = allocate_array<char>(allocator, new_length + 1),
+        .data = allocate_array(allocator, char, new_length + 1),
         .length = new_length,
     };
 

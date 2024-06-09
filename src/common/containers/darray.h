@@ -67,7 +67,7 @@ void darray_init(Allocator* backing_allocator, DArray<Element_Type>* out_array, 
     assert(backing_allocator && out_array);
     assert(capacity >= 0);
 
-    if (capacity) out_array->data = allocate_array<Element_Type>(backing_allocator, capacity);
+    if (capacity) out_array->data = allocate_array(backing_allocator, Element_Type, capacity);
     else out_array->data = nullptr;
 
     out_array->count = 0;
@@ -100,7 +100,7 @@ void darray_grow(DArray<Element_Type>* array, s64 new_cap)
 {
     assert(new_cap > array->capacity);
 
-    Element_Type* new_data = allocate_array<Element_Type>(array->backing_allocator, new_cap);
+    Element_Type* new_data = allocate_array(array->backing_allocator, Element_Type, new_cap);
     assert(new_data);
     if (array->capacity) {
         memcpy(new_data, array->data, sizeof(Element_Type) * array->count);

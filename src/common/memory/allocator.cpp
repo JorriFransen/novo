@@ -55,7 +55,7 @@ FN_ALLOCATOR(c_allocator_fn)
     return nullptr;
 }
 
-FN_ALLOCATE(allocate)
+FN_ALLOCATE(allocate_unaligned)
 {
     auto ptr = allocator->fn(Allocator_Mode::ALLOCATE, size, 1, 0, nullptr, allocator->user_data, 0);
     return ptr;

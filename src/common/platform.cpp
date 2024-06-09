@@ -150,7 +150,7 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena*
         close(PARENT_STDIN_FD);
         close(PARENT_STDERR_FD);
 
-        char** argv = allocate_array<char*>(&ta, command_line.count + 1);
+        char** argv = allocate_array(&ta, char*, command_line.count + 1);
 
         for (s64 i = 0; i < command_line.count; i++) {
             argv[i] = (char*)command_line[i].data;
@@ -495,7 +495,7 @@ String platform_windows_normalize_line_endings(Allocator* allocator, const Strin
     }
 
     auto new_length = str.length - cr_count;
-    auto buf = allocate_array<char>(allocator, new_length + 1);
+    auto buf = allocate_array(allocator, char, new_length + 1);
 
     s64 read_index = 0;
     s64 copy_length = 0;
