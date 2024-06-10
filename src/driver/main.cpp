@@ -20,9 +20,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    instance_free(&instance);
-
     #ifdef NOVO_TRACE_ALLOC
+        instance_free(&instance);
+        release(c_allocator(), options.output);
+        free_atoms();
+
         report_allocator_trace();
     #endif //NOVO_TRACE_ALLOC
     return 0;

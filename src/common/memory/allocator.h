@@ -2,7 +2,7 @@
 
 #include "defines.h"
 
-#define NOVO_TRACE_ALLOC
+// #define NOVO_TRACE_ALLOC
 
 namespace Novo {
 
@@ -78,7 +78,7 @@ NAPI FN_ALLOCATOR(c_allocator_fn);
        (type*)(allocate_aligned((allocator), sizeof(type) * (length), alignof(type), __FILE__, __LINE__))
 
 #   define release(allocator, ptr) \
-       allocate_free((allocator), (ptr), __FILE__, __LINE__)
+       allocate_free((allocator), (void*)(ptr), __FILE__, __LINE__)
 
 #   define release_all(allocator) \
        allocate_free_all((allocator), __FILE__, __LINE__)

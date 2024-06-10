@@ -100,10 +100,21 @@ bool string_ends_with(const String_Ref &str, const String_Ref &end)
     return string_equal(substr, end);
 }
 
+#ifdef NOVO_TRACE_ALLOC
+String string_copy_impl(Allocator* allocator, const char* a_buf, s64 a_length, const char* file, s64 line)
+# else // NOVO_TRACE_ALLOC
 String string_copy(Allocator* allocator, const char* a_buf, s64 a_length)
+#endif // NOVO_TRACE_ALLOC
 {
     String result = {
+
+#ifdef NOVO_TRACE_ALLOC
+        // allocate_array(allocator, char, a_length + 1),
+        (char*)allocate_unaligned(allocator, sizeof(char) * (a_length + 1), file, line),
+# else // NOVO_TRACE_ALLOC
         allocate_array(allocator, char, a_length + 1),
+#endif // NOVO_TRACE_ALLOC
+
         a_length,
     };
 
