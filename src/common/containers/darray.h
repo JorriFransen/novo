@@ -88,7 +88,7 @@ void darray_free(DArray<Element_Type>* array)
     if (array->data) {
         assert(array->capacity);
         if (!(array->backing_allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-            free(array->backing_allocator, array->data);
+            release(array->backing_allocator, array->data);
         }
     }
 
@@ -107,7 +107,7 @@ void darray_grow(DArray<Element_Type>* array, s64 new_cap)
 
         assert(array->data);
         if (!(array->backing_allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-            free(array->backing_allocator, array->data);
+            release(array->backing_allocator, array->data);
         }
     }
     array->data = new_data;

@@ -67,7 +67,7 @@ void hash_table_free(Hash_Table<Key_Type, Value_Type> *hash_table)
 
     assert(hash_table->hashes);
 
-    free(hash_table->allocator, hash_table->hashes);
+    release(hash_table->allocator, hash_table->hashes);
 
     *hash_table = {};
 }
@@ -132,7 +132,7 @@ void hash_table_grow(Hash_Table<Key_Type, Value_Type> *ht)
         }
     }
 
-    free(ht->allocator, old_hashes);
+    release(ht->allocator, old_hashes);
 }
 
 template <typename Key_Type, typename Value_Type>

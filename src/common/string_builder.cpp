@@ -1,5 +1,6 @@
 #include "string_builder.h"
 
+#include "memory/allocator.h"
 #include "memory/arena.h"
 
 #include <cstring>
@@ -33,7 +34,7 @@ void string_builder_free(String_Builder* sb)
     auto block = sb->first_block;
     while (block) {
         auto next = block->next_block;
-        free(sb->allocator, block);
+        release(sb->allocator, block);
         block = next;
     }
 }
@@ -113,7 +114,7 @@ static String_Builder_Block* string_builder_block(Allocator* allocator, u64 size
 {
     u64 alloc_size = sizeof(String_Builder_Block) + size;
 
-    auto result = (String_Builder_Block*)allocate_unaligned(allocator, alloc_size);
+    String_Builder_Block* result = allocate_size(allocator, alloc_size, String_Builder_Block);
     result->cursor = (char*)&result[1];
     result->end = &result->cursor[size];
     result->next_block = nullptr;

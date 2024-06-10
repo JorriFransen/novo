@@ -61,7 +61,7 @@ void vm_init(VM* vm, Allocator* allocator, Instance* inst)
 
 void vm_free(VM* vm)
 {
-    if (vm->registers) free(vm->allocator, vm->registers);
+    if (vm->registers) release(vm->allocator, vm->registers);
     stack_free(&vm->register_stack);
 
     VM_Alloc_Block* block = vm->current_alloc_block;
@@ -69,27 +69,27 @@ void vm_free(VM* vm)
         VM_Alloc_Block* next = block->next;
         assert(next);
 
-        free(vm->allocator, block);
+        release(vm->allocator, block);
 
         block = next;
     }
 
     assert(block == &vm->first_alloc_block);
     assert(block->next == nullptr);
-    free(vm->allocator, vm->first_alloc_block.mem);
+    release(vm->allocator, vm->first_alloc_block.mem);
 
     block = vm->free_alloc_blocks;
     while (block) {
         VM_Alloc_Block* next = block->next;
 
-        free(vm->allocator, block);
+        release(vm->allocator, block);
 
         block = next;
     }
 
-    if (vm->constant_memory) free(vm->allocator, vm->constant_memory);
-    if (vm->global_memory) free(vm->allocator, vm->global_memory);
-    
+    if (vm->constant_memory) release(vm->allocator, vm->constant_memory);
+    if (vm->global_memory) release(vm->allocator, vm->global_memory);
+
     ffi_free(&vm->ffi);
 }
 
@@ -138,7 +138,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
         vm->registers = allocate_array(vm->allocator, u64, reg_count);
         memcpy(vm->registers, old_regs, sizeof(vm->registers[0]) * vm->register_count);
         vm->register_count = reg_count;
-        free(vm->allocator, old_regs);
+        release(vm->allocator, old_regs);
     }
 
     for (s64 i = 0; i < program->functions.count; i++) {
@@ -170,7 +170,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
         u8* old_consts = vm->constant_memory;
         vm->constant_memory = allocate_array(vm->allocator, u8, new_size);
         vm->constant_memory_size = new_size;
-        free(vm->allocator, old_consts);
+        release(vm->allocator, old_consts);
     }
 
     memcpy(vm->constant_memory, program->constant_memory.data, program->constant_memory.count);
@@ -192,7 +192,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
         s64 new_size = max((s64)2, vm->global_memory_size);
         while (new_size < program->globals_size) new_size *= 2;
 
-        if (vm->global_memory) free(vm->allocator, vm->global_memory);
+        if (vm->global_memory) release(vm->allocator, vm->global_memory);
         vm->global_memory = allocate_array(vm->allocator, u8, new_size);
         vm->global_memory_size = new_size;
     }
@@ -377,7 +377,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
                         while (new_block_size < size) new_block_size *= 2;
 
                         u64 alloc_size = new_block_size + sizeof(VM_Alloc_Block);
-                        u8* mem = (u8*)allocate_unaligned(vm->allocator, alloc_size);
+                        u8* mem = allocate_size(vm->allocator, alloc_size, u8);
 
                         VM_Alloc_Block* new_block = (VM_Alloc_Block*)mem;
                         new_block->mem = mem + sizeof(VM_Alloc_Block);
@@ -597,7 +597,7 @@ VM_Result vm_run(VM* vm, SSA_Program* program, s64 fn_index)
                     vm->registers = allocate_array(vm->allocator, u64, new_count);
                     vm->register_count = new_count;
                     memcpy(vm->registers, old_regs, old_count * sizeof(vm->registers[0]));
-                    free(vm->allocator, old_regs);
+                    release(vm->allocator, old_regs);
                 }
 
                 break;
