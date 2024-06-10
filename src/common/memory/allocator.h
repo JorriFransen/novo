@@ -25,8 +25,12 @@ enum Allocator_Flag : Allocator_Flags
 };
 
 #ifdef NOVO_TRACE_ALLOC
+
+    NAPI void report_allocator_trace();
+
 #   define FN_ALLOCATOR(f) void * f(Allocator_Mode mode, s64 size, u64 align, s64 old_size, void* old_pointer, void* allocator_data, s64 options, const char* file, s64 line)
     typedef FN_ALLOCATOR(FN_Allocator);
+
 #else // NOVO_TRACE_ALLOC
 #   define FN_ALLOCATOR(f) void * f(Allocator_Mode mode, s64 size, u64 align, s64 old_size, void* old_pointer, void* allocator_data, s64 options)
     typedef FN_ALLOCATOR(FN_Allocator);

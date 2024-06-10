@@ -21,5 +21,9 @@ int main(int argc, char* argv[])
     }
 
     instance_free(&instance);
+
+    #ifdef NOVO_TRACE_ALLOC
+        report_allocator_trace();
+    #endif //NOVO_TRACE_ALLOC
     return 0;
 }
