@@ -320,7 +320,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 add_resolve_tasks(inst, parsed_file, inst->global_scope, nullptr);
             } else {
 
-                free(c_allocator(), task.content.data);
+                release(c_allocator(), task.content.data);
 
                 assert(task.insert.scope);
                 add_resolve_tasks(inst, nodes, task.insert.scope, task.insert.fn_decl, task.insert.bc_deps);
@@ -438,7 +438,6 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             bool success;
 
             if (task.kind == SSA_Task_Kind::RUN || task.kind == SSA_Task_Kind::INSERT) {
-
                 s64 wrapper_index = ssa_emit_run_wrapper(inst, &inst->ssa_program, task.node, task.scope);
                 success = wrapper_index >= 0;
 
@@ -451,7 +450,6 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 assert(success);
 
             } else if (task.kind == SSA_Task_Kind::CONSTANT) {
-
                 u32 const_index = ssa_emit_constant(inst, &inst->ssa_program, task.node.declaration->constant.value);
                 darray_append(&inst->ssa_program.constant_references, { task.node, const_index });
                 success = true;
@@ -462,6 +460,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 assert(success);
             }
 
+
             if (success) {
                 progress = true;
                 darray_remove_unordered(&inst->ssa_tasks, i);
@@ -469,7 +468,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                 if (task.bytecode_deps && task.kind != SSA_Task_Kind::CONSTANT) {
                     darray_free(task.bytecode_deps);
-                    free(c_allocator(), task.bytecode_deps);
+                    release(c_allocator(), task.bytecode_deps);
                 }
             }
         }

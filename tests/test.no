@@ -1,7 +1,5 @@
 
 //  - Support realloc in arenas
-//  - Use arena in temp allocator, only use the global one?
-//  - Think about an allocator for the dynamic arrays in Instance
 
 //  - Move import path resolution to resolver
 //  - Move inst->cwd into the tests

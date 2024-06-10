@@ -567,7 +567,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
 
             if (!type_expression(inst, task, run_expr, scope, nullptr)) {
                 darray_free(task->bytecode_deps);
-                free(c_allocator(), task->bytecode_deps);
+                release(c_allocator(), task->bytecode_deps);
                 task->bytecode_deps = old_bc_deps;
                 return false;
             }
@@ -599,7 +599,7 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
 
             if (!type_expression(inst, task, insert_expr, scope, inst->type_string)) {
                 darray_free(task->bytecode_deps);
-                free(c_allocator(), task->bytecode_deps);
+                release(c_allocator(), task->bytecode_deps);
                 task->bytecode_deps = old_bc_deps;
                 return false;
             }
@@ -1035,7 +1035,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             if (!type_expression(inst, task, run_expr, scope, suggested_type)) {
                 darray_free(task->bytecode_deps);
-                free(c_allocator(), task->bytecode_deps);
+                release(c_allocator(), task->bytecode_deps);
                 task->bytecode_deps = old_bc_deps;
                 return false;
             }

@@ -44,7 +44,7 @@ void stack_free(Stack<Element_Type>* stack)
 {
     if (stack->buffer) {
         assert(stack->capacity);
-        free(stack->allocator, stack->buffer);
+        release(stack->allocator, stack->buffer);
     }
 
     *stack = {};
@@ -59,7 +59,7 @@ void stack_ensure_capacity(Stack<Element_Type>* stack)
         memcpy(new_buf, stack->buffer, stack->capacity * sizeof(Element_Type));
 
         if (stack->buffer) {
-            free(stack->allocator, stack->buffer);
+            release(stack->allocator, stack->buffer);
         } else {
             stack->sp = 0;
         }

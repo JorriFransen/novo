@@ -47,17 +47,38 @@ NAPI bool string_ends_with(const String_Ref &str, const String_Ref &end);
 
 NAPI String string_append_internal(Allocator* allocator, const char* a_buf, s64 a_length, const char* b_buf, s64 b_length);
 
-NAPI String string_copy(Allocator* allocator, const char* a_buf, s64 a_length);
+#ifdef NOVO_TRACE_ALLOC
 
-NINLINE String string_copy(Allocator* allocator, const String str)
-{
-    return string_copy(allocator, str.data, str.length);
-}
+#   define string_copy(allocator, ...) \
+        string_copy_impl((allocator), __VA_ARGS__, __FILE__, __LINE__)
 
-NINLINE String string_copy(Allocator* allocator, const String_Ref str)
-{
-    return string_copy(allocator, str.data, str.length);
-}
+    NAPI String string_copy_impl(Allocator* allocator, const char* a_buf, s64 a_length, const char* file, s64 line);
+
+    NINLINE String string_copy_impl(Allocator* allocator, const String str, const char* file, s64 line)
+    {
+        return string_copy_impl(allocator, str.data, str.length, file, line);
+    }
+
+    NINLINE String string_copy_impl(Allocator* allocator, const String_Ref str, const char* file, s64 line)
+    {
+        return string_copy_impl(allocator, str.data, str.length, file, line);
+    }
+
+#else // NOVO_TRACE_ALLOC
+
+    NAPI String string_copy(Allocator* allocator, const char* a_buf, s64 a_length);
+
+    NINLINE String string_copy(Allocator* allocator, const String str)
+    {
+        return string_copy(allocator, str.data, str.length);
+    }
+
+    NINLINE String string_copy(Allocator* allocator, const String_Ref str)
+    {
+        return string_copy(allocator, str.data, str.length);
+    }
+
+#endif // NOVO_TRACE_ALLOC
 
 NINLINE String string_append(Allocator* allocator, const String a, const String b)
 {

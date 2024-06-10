@@ -41,7 +41,7 @@ String platform_dirname(Allocator* allocator, const String_Ref path)
     String result_copy = string_copy(allocator, result);
 
     if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-        free(allocator, path_copy.data);
+        release(allocator, path_copy.data);
     }
 
     return result_copy;
@@ -57,7 +57,7 @@ String platform_filename(Allocator* allocator, String_Ref path)
     String result_copy = string_copy(allocator, result);
 
     if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-        free(allocator, path_copy.data);
+        release(allocator, path_copy.data);
     }
 
     return result_copy;
