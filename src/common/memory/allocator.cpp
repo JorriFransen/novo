@@ -1,12 +1,14 @@
 #include "allocator.h"
-#include "containers/darray.h"
+#include <ctime>
 
 #ifdef NOVO_TRACE_ALLOC
+#   include "containers/darray.h"
 #   include "memory/arena.h"
+
+#   include <cstdio>
 #endif // NOVO_TRACE_ALLOC
 
 #include <cassert>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
@@ -19,7 +21,16 @@ namespace Novo {
         void* ptr;
         const char *file;
         s64 line;
-        bool freed;
+        clock_t time;
+        s64 release_record_index;
+    };
+
+    struct Trace_Release_Record
+    {
+        void* ptr;
+        const char *file;
+        s64 line;
+        clock_t time;
     };
 
     struct Trace_Alloc_Live
@@ -31,6 +42,7 @@ namespace Novo {
     Arena trace_alloc_arena;
     Allocator trace_alloc_allocator;
     DArray<Trace_Alloc_Record> trace_alloc_records;
+    DArray<Trace_Release_Record> trace_release_records;
     DArray<Trace_Alloc_Live> trace_alloc_live_allocs;
 
 
@@ -40,8 +52,31 @@ namespace Novo {
         printf("===========================\n");
         printf("c_allocator() trace report:\n");
 
-        printf("  %4lld total allocations\n", trace_alloc_records.count);
-        printf("  %4lld leaked allocations:\n", trace_alloc_live_allocs.count);
+        printf("  total allocations:   %lld\n", trace_alloc_records.count);
+
+        clock_t total_alloc_time = 0;
+        clock_t total_release_time = 0;
+
+        for (s64 i = 0; i < trace_alloc_records.count; i++) {
+            Trace_Alloc_Record record = trace_alloc_records[i];
+            clock_t release_time = 0;
+            if (record.release_record_index >= 0) {
+                assert(record.release_record_index < trace_release_records.count);
+                Trace_Release_Record release_record = trace_release_records[record.release_record_index];
+                release_time = release_record.time;
+            }
+            // printf("        %s:%lld: (alloc: %f sec) (free: %f sec)\n", record.file, record.line, (double)record.time / CLOCKS_PER_SEC, (double)release_time / CLOCKS_PER_SEC);
+            total_alloc_time += record.time;
+            total_release_time += release_time;
+        }
+
+        printf("    total alloc time:   %f sec\n", (double)total_alloc_time / CLOCKS_PER_SEC);
+        printf("    total release time: %f sec\n", (double)total_release_time / CLOCKS_PER_SEC);
+        printf("    total time:         %f sec\n", (double)(total_alloc_time + total_release_time) / CLOCKS_PER_SEC);
+
+
+
+        printf("  leaked allocations:  %lld\n", trace_alloc_live_allocs.count);
 
         for (s64 i = 0; i < trace_alloc_live_allocs.count; i++) {
             s64 record_index = trace_alloc_live_allocs[i].record_index;
@@ -52,6 +87,13 @@ namespace Novo {
         printf("===========================\n\n");
     }
 
+#   define trace_timer_start(name) clock_t name##_start = clock();
+#   define trace_timer_end(name) clock_t name = clock() - name##_start;
+
+
+#else // NOVO_TRACE_ALLOC
+#   define trace_timer_start(name)
+#   define trace_timer_end(name)
 #endif // NOVO_TRACE_ALLOC
 
 
@@ -68,6 +110,7 @@ Allocator* c_allocator()
             arena_new(&trace_alloc_arena);
             trace_alloc_allocator = arena_allocator_create(&trace_alloc_arena);
             darray_init(&trace_alloc_allocator, &trace_alloc_records);
+            darray_init(&trace_alloc_allocator, &trace_release_records);
             darray_init(&trace_alloc_allocator, &trace_alloc_live_allocs);
         #endif // NOVO_TRACE_ALLOC
     }
@@ -81,7 +124,9 @@ FN_ALLOCATOR(c_allocator_fn)
 
     case Allocator_Mode::ALLOCATE: {
         s64 actual_size = size + (align - 1) + sizeof(void*);
+        trace_timer_start(malloc_time);
         u8* mem = (u8*)malloc(actual_size);
+        trace_timer_end(malloc_time);
         void **ptr = (void**)get_aligned((u64)mem + sizeof(void*), align);
 
         // Store the pointer returned by malloc
@@ -91,7 +136,7 @@ FN_ALLOCATOR(c_allocator_fn)
 
         #ifdef NOVO_TRACE_ALLOC
             s64 record_index = trace_alloc_records.count;
-            darray_append(&trace_alloc_records, { ptr, file, line, false } );
+            darray_append(&trace_alloc_records, { ptr, file, line, malloc_time, false } );
             darray_append(&trace_alloc_live_allocs, { ptr, record_index });
         #endif // NOVO_TRACE_ALLOC
         return ptr;
@@ -105,7 +150,9 @@ FN_ALLOCATOR(c_allocator_fn)
     case Allocator_Mode::FREE: {
         auto old = (void**)old_pointer;
         auto _old = old[-1];
+        trace_timer_start(release_time);
         ::free(_old);
+        trace_timer_end(release_time);
 
         #ifdef NOVO_TRACE_ALLOC
             s64 record_index = -1;
@@ -118,7 +165,9 @@ FN_ALLOCATOR(c_allocator_fn)
             }
             assert(record_index >= 0);
             assert(record_index < trace_alloc_records.count);
-            trace_alloc_records[record_index].freed = true;
+            s64 release_record_index = trace_release_records.count;
+            trace_alloc_records[record_index].release_record_index = release_record_index;
+            darray_append(&trace_release_records, { old_pointer, file, line,  release_time });
         #endif // NOVO_TRACE_ALLOC
         break;
     }
