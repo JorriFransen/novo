@@ -33,6 +33,7 @@ common_source = [
 
   'src/common/memory/allocator.cpp', 'src/common/memory/allocator.h',
   'src/common/memory/arena.cpp', 'src/common/memory/arena.h',
+  'src/common/memory/freelist.cpp', 'src/common/memory/freelist.h',
 ]
 
 

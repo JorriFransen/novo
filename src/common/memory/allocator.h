@@ -103,7 +103,7 @@ NAPI FN_ALLOCATOR(c_allocator_fn);
     NAPI FN_FREE_ALL(allocate_free_all);
 
 #   define allocate(allocator, type) \
-       (type*)(allocate_unaligned((allocator), sizeof(type)));
+       (type*)(allocate_aligned((allocator), sizeof(type), alignof(type)));
 
 #   define allocate_size(allocator, size, cast_type) \
         (cast_type*)(allocate_unaligned((allocator), (size)));

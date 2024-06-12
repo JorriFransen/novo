@@ -1,10 +1,10 @@
 #include "allocator.h"
-#include <ctime>
 
 #ifdef NOVO_TRACE_ALLOC
 #   include "containers/darray.h"
 #   include "memory/arena.h"
 
+#   include <ctime>
 #   include <cstdio>
 #endif // NOVO_TRACE_ALLOC
 

@@ -132,6 +132,14 @@ NINLINE u64 get_aligned(u64 operand, u64 alignment) {
     return ((operand + (alignment - 1)) & ~(alignment - 1));
 }
 
+// This assumes padding, header_size, _aligned_
+NINLINE u64 get_aligned_with_header(u64 operand, u64 alignment, u64 header_size) {
+    u64 padding = get_aligned(operand, alignment) - operand;
+    if (header_size <= padding) return padding;
+
+    return get_aligned(operand + header_size, alignment) - (operand + header_size);
+}
+
 struct Real_Value
 {
     float r32;
