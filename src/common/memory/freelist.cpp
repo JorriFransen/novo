@@ -12,15 +12,23 @@ namespace Novo {
 
 void freelist_init(Freelist* freelist, void* memory, s64 size)
 {
-    assert(size > sizeof(Freelist_Header));
-    Freelist_Header* node = (Freelist_Header*)memory;
+    freelist->start = memory;
+    freelist->size = size;
+    freelist->remaining = size;
 
-    node->size = size;
+    freelist_reset(freelist);
+}
+
+void freelist_reset(Freelist* freelist)
+{
+    assert(freelist->size > sizeof(Freelist_Header));
+    Freelist_Header* node = (Freelist_Header*)freelist->start;
+
+    node->size = freelist->size;
     node->next = nullptr;
 
     freelist->first_free = node;
-    freelist->start = memory;
-    freelist->size = size;
+    freelist->remaining = freelist->size;
 }
 
 void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist_Header* node)
@@ -76,17 +84,9 @@ Freelist_Header* freelist_find_first(Freelist* freelist, s64 size, Freelist_Head
     return nullptr;
 }
 
-struct Freelist_Alloc_Header
-{
-    s32 alignment_padding;
-    u32 size;
-};
-
 void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
 {
-    s32 alignment_padding = get_aligned_with_header(0, align, sizeof(Freelist_Alloc_Header));
-    s32 padding = alignment_padding + sizeof(Freelist_Alloc_Header);
-    s64 total_size =  size + padding;
+    s64 total_size =  size + max((size_t)align - 1, sizeof(Freelist_Alloc_Header));
 
     // Avoid headers from overlapping
     if (total_size < sizeof(Freelist_Header)) total_size = sizeof(Freelist_Header);
@@ -97,6 +97,12 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
     if (!node) {
         assert(false && "Freelist out of memory");
     }
+
+    // This padding is for alignment and header
+    u64 padding = get_aligned((u64)node + sizeof(Freelist_Alloc_Header), align) - (u64)node;
+    assert(padding >= sizeof(Freelist_Alloc_Header));
+
+    s32 alignment_padding = padding - sizeof(Freelist_Alloc_Header);
 
     if (node->size > total_size) {
         Freelist_Header* new_node = (Freelist_Header*)((u8*)node + total_size);
@@ -112,14 +118,18 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
     assert(total_size <= U32_MAX);
     alloc_header->size = total_size;
 
+    freelist->remaining -= total_size;
+
     return (u8*)alloc_header + sizeof(Freelist_Alloc_Header);
 }
 
 void freelist_release(Freelist* freelist, void* ptr)
 {
-    Freelist_Alloc_Header* alloc_header = (Freelist_Alloc_Header*)((u8*)ptr - sizeof(Freelist_Alloc_Header));
-    Freelist_Header* new_node = (Freelist_Header*)((u8*)alloc_header - alloc_header->alignment_padding);
-    new_node->size = alloc_header->size;
+    Freelist_Alloc_Header* alloc_header_ = (Freelist_Alloc_Header*)((u8*)ptr - sizeof(Freelist_Alloc_Header));
+    Freelist_Alloc_Header old_alloc_header = *alloc_header_;
+
+    Freelist_Header* new_node = (Freelist_Header*)((u8*)alloc_header_ - alloc_header_->alignment_padding);
+    new_node->size = alloc_header_->size;
 
     Freelist_Header* node = freelist->first_free;
     Freelist_Header* prev = nullptr;
@@ -141,6 +151,8 @@ void freelist_release(Freelist* freelist, void* ptr)
         prev->size += new_node->size;
         freelist_remove(freelist, prev, new_node);
     }
+
+    freelist->remaining += old_alloc_header.size;
 }
 
 FN_ALLOCATOR(fl_allocator_fn)
@@ -184,7 +196,7 @@ Allocator* fl_allocator()
     return &g_fl_allocator;
 }
 
-void dump_graph(Freelist* fl, const char* filename)
+void freelist_dump_graph(Freelist* fl, const char* filename)
 {
     Temp_Arena tarena = temp_arena(nullptr);
     Allocator ta = arena_allocator_create(tarena.arena);
