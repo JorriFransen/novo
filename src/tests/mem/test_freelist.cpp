@@ -12,7 +12,7 @@ void alloc_free_one() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->arena.capacity;
+    u64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
     void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
@@ -40,7 +40,7 @@ void alloc_free_multi() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->arena.capacity;
+    u64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
     void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
@@ -126,7 +126,7 @@ void alloc_free_multi_size() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->arena.capacity;
+    u64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
     void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
@@ -217,7 +217,7 @@ void alloc_aligned() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->arena.capacity;
+    u64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
     void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
@@ -229,7 +229,7 @@ void alloc_aligned() {
     void *memory1;
     void *memory2;
 
-    s64 old_size;
+    u64 old_size;
 
     {
         const s64 alloc_size = 8;

@@ -17,16 +17,16 @@ enum Arena_Flag : Arena_Flags {
 struct Arena
 {
     u8* data;
-    s64 used;
-    s64 capacity;
-    s64 max_capacity;
+    u64 used;
+    u64 capacity;
+    u64 max_capacity;
     Arena_Flags flags;
 };
 
 struct Temp_Arena
 {
     Arena* arena;
-    s64 reset_to;
+    u64 reset_to;
 };
 
 NAPI Allocator arena_allocator_create(Arena* arena);
@@ -38,7 +38,7 @@ NAPI void arena_free(Arena* arena);
 N__attribute((malloc, alloc_size(2), alloc_align(3)))
 NAPI void* arena_alloc(Arena* arena, s64 size, s64 align);
 
-NAPI bool arena_grow(Arena* arena, s64 min_size);
+NAPI bool arena_grow(Arena* arena, u64 min_size);
 NAPI void arena_reset(Arena* arena);
 
 NAPI FN_ALLOCATOR(arena_allocator_fn);

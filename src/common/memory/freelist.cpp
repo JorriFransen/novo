@@ -102,7 +102,7 @@ void freelist_remove(Freelist* freelist, Freelist_Header* prev, Freelist_Header*
     node->next = nullptr;
 }
 
-Freelist_Header* freelist_find_first(Freelist* freelist, s64 size, Freelist_Header** prev_)
+Freelist_Header* freelist_find_first(Freelist* freelist, u64 size, Freelist_Header** prev_)
 {
     assert(freelist->first_free);
 
@@ -124,7 +124,7 @@ Freelist_Header* freelist_find_first(Freelist* freelist, s64 size, Freelist_Head
 
 void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
 {
-    s64 total_size =  size + max((size_t)align - 1, sizeof(Freelist_Alloc_Header));
+    u64 total_size =  size + max((size_t)align - 1, sizeof(Freelist_Alloc_Header));
 
     // Avoid headers from overlapping
     if (total_size < sizeof(Freelist_Header)) total_size = sizeof(Freelist_Header);

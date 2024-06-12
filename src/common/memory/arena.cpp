@@ -130,11 +130,11 @@ void* arena_alloc(Arena* arena, s64 size, s64 align)
     return result;
 }
 
-bool arena_grow(Arena* arena, s64 min_size)
+bool arena_grow(Arena* arena, u64 min_size)
 {
     if (!(arena->flags & ARENA_FLAG_GROW)) return false;
 
-    s64 new_cap = arena->capacity * 2;
+    u64 new_cap = arena->capacity * 2;
     while (new_cap < min_size) new_cap *= 2;
 
     assert(new_cap <= NOVO_ARENA_MAX_CAP);
