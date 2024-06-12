@@ -1,7 +1,10 @@
 #include "freelist.h"
 
 #include "defines.h"
+#include "filesystem.h"
 #include "memory/allocator.h"
+#include "memory/arena.h"
+#include "string_builder.h"
 
 #include <cassert>
 
@@ -16,6 +19,8 @@ void freelist_init(Freelist* freelist, void* memory, s64 size)
     node->next = nullptr;
 
     freelist->first_free = node;
+    freelist->start = memory;
+    freelist->size = size;
 }
 
 void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist_Header* node)
@@ -35,7 +40,6 @@ void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist
             freelist->first_free = node;
             node->next = nullptr;
         }
-
     }
 
 }
@@ -180,6 +184,39 @@ Allocator* fl_allocator()
     return &g_fl_allocator;
 }
 
+void dump_graph(Freelist* fl, const char* filename)
+{
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    String_Builder sb;
+    string_builder_init(&sb, &ta);
+
+    string_builder_append(&sb, "digraph G {\n");
+    string_builder_append(&sb, "node [shape=record];\n");
+    string_builder_append(&sb, "rankdir=LR;\n");
+
+    Freelist_Header* node = fl->first_free;
+    s64 node_idx = 0;
+    while (node) {
+        s64 start_offset = (u8*)node - (u8*)fl->start;
+        string_builder_append(&sb, "  node%lld [label = \"start: %lld | end: %lld | size: %lld\" ];\n", node_idx, start_offset, start_offset + node->size, node->size);
+
+        if (node->next) {
+            string_builder_append(&sb, "  node%lld -> node%lld;\n", node_idx, node_idx + 1);
+        }
+
+        node_idx++;
+        node = node->next;
+    }
+
+    string_builder_append(&sb, "}");
+
+    String graph_string = string_builder_to_string(&sb);
+    fs_write_entire_file(filename, graph_string);
+
+    temp_arena_release(tarena);
+}
 
 }
 

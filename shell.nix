@@ -9,6 +9,7 @@ with (import <nixpkgs> {});
       gdb
       meson
       ninja
+      graphviz
     ];
     buildInputs = [];
   }

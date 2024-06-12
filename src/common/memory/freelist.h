@@ -16,6 +16,8 @@ struct Freelist_Header
 struct Freelist
 {
     Freelist_Header* first_free;
+    void* start;
+    s64 size;
 };
 
 NAPI void freelist_init(Freelist* freelist, void* memory, s64 size);
@@ -30,5 +32,7 @@ NAPI void freelist_release(Freelist* freelist, void* ptr);
 NAPI FN_ALLOCATOR(fl_allocator_fn);
 
 NAPI Allocator* fl_allocator();
+
+NAPI void dump_graph(Freelist* fl, const char* filename);
 
 }

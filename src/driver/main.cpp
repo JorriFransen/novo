@@ -19,18 +19,26 @@ int main(int argc, char* argv[])
 
     Freelist_Header* initial_node = fl->first_free;
 
+    dump_graph(fl, "g0.dot");
+
     u64* p1 = allocate(flalloc, u64);
+    dump_graph(fl, "g1.dot");
     u64* p2 = allocate_size(flalloc, 8, u64);
+    dump_graph(fl, "g2.dot");
 
     assert(p1 != p2);
 
     release(flalloc, p1);
+    dump_graph(fl, "g3.dot");
 
     u64* p3 = allocate_size(flalloc, 8, u64);
+    dump_graph(fl, "g4.dot");
     assert(p3 == p1);
 
     release(flalloc, p3);
+    dump_graph(fl, "g5.dot");
     release(flalloc, p2);
+    dump_graph(fl, "g6.dot");
 
     assert(fl->first_free == initial_node);
     assert(fl->first_free->size == MEBIBYTE(8));

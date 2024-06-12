@@ -45,7 +45,6 @@ NAPI FN_ALLOCATOR(arena_allocator_fn);
 NAPI Temp_Arena temp_arena_create(Arena* arena);
 NAPI void temp_arena_release(Temp_Arena ta);
 NAPI Temp_Arena temp_arena(Arena* dont_use);
-NAPI Allocator temp_arena_allocator(Arena* dont_use);
 
 }
 
