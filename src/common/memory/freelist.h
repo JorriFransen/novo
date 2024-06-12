@@ -2,6 +2,7 @@
 
 #include "allocator.h"
 #include "defines.h"
+#include "memory/arena.h"
 
 namespace Novo {
 
@@ -17,9 +18,8 @@ struct Freelist
 {
     Freelist_Header* first_free;
 
-    void* start;
-    s64 size;
-    s64 remaining;
+    Arena arena;
+    s64 remaining; // TODO: Remove this and use 'used' from the arena
 };
 
 struct Freelist_Alloc_Header
@@ -29,8 +29,10 @@ struct Freelist_Alloc_Header
 };
 
 
-NAPI void freelist_init(Freelist* freelist, void* memory, s64 size);
+NAPI void freelist_init(Freelist* freelist, Arena arena);
 NAPI void freelist_reset(Freelist* freelist);
+
+NAPI bool freelist_grow(Freelist* freelist, s64 min_increase);
 
 NAPI void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist_Header* node);
 NAPI void freelist_remove(Freelist* freelist, Freelist_Header* prev, Freelist_Header* node);
@@ -43,6 +45,9 @@ NAPI FN_ALLOCATOR(fl_allocator_fn);
 
 NAPI Allocator* fl_allocator();
 
+#ifndef NDEBUG
 NAPI void freelist_dump_graph(Freelist* fl, const char* filename);
+#endif // NDEBUG
+
 
 }

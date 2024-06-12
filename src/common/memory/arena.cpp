@@ -27,6 +27,17 @@ Allocator arena_allocator_create(Arena* arena)
     return { arena_allocator_fn, arena, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
 }
 
+Arena arena_create(u8* data, s64 size)
+{
+    Arena result;
+    result.data = data;
+    result.used = 0;
+    result.capacity = size;
+    result.max_capacity = size;
+    result.flags = ARENA_FLAG_NONE;
+    return result;
+}
+
 void arena_new(Arena* arena, u64 max_cap/*=NOVO_ARENA_MAX_CAP*/)
 {
 #if NPLATFORM_LINUX

@@ -4,31 +4,70 @@
 #include "filesystem.h"
 #include "memory/allocator.h"
 #include "memory/arena.h"
+#include "src/compiler/type.h"
 #include "string_builder.h"
 
 #include <cassert>
 
 namespace Novo {
 
-void freelist_init(Freelist* freelist, void* memory, s64 size)
+void freelist_init(Freelist* freelist, Arena arena)
 {
-    freelist->start = memory;
-    freelist->size = size;
-    freelist->remaining = size;
+    freelist->arena = arena;
+    freelist->remaining = arena.capacity;
 
     freelist_reset(freelist);
 }
 
 void freelist_reset(Freelist* freelist)
 {
-    assert(freelist->size > sizeof(Freelist_Header));
-    Freelist_Header* node = (Freelist_Header*)freelist->start;
+    assert(freelist->arena.capacity > sizeof(Freelist_Header));
+    Freelist_Header* node = (Freelist_Header*)freelist->arena.data;
 
-    node->size = freelist->size;
+    node->size = freelist->arena.capacity;
     node->next = nullptr;
 
     freelist->first_free = node;
-    freelist->remaining = freelist->size;
+    freelist->remaining = freelist->arena.capacity;
+}
+
+bool freelist_grow(Freelist* freelist, s64 min_increase)
+{
+    if (!(freelist->arena.flags & ARENA_FLAG_GROW)) return false;
+
+    s64 old_cap = freelist->arena.capacity;
+
+    bool grow_res = arena_grow(&freelist->arena, old_cap + min_increase);
+    assert(grow_res);
+
+    s64 increase = freelist->arena.capacity - old_cap;
+    assert(increase >= min_increase);
+    freelist->remaining += increase;
+
+    Freelist_Header* last_node = freelist->first_free;
+    while (last_node->next) last_node = last_node->next;
+
+    Freelist_Header* new_node = (Freelist_Header*)(freelist->arena.data + old_cap);
+    new_node->size = increase;
+    new_node->next = nullptr;
+
+    if (last_node) {
+
+        if ((u8*)last_node + last_node->size == (u8*)new_node) {
+            assert(false); // TOOD: Test this!
+            last_node->size += new_node->size;
+        } else {
+            assert(false); // TOOD: Test this!
+            last_node->next = new_node;
+        }
+
+        return true;
+
+    } else {
+        assert(false); // TOOD: Test this!
+        freelist->first_free = new_node;
+        return true;
+    }
 }
 
 void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist_Header* node)
@@ -49,7 +88,6 @@ void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist
             node->next = nullptr;
         }
     }
-
 }
 
 void freelist_remove(Freelist* freelist, Freelist_Header* prev, Freelist_Header* node)
@@ -95,7 +133,13 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
     Freelist_Header* node = freelist_find_first(freelist, total_size, &prev);
 
     if (!node) {
-        assert(false && "Freelist out of memory");
+        // TODO: Change freelist_grow to return a node that statisfies total size to avoid searching again
+        if (freelist_grow(freelist, total_size)) {
+            node = freelist_find_first(freelist, total_size, &prev);
+            assert(node);
+        } else {
+            assert(false && "Freelist out of memory");
+        }
     }
 
     // This padding is for alignment and header
@@ -111,6 +155,7 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
         freelist_insert(freelist, node, new_node);
     }
 
+    // TODO: when align passes a treshold, modify this node and the final alignment_padding, to avoid wasting the space
     freelist_remove(freelist, prev, node);
 
     Freelist_Alloc_Header* alloc_header = (Freelist_Alloc_Header*)((u8*)node + alignment_padding);
@@ -178,7 +223,7 @@ FN_ALLOCATOR(fl_allocator_fn)
     return nullptr;
 }
 
-#define g_fl_allocator_size MEBIBYTE(8)
+#define g_fl_allocator_size 1024
 
 bool g_fl_allocator_initialized = false;
 u8 g_fl_memory[g_fl_allocator_size];
@@ -188,14 +233,17 @@ Allocator g_fl_allocator;
 Allocator* fl_allocator()
 {
     if (!g_fl_allocator_initialized) {
-        freelist_init(&g_freelist, g_fl_memory, g_fl_allocator_size);
-        g_fl_allocator = { fl_allocator_fn, &g_freelist, ALLOCATOR_FLAG_CANT_REALLOC };
+        Arena arena;
+        arena_new(&arena);
+        freelist_init(&g_freelist, arena);
+        g_fl_allocator = { fl_allocator_fn, &g_freelist };
         g_fl_allocator_initialized = true;
     }
 
     return &g_fl_allocator;
 }
 
+#ifndef NDEBUG
 void freelist_dump_graph(Freelist* fl, const char* filename)
 {
     Temp_Arena tarena = temp_arena(nullptr);
@@ -211,7 +259,7 @@ void freelist_dump_graph(Freelist* fl, const char* filename)
     Freelist_Header* node = fl->first_free;
     s64 node_idx = 0;
     while (node) {
-        s64 start_offset = (u8*)node - (u8*)fl->start;
+        s64 start_offset = (u8*)node - (u8*)fl->arena.data;
         string_builder_append(&sb, "  node%lld [label = \"start: %lld | end: %lld | size: %lld\" ];\n", node_idx, start_offset, start_offset + node->size, node->size);
 
         if (node->next) {
@@ -229,6 +277,7 @@ void freelist_dump_graph(Freelist* fl, const char* filename)
 
     temp_arena_release(tarena);
 }
+#endif // NDEBUG
 
 }
 

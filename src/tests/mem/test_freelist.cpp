@@ -12,9 +12,9 @@ void alloc_free_one() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->size;
+    s64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
-    void* memory_end = (u8*)memory_start + fl->size;
+    void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
     assert(initial_size == fl->remaining);
 
@@ -29,7 +29,7 @@ void alloc_free_one() {
 
     release(flalloc, memory);
 
-    assert(fl->remaining == fl->size);
+    assert(fl->remaining == fl->arena.capacity);
     assert(fl->first_free == memory_start);
 
     freelist_reset(fl);
@@ -40,9 +40,9 @@ void alloc_free_multi() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->size;
+    s64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
-    void* memory_end = (u8*)memory_start + fl->size;
+    void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
     assert(initial_size == fl->remaining);
 
@@ -126,9 +126,9 @@ void alloc_free_multi_size() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->size;
+    s64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
-    void* memory_end = (u8*)memory_start + fl->size;
+    void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
     assert(initial_size == fl->remaining);
 
@@ -217,9 +217,9 @@ void alloc_aligned() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    s64 initial_size = fl->size;
+    s64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
-    void* memory_end = (u8*)memory_start + fl->size;
+    void* memory_end = (u8*)memory_start + fl->arena.capacity;
 
     assert(initial_size == fl->remaining);
 
@@ -242,7 +242,7 @@ void alloc_aligned() {
         memory1 = freelist_allocate(fl, alloc_size, alignment);
         assert(memory1);
         assert(is_aligned(memory1, alignment));
-        assert(fl->remaining <= old_size - (alloc_size + (alignment - 1)));
+        assert(fl->remaining <= old_size - (alloc_size + (alignment - 1))); // this assumes a non growing arena
         assert(fl->first_free != memory_start);
         assert(memory1 >= memory_start);
         assert(memory1 < memory_end);
@@ -260,7 +260,7 @@ void alloc_aligned() {
         memory2 = freelist_allocate(fl, alloc_size, alignment);
         assert(memory2);
         assert(is_aligned(memory2, alignment));
-        assert(fl->remaining <= old_size - (alloc_size + (alignment - 1)));
+        assert(fl->remaining <= old_size - (alloc_size + (alignment - 1))); // this assumes a non growing arena
         assert(fl->first_free != memory_start);
         assert(memory2 >= memory_start);
         assert(memory2 < memory_end);
@@ -270,7 +270,7 @@ void alloc_aligned() {
     freelist_release(fl, memory2);
 
 
-    assert(fl->remaining == fl->size);
+    assert(fl->remaining == fl->arena.capacity);
     assert(fl->first_free == memory_start);
 
     freelist_reset(fl);

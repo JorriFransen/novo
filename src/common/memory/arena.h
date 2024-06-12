@@ -30,6 +30,7 @@ struct Temp_Arena
 };
 
 NAPI Allocator arena_allocator_create(Arena* arena);
+NAPI Arena arena_create(u8* data, s64 size);
 
 NAPI void arena_new(Arena* arena, u64 max_cap = NOVO_ARENA_MAX_CAP);
 NAPI void arena_free(Arena* arena);
