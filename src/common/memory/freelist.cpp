@@ -31,9 +31,9 @@ void freelist_reset(Freelist* freelist)
     freelist->remaining = freelist->arena.capacity;
 }
 
-bool freelist_grow(Freelist* freelist, s64 min_increase)
+Freelist_Header* freelist_grow(Freelist* freelist, s64 min_increase, Freelist_Header** prev_out)
 {
-    if (!(freelist->arena.flags & ARENA_FLAG_GROW)) return false;
+    if (!(freelist->arena.flags & ARENA_FLAG_GROW)) return nullptr;
 
     s64 old_cap = freelist->arena.capacity;
 
@@ -45,29 +45,40 @@ bool freelist_grow(Freelist* freelist, s64 min_increase)
     freelist->remaining += increase;
 
     Freelist_Header* last_node = freelist->first_free;
-    while (last_node->next) last_node = last_node->next;
+    Freelist_Header* prev_node = nullptr;
+    if (last_node) {
+        while (last_node->next) {
+            prev_node = last_node;
+            last_node = last_node->next;
+        }
+    }
 
     Freelist_Header* new_node = (Freelist_Header*)(freelist->arena.data + old_cap);
     new_node->size = increase;
     new_node->next = nullptr;
 
+    Freelist_Header* result = nullptr;
+
     if (last_node) {
 
         if ((u8*)last_node + last_node->size == (u8*)new_node) {
-            assert(false); // TOOD: Test this!
             last_node->size += new_node->size;
+            result = last_node;
         } else {
-            assert(false); // TOOD: Test this!
             last_node->next = new_node;
+            result = new_node;
+            prev_node = last_node;
         }
 
-        return true;
-
     } else {
-        assert(false); // TOOD: Test this!
         freelist->first_free = new_node;
-        return true;
+        result = new_node;
     }
+
+    assert(result);
+    if (prev_out) *prev_out = prev_node;
+
+    return result;
 }
 
 void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist_Header* node)
@@ -104,7 +115,7 @@ void freelist_remove(Freelist* freelist, Freelist_Header* prev, Freelist_Header*
 
 Freelist_Header* freelist_find_first(Freelist* freelist, u64 size, Freelist_Header** prev_)
 {
-    assert(freelist->first_free);
+    if (!freelist->first_free) return nullptr;
 
    Freelist_Header* node = freelist->first_free;
    Freelist_Header* prev = nullptr;
@@ -133,11 +144,10 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
     Freelist_Header* node = freelist_find_first(freelist, total_size, &prev);
 
     if (!node) {
-        // TODO: Change freelist_grow to return a node that statisfies total size to avoid searching again
-        if (freelist_grow(freelist, total_size)) {
-            node = freelist_find_first(freelist, total_size, &prev);
-            assert(node);
-        } else {
+        node = freelist_grow(freelist, total_size, &prev);
+        assert(node);
+
+        if (!node) {
             assert(false && "Freelist out of memory");
         }
     }
@@ -173,11 +183,19 @@ void freelist_release(Freelist* freelist, void* ptr)
     Freelist_Alloc_Header* alloc_header_ = (Freelist_Alloc_Header*)((u8*)ptr - sizeof(Freelist_Alloc_Header));
     Freelist_Alloc_Header old_alloc_header = *alloc_header_;
 
-    Freelist_Header* new_node = (Freelist_Header*)((u8*)alloc_header_ - alloc_header_->alignment_padding);
-    new_node->size = alloc_header_->size;
+    Freelist_Header* new_node = (Freelist_Header*)((u8*)alloc_header_ - old_alloc_header.alignment_padding);
+    new_node->size = old_alloc_header.size;
+
+    freelist->remaining += old_alloc_header.size;
 
     Freelist_Header* node = freelist->first_free;
     Freelist_Header* prev = nullptr;
+
+    if (!node) {
+        freelist->first_free = new_node;
+        return;
+    }
+
     while (node) {
         if (new_node < node) {
             freelist_insert(freelist, prev, new_node);
@@ -196,8 +214,6 @@ void freelist_release(Freelist* freelist, void* ptr)
         prev->size += new_node->size;
         freelist_remove(freelist, prev, new_node);
     }
-
-    freelist->remaining += old_alloc_header.size;
 }
 
 FN_ALLOCATOR(fl_allocator_fn)

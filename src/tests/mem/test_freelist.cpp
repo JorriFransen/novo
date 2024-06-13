@@ -278,6 +278,76 @@ void alloc_aligned() {
 #undef is_aligned
 }
 
+void grow() {
+    Allocator* flalloc = fl_allocator();
+    Freelist* fl = (Freelist*)flalloc->user_data;
+
+    u64 initial_size = fl->arena.capacity;
+    void* memory_start = fl->first_free;
+    #define memory_end ((u8*)memory_start + fl->arena.capacity)
+
+    assert(initial_size == fl->remaining);
+
+    const s64 alloc_size = 4096 - sizeof(Freelist_Alloc_Header);
+
+    // Fill up first block
+    void* mem1 = freelist_allocate(fl, alloc_size, 1);
+    assert(mem1);
+    assert(fl->arena.capacity == initial_size);
+    assert(mem1 >= memory_start);
+    assert(mem1 < memory_end);
+
+    // Grow, make a small allocation
+    // Since there is no 'free' memory, there are no nodes, this grow will create a new node
+    void* mem2 = freelist_allocate(fl, 128, 1);
+    assert(mem2);
+    assert(fl->arena.capacity == initial_size * 2);
+    assert(mem2 >= memory_start);
+    assert(mem2 < memory_end);
+
+    // Grow, fill remainder of second block, and a small part of the third block
+    // Since there is free memory, and it is at the end of the memory space before growing,
+    //   a new node will be created but not added, instead it's size will be added to the last node's size.
+    void* mem3 = freelist_allocate(fl, alloc_size, 1);
+    assert(mem3);
+    assert(fl->arena.capacity == initial_size * 4);
+    assert(mem3 >= memory_start);
+    assert(mem3 < memory_end);
+
+    // Fill remainder of third block
+    // Now there is no 'free' memory anymore
+    void* mem4 = freelist_allocate(fl, fl->remaining - sizeof(Freelist_Alloc_Header), 1);
+    assert(mem4);
+    assert(fl->arena.capacity == initial_size * 4);
+    assert(mem4 >= memory_start);
+    assert(mem4 < memory_end);
+
+    // Fee a previous allocation, creating a free node in the middle of the memory space.
+    freelist_release(fl, mem2);
+
+    // Make another allocation, bigger than the memory released before.
+    // Since this is the only 'free' memory, the arena should grow, and the new freelist node should not merge.
+    void* mem5 = freelist_allocate(fl, alloc_size, 1);
+    assert(mem5);
+    assert(fl->arena.capacity == initial_size * 8);
+    assert(mem5 >= memory_start);
+    assert(mem5 < memory_end);
+
+    freelist_release(fl, mem1);
+    freelist_release(fl, mem3);
+    freelist_release(fl, mem4);
+    freelist_release(fl, mem5);
+
+    assert(fl->remaining == initial_size * 8);
+    assert(fl->first_free);
+    assert(fl->first_free->size == initial_size * 8);
+    assert(fl->first_free->next == nullptr);
+
+    freelist_reset(fl);
+
+#undef memory_end
+}
+
 int main() {
 
     alloc_free_one();
@@ -285,6 +355,8 @@ int main() {
     alloc_free_multi_size();
 
     alloc_aligned();
+
+    grow();
 
     return 0;
 }
