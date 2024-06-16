@@ -239,10 +239,7 @@ FN_ALLOCATOR(fl_allocator_fn)
     return nullptr;
 }
 
-#define g_fl_allocator_size 1024
-
 bool g_fl_allocator_initialized = false;
-u8 g_fl_memory[g_fl_allocator_size];
 Freelist g_freelist;
 Allocator g_fl_allocator;
 

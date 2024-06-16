@@ -1,10 +1,5 @@
 #include "allocator.h"
 
-
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
-
 namespace Novo {
 
 FN_ALLOCATE(allocate_unaligned)

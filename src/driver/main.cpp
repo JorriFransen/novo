@@ -3,6 +3,7 @@
 #include <instance.h>
 #include <logger.h>
 #include <memory/c_allocator.h>
+#include <memory/trace.h>
 #include <string_builder.h>
 
 #include "command_line_args.h"
@@ -25,7 +26,7 @@ int main(int argc, char* argv[])
         release(c_allocator(), options.output);
         free_atoms();
 
-        report_allocator_trace();
+        report_allocator_trace((Allocator_Trace*)c_allocator()->user_data);
     #endif //NOVO_TRACE_ALLOC
     return 0;
 }
