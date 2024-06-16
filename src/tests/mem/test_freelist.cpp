@@ -20,7 +20,7 @@ void alloc_free_one() {
 
     const s64 alloc_size = 64;
 
-    void* memory = freelist_allocate(fl, alloc_size, 1);
+    void* memory = allocate_size(flalloc, alloc_size, void);
     assert(memory);
     assert(fl->remaining == initial_size - (alloc_size + sizeof(Freelist_Alloc_Header)));
     assert(fl->first_free != memory_start);
