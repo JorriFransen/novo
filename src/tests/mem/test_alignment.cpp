@@ -1,6 +1,7 @@
 
 #include <defines.h>
 #include <memory/c_allocator.h>
+#include <memory/freelist.h>
 
 #include <cassert>
 #include <cstdio>
@@ -20,6 +21,7 @@ int main(int argc, char* argv[])
 
     Allocator* allocators[] = {
         c_allocator(),
+        fl_allocator(),
         &arena_allocator,
     };
 

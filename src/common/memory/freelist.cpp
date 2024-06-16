@@ -164,11 +164,14 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
 
     s32 alignment_padding = padding - sizeof(Freelist_Alloc_Header);
 
-    if (node->size > total_size) {
+    s64 remaining = node->size - total_size;
+    if (remaining >= sizeof(Freelist_Header)) {
         Freelist_Header* new_node = (Freelist_Header*)((u8*)node + total_size);
         new_node->size = node->size - total_size;
         new_node->next = nullptr;
         freelist_insert(freelist, node, new_node);
+    } else {
+        total_size += remaining;
     }
 
     // TODO: when align passes a treshold, modify this node and the final alignment_padding, to avoid wasting the space
