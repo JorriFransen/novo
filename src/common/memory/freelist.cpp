@@ -184,7 +184,9 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
 
     freelist->remaining -= total_size;
 
-    return (u8*)alloc_header + sizeof(Freelist_Alloc_Header);
+    void* result = (void*)((u8*)alloc_header + sizeof(Freelist_Alloc_Header));
+    memset(result, 0, size);
+    return result;
 }
 
 void freelist_release(Freelist* freelist, void* ptr)
