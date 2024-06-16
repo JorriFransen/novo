@@ -4,6 +4,7 @@
 #include "filesystem.h"
 #include "memory/allocator.h"
 #include "memory/arena.h"
+#include "memory/trace.h"
 #include "src/compiler/type.h"
 #include "string_builder.h"
 
@@ -17,6 +18,11 @@ void freelist_init(Freelist* freelist, Arena arena)
     freelist->remaining = arena.capacity;
 
     freelist_reset(freelist);
+
+#ifdef NOVO_TRACE_ALLOC
+    init_allocator_trace(&freelist->trace);
+#endif // NOVO_TRACE_ALLOC
+
 }
 
 void freelist_reset(Freelist* freelist)
@@ -222,13 +228,22 @@ FN_ALLOCATOR(fl_allocator_fn)
 
     switch (mode) {
         case Allocator_Mode::ALLOCATE: {
-            return freelist_allocate(freelist, size, align);
+
+            trace_timer_start(alloc_time);
+            void* result = freelist_allocate(freelist, size, align);
+            trace_alloc_timer_end(&freelist->trace, alloc_time, result);
+
+            return result;
         }
 
         case Allocator_Mode::REALLOCATE: assert(false); break;
 
         case Allocator_Mode::FREE: {
+
+            trace_timer_start(release_time);
             freelist_release(freelist, old_pointer);
+            trace_release_timer_end(&freelist->trace, release_time, old_pointer);
+
             return nullptr;
         }
 
@@ -249,7 +264,7 @@ Allocator* fl_allocator()
         Arena arena;
         arena_new(&arena);
         freelist_init(&g_freelist, arena);
-        g_fl_allocator = { fl_allocator_fn, &g_freelist };
+        g_fl_allocator = { fl_allocator_fn, &g_freelist, ARENA_FLAG_NONE };
         g_fl_allocator_initialized = true;
     }
 

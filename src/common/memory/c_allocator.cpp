@@ -26,7 +26,7 @@ Allocator* c_allocator()
             user_data = &g_c_allocator_trace;
         #endif // NOVO_TRACE_ALLOC
 
-        g_c_allocator = { c_allocator_fn, user_data, ALLOCATOR_FLAG_CANT_REALLOC };
+        g_c_allocator = { c_allocator_fn, user_data, ALLOCATOR_FLAG_NONE };
         g_c_allocator_initialized = true;
 
     }

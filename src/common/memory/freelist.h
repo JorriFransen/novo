@@ -4,6 +4,10 @@
 #include "defines.h"
 #include "memory/arena.h"
 
+#ifdef NOVO_TRACE_ALLOC
+#include "memory/trace.h"
+#endif // NOVO_TRACE_ALLOC
+
 namespace Novo {
 
 struct Allocator;
@@ -20,6 +24,11 @@ struct Freelist
 
     Arena arena;
     u64 remaining; // TODO: Remove this and use 'used' from the arena
+
+#ifdef NOVO_TRACE_ALLOC
+    Allocator_Trace trace;
+#endif // NOVO_TRACE_ALLOC
+
 };
 
 struct Freelist_Alloc_Header
