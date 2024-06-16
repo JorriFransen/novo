@@ -15,11 +15,11 @@ void init_allocator_trace(Allocator_Trace *trace)
     darray_init(&trace->trace_alloc_allocator, &trace->trace_alloc_live_allocs);
 }
 
-void report_allocator_trace(Allocator_Trace *trace)
+void report_allocator_trace(String_Ref name, Allocator_Trace *trace)
 {
     printf("\n\n");
     printf("===========================\n");
-    printf("c_allocator() trace report:\n");
+    printf("%.*s trace report:\n", (int)name.length, name.data);
 
     printf("  total allocations:   %lld\n", trace->trace_alloc_records.count);
 

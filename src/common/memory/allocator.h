@@ -2,8 +2,6 @@
 
 #include "defines.h"
 
-#define NOVO_TRACE_ALLOC
-
 namespace Novo {
 
 enum class Allocator_Mode

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "memory/allocator.h"
 #ifdef NOVO_TRACE_ALLOC
 
 #include "defines.h"
 
-#include "memory/arena.h"
 #include "containers/darray.h"
+#include "memory/arena.h"
+#include "nstring.h"
 
 #include <ctime>
 
@@ -74,13 +74,14 @@ struct Allocator_Trace
 }
 
 NAPI void init_allocator_trace(Allocator_Trace *trace);
-NAPI void report_allocator_trace(Allocator_Trace *trace);
+NAPI void report_allocator_trace(String_Ref allocator_name, Allocator_Trace *trace);
 
 }
 
-#elif // NOVO_TRACE_ALLOC
+#else // NOVO_TRACE_ALLOC
 
 #define trace_timer_start(name)
-#define trace_timer_end(name)
+#define trace_alloc_timer_end(trace, name, ptr)
+#define trace_release_timer_end(trace, name, ptr)
 
 #endif // NOVO_TRACE_ALLOC

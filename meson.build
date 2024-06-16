@@ -8,6 +8,7 @@ compiler_id = compiler.get_id()
 
 link_args = []
 
+# add_global_arguments('-DNOVO_TRACE_ALLOC', language: ['c', 'cpp'])
 
 if compiler_id == 'clang-cl'
   add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language : 'cpp')

@@ -3,6 +3,8 @@
 #include <filesystem.h>
 #include <logger.h>
 #include <memory/arena.h>
+#include <memory/c_allocator.h>
+#include <memory/trace.h>
 #include <nstring.h>
 #include <platform.h>
 
@@ -67,6 +69,72 @@ static Test_Case test_cases[] = {
     { .file_path = "tests/032_enums.no" },
 };
 
+static bool run_test_case(Test_Case* tc, Options options);
+
+int main(int argc, char* argv[]) {
+
+    Temp_Arena tarena = temp_arena(nullptr);
+    Allocator ta = arena_allocator_create(tarena.arena);
+
+    Options options;
+
+    String exe_path = platform_exe_path(&ta, argv[0]);
+
+    if (argc > 1) {
+        test_path_prefix = string_copy(&ta, argv[1]);
+        assert(fs_is_directory(test_path_prefix));
+    }
+    else {
+        test_path_prefix = {};
+    }
+
+    String exe_dir = fs_dirname(&ta, exe_path);
+    String build_dir_ = string_format(&ta, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
+    assert(fs_is_directory(build_dir_.data));
+
+    options.exe_dir = fs_realpath(&ta, build_dir_);
+
+    s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
+    s64 test_success_count = 0;
+
+    s64 max_it = 1;
+
+    // #ifdef NOVO_TRACE_ALLOC
+    //     max_it = 10;
+    // #endif
+
+    for (s64 it = 0; it < max_it; it++) {
+        for (s64 i = 0; i < test_count; i++) {
+
+            auto tc = &test_cases[i];
+
+            printf("Running: '%s'...", tc->file_path);
+            fflush(stdout);
+
+            bool result = run_test_case(tc, options);
+
+            printf("%s\n", result ? "OK" : "FAIL");
+            fflush(stdout);
+
+            if (result) test_success_count++;
+        }
+
+        printf("\n%lld/%lld tests successful\n", test_success_count, test_count);
+
+    }
+
+    temp_arena_release(tarena);
+    int result = test_success_count == test_count * max_it ? 0 : 1;
+
+    #ifdef NOVO_TRACE_ALLOC
+        free_atoms();
+
+        report_allocator_trace("c_allocator()", (Allocator_Trace*)c_allocator()->user_data);
+    #endif // NOVO_TRACE_ALLOC
+
+    return result;
+}
+
 static bool run_test_case(Test_Case* tc, Options options)
 {
     options.keep_c_backend_output = true;
@@ -124,55 +192,4 @@ static bool run_test_case(Test_Case* tc, Options options)
     temp_arena_release(tarena);
 
     return result;
-}
-
-int main(int argc, char* argv[]) {
-
-    Temp_Arena tarena = temp_arena(nullptr);
-    Allocator ta = arena_allocator_create(tarena.arena);
-
-    Options options;
-
-    String exe_path = platform_exe_path(&ta, argv[0]);
-
-    if (argc > 1) {
-        test_path_prefix = string_copy(&ta, argv[1]);
-        assert(fs_is_directory(test_path_prefix));
-    }
-    else {
-        test_path_prefix = {};
-    }
-
-    String exe_dir = fs_dirname(&ta, exe_path);
-    String build_dir_ = string_format(&ta, "%.*s" NPLATFORM_PATH_SEPARATOR "../../../", (int)exe_dir.length, exe_dir.data);
-    assert(fs_is_directory(build_dir_.data));
-
-    options.exe_dir = fs_realpath(&ta, build_dir_);
-
-    s64 test_count = sizeof(test_cases) / sizeof(test_cases[0]);
-    s64 test_success_count = 0;
-
-    s64 max_it = 1;
-    for (s64 it = 0; it < max_it; it++) {
-        for (s64 i = 0; i < test_count; i++) {
-
-            auto tc = &test_cases[i];
-
-            printf("Running: '%s'...", tc->file_path);
-            fflush(stdout);
-
-            bool result = run_test_case(tc, options);
-
-            printf("%s\n", result ? "OK" : "FAIL");
-            fflush(stdout);
-
-            if (result) test_success_count++;
-        }
-
-        printf("\n%lld/%lld tests successful\n", test_success_count, test_count);
-
-    }
-
-    temp_arena_release(tarena);
-    return test_success_count == test_count * max_it ? 0 : 1;
 }
