@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
         release(c_allocator(), options.output);
         free_atoms();
 
-        report_allocator_trace("c_allocator()", (Allocator_Trace*)c_allocator()->user_data);
+        // report_allocator_trace("c_allocator()", (Allocator_Trace*)c_allocator()->user_data);
         report_allocator_trace("fl_allocator()", &((Freelist*)fl_allocator()->user_data)->trace);
     #endif //NOVO_TRACE_ALLOC
     return 0;
