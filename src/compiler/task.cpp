@@ -1,7 +1,7 @@
 #include "task.h"
 
 #include <containers/darray.h>
-#include <memory/allocator.h>
+#include <memory/c_allocator.h>
 
 #include "instance.h"
 #include "parser.h"

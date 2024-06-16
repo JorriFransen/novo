@@ -13,7 +13,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
-#include <memory/allocator.h>
+#include <memory/c_allocator.h>
 #include <memory/arena.h>
 
 namespace Novo {

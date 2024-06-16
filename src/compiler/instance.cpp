@@ -4,6 +4,7 @@
 #include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
+#include <memory/c_allocator.h>
 #include <memory/arena.h>
 #include <nstring.h>
 #include <platform.h>

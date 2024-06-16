@@ -2,7 +2,7 @@
 
 #include "defines.h"
 
-// #define NOVO_TRACE_ALLOC
+#define NOVO_TRACE_ALLOC
 
 namespace Novo {
 
@@ -26,14 +26,18 @@ enum Allocator_Flag : Allocator_Flags
 
 #ifdef NOVO_TRACE_ALLOC
 
-    NAPI void report_allocator_trace();
-
 #   define FN_ALLOCATOR(f) void * f(Allocator_Mode mode, s64 size, u64 align, s64 old_size, void* old_pointer, void* allocator_data, s64 options, const char* file, s64 line)
     typedef FN_ALLOCATOR(FN_Allocator);
+
+#   define trace_timer_start(name) clock_t name##_start = clock();
+#   define trace_timer_end(name) clock_t name = clock() - name##_start;
 
 #else // NOVO_TRACE_ALLOC
 #   define FN_ALLOCATOR(f) void * f(Allocator_Mode mode, s64 size, u64 align, s64 old_size, void* old_pointer, void* allocator_data, s64 options)
     typedef FN_ALLOCATOR(FN_Allocator);
+
+#   define trace_timer_start(name)
+#   define trace_timer_end(name)
 #endif // NOVO_TRACE_ALLOC
 
 struct Allocator {
@@ -42,10 +46,6 @@ struct Allocator {
 
     Allocator_Flags flags;
 };
-
-NAPI Allocator* c_allocator();
-
-NAPI FN_ALLOCATOR(c_allocator_fn);
 
 #ifdef NOVO_TRACE_ALLOC
 

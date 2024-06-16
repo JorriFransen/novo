@@ -2,7 +2,7 @@
 
 #include <containers/darray.h>
 #include <defines.h>
-#include <memory/allocator.h>
+#include <memory/c_allocator.h>
 #include <memory/arena.h>
 #include <nstring.h>
 

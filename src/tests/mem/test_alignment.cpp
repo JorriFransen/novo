@@ -1,6 +1,6 @@
 
 #include <defines.h>
-#include <memory/allocator.h>
+#include <memory/c_allocator.h>
 
 #include <cassert>
 #include <cstdio>
