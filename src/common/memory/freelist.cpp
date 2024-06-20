@@ -236,7 +236,7 @@ FN_ALLOCATOR(fl_allocator_fn)
 
             trace_timer_start(alloc_time);
             void* result = freelist_allocate(freelist, size, align);
-            trace_alloc_timer_end(&freelist->trace, alloc_time, result);
+            trace_alloc_timer_end(&freelist->trace, alloc_time, result, size);
 
             return result;
         }

@@ -15,6 +15,7 @@ namespace Novo {
 struct Trace_Alloc_Record
 {
     void* ptr;
+    s64 size;
     const char *file;
     s64 line;
     clock_t time;
@@ -47,11 +48,11 @@ struct Allocator_Trace
 
 #define trace_timer_start(name) clock_t name##_start = clock();
 
-#define trace_alloc_timer_end(trace_, name_, ptr) { \
+#define trace_alloc_timer_end(trace_, name_, ptr, size) { \
     clock_t name = clock() - name_##_start; \
     Allocator_Trace* trace = (Allocator_Trace*)(trace_); \
     s64 record_index = trace->trace_alloc_records.count; \
-    darray_append(&trace->trace_alloc_records, { (ptr), file, line, name, false } ); \
+    darray_append(&trace->trace_alloc_records, { (ptr), (size), file, line, name, -1 } ); \
     darray_append(&trace->trace_alloc_live_allocs, { (ptr), record_index }); \
 }
 
@@ -81,7 +82,7 @@ NAPI void report_allocator_trace(String_Ref allocator_name, Allocator_Trace *tra
 #else // NOVO_TRACE_ALLOC
 
 #define trace_timer_start(name)
-#define trace_alloc_timer_end(trace, name, ptr)
+#define trace_alloc_timer_end(trace, name, ptr, size)
 #define trace_release_timer_end(trace, name, ptr)
 
 #endif // NOVO_TRACE_ALLOC

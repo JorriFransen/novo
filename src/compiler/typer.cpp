@@ -939,7 +939,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
                 assert(rc.status == Resolved_Constant_Status::RESOLVED);
                 assert(rc.type == inst->builtin_type_s64);
 
-                s64 ci = rc.integer;
+                u64 ci = rc.integer;
 
                 if (ci < 0 || ci >= base->resolved_type->array.length) {
                     String tname = temp_type_string(inst, base->resolved_type);
@@ -1099,7 +1099,7 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             } else if (suggested_type->kind == Type_Kind::ARRAY) {
 
-                if (suggested_type->array.length != expr->compound.expressions.count) {
+                if (suggested_type->array.length != (u64)expr->compound.expressions.count) {
                     String tname = temp_type_string(inst, suggested_type);
                     instance_fatal_error(inst, source_pos(inst, expr), "Invalid compound expression length, got '%lld', expected '%lld' for type '%.*s'",
                                          expr->compound.expressions.count, suggested_type->array.length,

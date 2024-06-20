@@ -138,7 +138,7 @@ Type* pointer_type_get(Instance *inst, Type* base)
     return pointer_type_new(inst, base);
 }
 
-Type* array_type_get(Instance* inst, s64 length, Type* element_type)
+Type* array_type_get(Instance* inst, u64 length, Type* element_type)
 {
     for (s64 i = 0; i < inst->array_types.count; i++) {
         Type* atype = inst->array_types[i];

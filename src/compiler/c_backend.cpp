@@ -1140,7 +1140,7 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
                 assert(const_expr->compound.expressions.count == const_expr->resolved_type->structure.members.count);
             } else {
                 assert(const_expr->resolved_type->kind == Type_Kind::ARRAY);
-                assert(const_expr->compound.expressions.count == const_expr->resolved_type->array.length);
+                assert((u64)const_expr->compound.expressions.count == const_expr->resolved_type->array.length);
             }
 
             string_builder_append(sb, "{ ");

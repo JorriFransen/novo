@@ -18,21 +18,22 @@ Allocator_Trace g_c_allocator_trace;
 
 Allocator* c_allocator()
 {
-    if (!g_c_allocator_initialized) {
+    return fl_allocator();
+    // if (!g_c_allocator_initialized) {
 
-        void* user_data = nullptr;
+    //     void* user_data = nullptr;
 
-        #ifdef NOVO_TRACE_ALLOC
-            init_allocator_trace(&g_c_allocator_trace);
-            user_data = &g_c_allocator_trace;
-        #endif // NOVO_TRACE_ALLOC
+    //     #ifdef NOVO_TRACE_ALLOC
+    //         init_allocator_trace(&g_c_allocator_trace);
+    //         user_data = &g_c_allocator_trace;
+    //     #endif // NOVO_TRACE_ALLOC
 
-        g_c_allocator = { c_allocator_fn, user_data, ALLOCATOR_FLAG_NONE };
-        g_c_allocator_initialized = true;
+    //     g_c_allocator = { c_allocator_fn, user_data, ALLOCATOR_FLAG_NONE };
+    //     g_c_allocator_initialized = true;
 
-    }
+    // }
 
-    return &g_c_allocator;
+    // return &g_c_allocator;
 }
 
 FN_ALLOCATOR(c_allocator_fn)
@@ -44,7 +45,7 @@ FN_ALLOCATOR(c_allocator_fn)
 
         trace_timer_start(malloc_time);
         u8* mem = (u8*)malloc(actual_size);
-        trace_alloc_timer_end(allocator_data, malloc_time, mem);
+        trace_alloc_timer_end(allocator_data, malloc_time, mem, actual_size);
 
         void **ptr = (void**)get_aligned((u64)mem + sizeof(void*), align);
 

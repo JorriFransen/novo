@@ -62,6 +62,8 @@ void alloc_free_multi() {
     assert(fl->first_free != memory_start);
     assert(memory2 >= memory_start);
     assert(memory2 < memory_end);
+    assert(memory2 > ((u8*)memory1 + alloc_size));
+
 
     void* memory3 = freelist_allocate(fl, alloc_size, 1);
     assert(memory3);
@@ -69,6 +71,7 @@ void alloc_free_multi() {
     assert(fl->first_free != memory_start);
     assert(memory3 >= memory_start);
     assert(memory3 < memory_end);
+    assert(memory3 > ((u8*)memory2 + alloc_size));
 
 
     freelist_release(fl, memory2);
@@ -81,6 +84,8 @@ void alloc_free_multi() {
     assert(fl->first_free != memory_start);
     assert(memory4 >= memory_start);
     assert(memory4 < memory_end);
+    assert(memory4 > ((u8*)memory1 + alloc_size));
+    assert(memory4 < ((u8*)memory3));
 
     void* memory5 = freelist_allocate(fl, alloc_size, 1);
     assert(memory5);
@@ -88,6 +93,7 @@ void alloc_free_multi() {
     assert(fl->first_free != memory_start);
     assert(memory5 >= memory_start);
     assert(memory5 < memory_end);
+    assert(memory5 > ((u8*)memory3 + alloc_size));
 
     void* memory6 = freelist_allocate(fl, alloc_size, 1);
     assert(memory6);
@@ -95,6 +101,7 @@ void alloc_free_multi() {
     assert(fl->first_free != memory_start);
     assert(memory6 >= memory_start);
     assert(memory6 < memory_end);
+    assert(memory6 > ((u8*)memory5 + alloc_size));
 
     freelist_release(fl, memory1);
     assert(fl->remaining == initial_size - ((alloc_size + sizeof(Freelist_Alloc_Header)) * 4));
