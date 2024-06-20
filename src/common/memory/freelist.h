@@ -12,15 +12,15 @@ namespace Novo {
 
 struct Allocator;
 
-struct Freelist_Header
+struct Freelist_Node
 {
     u64 size;
-    Freelist_Header* next;
+    Freelist_Node* next;
 };
 
 struct Freelist
 {
-    Freelist_Header* first_free;
+    Freelist_Node* first_free;
 
     Arena arena;
     u64 remaining; // TODO: Remove this and use 'used' from the arena
@@ -33,20 +33,19 @@ struct Freelist
 
 struct Freelist_Alloc_Header
 {
-    s32 alignment_padding;
-    u32 size;
+    size_t size;
+    size_t padding;
 };
-
 
 NAPI void freelist_init(Freelist* freelist, Arena arena);
 NAPI void freelist_reset(Freelist* freelist);
 
-NAPI Freelist_Header* freelist_grow(Freelist* freelist, s64 min_increase, Freelist_Header** prev_out);
+NAPI Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, Freelist_Node** prev_out);
 
-NAPI void freelist_insert(Freelist* freelist, Freelist_Header* insert_after, Freelist_Header* node);
-NAPI void freelist_remove(Freelist* freelist, Freelist_Header* prev, Freelist_Header* node);
+NAPI void freelist_insert(Freelist* freelist, Freelist_Node* insert_after, Freelist_Node* node);
+NAPI void freelist_remove(Freelist* freelist, Freelist_Node* prev, Freelist_Node* node);
 
-NAPI Freelist_Header* freelist_find_first(Freelist* freelist, u64 size, Freelist_Header** prev);
+NAPI Freelist_Node* freelist_find_first(Freelist* freelist, size_t size, size_t align, size_t* padding_out, Freelist_Node** prev_node_out);
 NAPI void* freelist_allocate(Freelist* freelist, s64 size, s64 align);
 NAPI void freelist_release(Freelist* freelist, void* ptr);
 
