@@ -38,25 +38,6 @@ AST_Node ast_node(AST_Identifier* ident)
     return AST_Node { AST_Node_Kind::IDENTIFIER, { .identifier = ident } };
 }
 
-Type* ast_node_type(const AST_Node& node)
-{
-    switch (node.kind) {
-        case AST_Node_Kind::INVALID: assert(false); break;
-        case AST_Node_Kind::DECLARATION: return node.declaration->resolved_type;
-        case AST_Node_Kind::STATEMENT: assert(false); break;
-        case AST_Node_Kind::EXPRESSION: return node.expression->resolved_type;
-        case AST_Node_Kind::TYPE_SPEC: return node.ts->resolved_type;
-        case AST_Node_Kind::IDENTIFIER: {
-            assert(node.identifier->decl);
-            assert(node.identifier->decl->resolved_type);
-            return node.identifier->decl->resolved_type;
-        }
-    }
-
-    assert(false);
-    return nullptr;
-}
-
 AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes)
 {
     auto result = allocate(&inst->ast_allocator, AST_File);
@@ -148,7 +129,7 @@ AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident,
     result->function.return_ts = return_ts;
     result->function.scope = scope;
     darray_init(&inst->ast_allocator, &result->function.variables, 0);
-    darray_init(&inst->ast_allocator, &result->function.temp_structs, 0);
+    darray_init(&inst->ast_allocator, &result->function.implicit_allocs, 0);
 
     return result;
 }
@@ -332,6 +313,14 @@ AST_Expression* ast_implicit_member_expression(Instance* inst, AST_Identifier* m
     return result;
 }
 
+AST_Expression* ast_subscript_expression(Instance* inst, AST_Expression* base, AST_Expression* index)
+{
+    AST_Expression* result = ast_expression(inst, AST_Expression_Kind::SUBSCRIPT);
+    result->subscript.base = base;
+    result->subscript.index = index;
+    return result;
+}
+
 AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression*> args)
 {
     auto result = ast_expression(inst, AST_Expression_Kind::CALL);
@@ -468,6 +457,14 @@ AST_Type_Spec* ast_pointer_type_spec(Instance* inst, AST_Type_Spec *base)
 {
     auto result = ast_type_spec(inst, AST_Type_Spec_Kind::POINTER);
     result->base = base;
+    return result;
+}
+
+AST_Type_Spec* ast_array_type_spec(Instance* inst, AST_Expression* length_expr, AST_Type_Spec* element_ts)
+{
+    AST_Type_Spec* result = ast_type_spec(inst, AST_Type_Spec_Kind::ARRAY);
+    result->array.length = length_expr;
+    result->array.element_ts = element_ts;
     return result;
 }
 

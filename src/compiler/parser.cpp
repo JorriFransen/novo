@@ -13,6 +13,7 @@
 #include "filesystem.h"
 #include "instance.h"
 #include "keywords.h"
+#include "lexer.h"
 #include "scope.h"
 #include "source_pos.h"
 #include "token.h"
@@ -951,7 +952,7 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
     temp_arena_release(tarena);
 
-    while (is_token(parser, '(') || is_token(parser, '.')) {
+    while (is_token(parser, '(') || is_token(parser, '.') || is_token(parser, '[')) {
 
         switch ((u32)parser->lexer.token.kind) {
             case '(': {
@@ -987,6 +988,16 @@ AST_Expression* parse_leaf_expression(Parser* parser)
 
                 result = ast_member_expression(parser->instance, result, member_name);
 
+                save_source_pos(parser->instance, result, pos);
+                break;
+            }
+
+            case '[': {
+                next_token(&parser->lexer);
+                AST_Expression* index_expr = parse_expression(parser);
+                expect_token(parser, ']');
+                pos = source_pos(pos, source_pos(&parser->lexer));
+                result = ast_subscript_expression(parser->instance, result, index_expr);
                 save_source_pos(parser->instance, result, pos);
                 break;
             }
@@ -1365,10 +1376,23 @@ AST_Type_Spec* parse_type_spec(Parser* parser)
             break;
         }
 
+        case '[': {
+            next_token(&parser->lexer);
+            AST_Expression* length_expr = parse_expression(parser);
+            expect_token(parser, ']');
+
+            AST_Type_Spec* element_ts = parse_type_spec(parser);
+
+            result = ast_array_type_spec(parser->instance, length_expr, element_ts);
+
+            pos = source_pos(pos, source_pos(parser->instance, element_ts));
+            break;
+        }
+
         default: {
 
             instance_fatal_error(parser->instance, source_pos(parser, ct), "Unexpected token when parsing type: '%s'", tmp_token_str(ct));
-
+            break;
         }
     }
 

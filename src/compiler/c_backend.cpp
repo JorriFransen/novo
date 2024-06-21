@@ -1,6 +1,7 @@
 #include "c_backend.h"
 
 #include "atom.h"
+#include "const_resolver.h"
 #include "instance.h"
 #include "source_pos.h"
 #include "ssa.h"
@@ -314,13 +315,14 @@ void c_backend_emit_enum_declaration(C_Backend* cb, String_Builder* sb, Type *ty
     string_builder_append(sb, "} %.*s;\n", (int)name.length, name.data);
 }
 
-void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name)
+void c_backend_emit_c_type(C_Backend* cb, String_Builder* sb, Type* type, String_Ref name, CType_Flags flags/* =CTYPE_FLAG_NONE*/)
 {
-    String result = c_backend_emit_c_type(cb, type, name);
+    String result = c_backend_emit_c_type(cb, type, name, flags);
+
     string_builder_append(sb, "%.*s", (int)result.length, result.data);
 }
 
-String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
+String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name, CType_Flags flags/* =CTYPE_FLAG_NONE*/)
 {
     if (string_equal(name, "main")) {
         assert(type->kind == Type_Kind::FUNCTION);
@@ -359,10 +361,21 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
             if (type == cb->inst->builtin_type_cstring) {
                 result = string_format(&ta, "const char (*%.*s)", (int)name.length, name.data);
             } else {
-                if (name.length) result = c_backend_emit_c_type(cb, type->pointer.base, string_format(&ta, "(*%.*s)", (int)name.length, name.data));
-                else             result = c_backend_emit_c_type(cb, type->pointer.base, "*");
+                if (name.length) result = c_backend_emit_c_type(cb, type->pointer.base, string_format(&ta, "(*%.*s)", (int)name.length, name.data), flags);
+                else             result = c_backend_emit_c_type(cb, type->pointer.base, "(*)", flags);
             }
+            break;
+        }
 
+        case Type_Kind::ARRAY: {
+
+            if (flags & CTYPE_FLAG_ARRAY_ELEM_POINTER) {
+                Type* ptr_type = pointer_type_get(cb->inst, type->array.element_type);
+                result = c_backend_emit_c_type(cb, ptr_type, name, flags);
+            } else {
+                if (name.length) result = c_backend_emit_c_type(cb, type->array.element_type, string_format(&ta, "%.*s[%lld]", (int)name.length, name.data, type->array.length), flags);
+                else             result = c_backend_emit_c_type(cb, type->array.element_type, string_format(&ta, "[%lld]", type->array.length), flags);
+            }
             break;
         }
 
@@ -375,7 +388,7 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
 
             if (type->function.param_types.count) {
                 for (s64 i = 0; i < type->function.param_types.count; i++) {
-                    string_builder_append(&sb, "%s%s", i == 0 ? "" : ", ", c_backend_emit_c_type(cb, type->function.param_types[i], ""));
+                    string_builder_append(&sb, "%s%s", i == 0 ? "" : ", ", c_backend_emit_c_type(cb, type->function.param_types[i], "", flags));
                 }
             }
 
@@ -388,8 +401,12 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name)
 
             String result = string_builder_to_string(&sb);
 
-            result = c_backend_emit_c_type(cb, type->function.return_type, result);
-            break;
+            Type* return_type = type->function.return_type;
+            if (return_type->kind == Type_Kind::ARRAY) {
+                return_type = pointer_type_get(cb->inst, return_type->array.element_type);
+            }
+
+            return c_backend_emit_c_type(cb, return_type, result, flags);
         }
 
         case Type_Kind::STRUCT: {
@@ -443,12 +460,17 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
 
     string_builder_append(&local_sb, "%.*s(", (int)name.length, name.data);
 
+    Type* sret_type = nullptr;
     if (return_type->kind == Type_Kind::STRUCT) {
         c_ret_type = cb->inst->builtin_type_void;
+        sret_type = pointer_type_get(cb->inst, return_type);
+    } else if (return_type->kind == Type_Kind::ARRAY) {
+        c_ret_type = cb->inst->builtin_type_void;
+        sret_type = pointer_type_get(cb->inst, return_type->array.element_type);
+    }
 
-        Type* sret_type = pointer_type_get(cb->inst, return_type);
+    if (sret_type) {
         c_backend_emit_c_type(cb, &local_sb, sret_type, "sret");
-
         if (func->param_count > 1) {
             string_builder_append(&local_sb, ", ");
         }
@@ -463,11 +485,20 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
             char param_name[32];
             string_format(param_name, "p%lld", i);
 
+            Type* orig_type = nullptr;
+
             if (param_type->kind == Type_Kind::STRUCT) {
                 param_type = pointer_type_get(cb->inst, param_type);
+            } else if (param_type->kind == Type_Kind::ARRAY || (param_type->kind == Type_Kind::POINTER && param_type->pointer.base->kind == Type_Kind::ARRAY)) {
+                orig_type = param_type;
             }
 
-            c_backend_emit_c_type(cb, &local_sb, param_type, param_name);
+            c_backend_emit_c_type(cb, &local_sb, param_type, param_name, CTYPE_FLAG_ARRAY_ELEM_POINTER);
+
+            if (orig_type) {
+                String tname = temp_type_string(cb->inst, orig_type);
+                string_builder_append(&local_sb, "/* %.*s */", (int)tname.length, tname.data);
+            }
         }
     }
 
@@ -478,8 +509,7 @@ void c_backend_emit_function_decl(C_Backend* cb, String_Builder* sb, SSA_Functio
     string_builder_append(&local_sb, ")");
 
     String result = string_builder_to_string(&local_sb);
-
-    c_backend_emit_c_type(cb, sb, c_ret_type, result);
+    c_backend_emit_c_type(cb, sb, c_ret_type, result, CTYPE_FLAG_ARRAY_ELEM_POINTER);
 
     temp_arena_release(tarena);
 }
@@ -524,12 +554,24 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
         string_builder_append(sb, "    ");
         string_format(reg_name, "r%u", i);
 
-        if (register_type->kind == Type_Kind::STRUCT || func->registers[i].alloc_reg) {
+        Type* initial_type = register_type;
+        bool is_struct = register_type->kind == Type_Kind::STRUCT;
+        bool is_array = register_type->kind == Type_Kind::ARRAY;
+
+        if (is_array) {
+            register_type = pointer_type_get(cb->inst, register_type->array.element_type);
+        } else if (is_struct || func->registers[i].alloc_reg) {
             register_type = pointer_type_get(cb->inst, register_type);
         }
 
-        c_backend_emit_c_type(cb, sb, register_type, reg_name);
-        string_builder_append(sb, ";\n");
+        c_backend_emit_c_type(cb, sb, register_type, reg_name, CTYPE_FLAG_ARRAY_ELEM_POINTER);
+
+        string_builder_append(sb, ";");
+        if (is_array || is_struct) {
+            String tname = temp_type_string(cb->inst, initial_type);
+            string_builder_append(sb, " /* %.*s */", (int)tname.length, tname.data);
+        }
+        string_builder_append(sb, "\n");
     }
 
     string_builder_append(sb, "\n");
@@ -604,10 +646,10 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 operand_reg = FETCH32();
 
                     Type* target_type = func->registers[result_reg].type;
-                    assert(target_type->kind == Type_Kind::POINTER);
+                    assert(target_type->kind == Type_Kind::POINTER || target_type->kind == Type_Kind::INTEGER);
 
                     string_builder_append(sb, "    r%u = (", result_reg);
-                    c_backend_emit_c_type(cb, sb, target_type, "");
+                    c_backend_emit_c_type(cb, sb, target_type, "", CTYPE_FLAG_ARRAY_ELEM_POINTER);
                     string_builder_append(sb, ")r%u;", operand_reg);
                     break;
                 }
@@ -652,7 +694,15 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     /*u64 size =*/ FETCH64();
 
                     string_format(reg_name, "alloc_r%u", result_reg);
-                    string_builder_append(sb, "    r%u = &(%s);", result_reg, reg_name);
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    Type *ctype = func->registers[result_reg].type;
+                    if (ctype->kind == Type_Kind::ARRAY) {
+                        ctype = pointer_type_get(cb->inst, ctype->array.element_type);
+                    } else {
+                        ctype = pointer_type_get(cb->inst, ctype);
+                    }
+                    c_backend_emit_c_type(cb, sb, ctype, "", CTYPE_FLAG_ARRAY_ELEM_POINTER);
+                    string_builder_append(sb, ")&(%s);", reg_name);
                     break;
                 }
 
@@ -681,7 +731,16 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 ptr_reg = FETCH32();
                     u32 value_reg = FETCH32();
 
-                    string_builder_append(sb, "    *(r%u) = r%u;", ptr_reg, value_reg);
+                    SSA_Register ptr_reg_data = func->registers[ptr_reg];
+                    Type* ptr_type = ptr_reg_data.type;
+
+                    if (ptr_reg_data.alloc_reg) {
+                        ptr_type = pointer_type_get(cb->inst, ptr_type);
+                    }
+
+                    string_builder_append(sb, "    *(r%u) = (", ptr_reg);
+                    c_backend_emit_c_type(cb, sb, ptr_type->pointer.base, "", CTYPE_FLAG_ARRAY_ELEM_POINTER);
+                    string_builder_append(sb, ")r%u;",  value_reg);
                     break;
                 }
 
@@ -718,6 +777,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     }
 
                     string_builder_append(sb, "    r%u = ", result_reg);
+
                     if (sret) {
                         string_builder_append(sb, "sret;");
                     } else {
@@ -740,7 +800,14 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 result_reg = FETCH32();
                     u32 offset = FETCH32();
 
-                    Type* pointer_type = pointer_type_get(cb->inst, func->registers[result_reg].type);
+                    Type* register_type = func->registers[result_reg].type;
+                    Type* pointer_type = nullptr;
+                    if (register_type->kind == Type_Kind::ARRAY) {
+                        pointer_type = pointer_type_get(cb->inst, register_type->array.element_type);
+                    } else {
+                        pointer_type = pointer_type_get(cb->inst, register_type);
+                    }
+                    assert(pointer_type);
 
                     string_builder_append(sb, "    r%u = (", result_reg);
                     c_backend_emit_c_type(cb, sb, pointer_type, "");
@@ -802,13 +869,21 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 index_reg = FETCH32();
 
                     Type* base_ptr_type = func->registers[base_ptr_reg].type;
-                    assert(base_ptr_type->kind == Type_Kind::POINTER);
-                    Type* base_pointee_type = base_ptr_type->pointer.base;
+
+                    Type* base_pointee_type = nullptr;
+                    if (base_ptr_type->kind == Type_Kind::POINTER) {
+                        base_pointee_type = base_ptr_type->pointer.base;
+                    } else if (base_ptr_type->kind == Type_Kind::ARRAY) {
+                        base_pointee_type = base_ptr_type->array.element_type;
+                        base_ptr_type = pointer_type_get(cb->inst, base_pointee_type);
+                    } else assert(false);
                     assert(base_pointee_type->bit_size / 8 == size);
 
                     assert(func->registers[result_reg].type == base_ptr_type);
 
-                    string_builder_append(sb, "    r%u = r%u + r%u;", result_reg, base_ptr_reg, index_reg);
+                    string_builder_append(sb, "    r%u = (", result_reg);
+                    c_backend_emit_c_type(cb, sb, base_ptr_type, "");
+                    string_builder_append(sb, ")r%u + r%u;", base_ptr_reg, index_reg);
 
                     break;
                 }
@@ -873,7 +948,6 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                         // Type* arg_type = func->registers[arg_reg].type;
 
                         string_builder_append(sb, "r%u", arg_reg);
-
                     }
 
                     string_builder_append(sb, ");");
@@ -943,7 +1017,7 @@ void c_backend_emit_function_body(C_Backend* cb, String_Builder* sb, u32 fn_inde
                     u32 value_reg = FETCH32();
 
                     if (func->sret) {
-                        string_builder_append(sb, "    return;");
+                        string_builder_append(sb, "    return ;");
                     } else {
                         string_builder_append(sb, "    return r%u;", value_reg);
                     }
@@ -1033,18 +1107,41 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
     switch (const_expr->kind) {
         case AST_Expression_Kind::INVALID: assert(false); break;
         case AST_Expression_Kind::IDENTIFIER: assert(false); break;
-        case AST_Expression_Kind::UNARY: assert(false); break;
+
+        case AST_Expression_Kind::UNARY: {
+            switch (const_expr->unary.op) {
+                default: assert(false); break;
+
+                case '-': {
+
+                    assert(const_expr->resolved_type->kind == Type_Kind::INTEGER);
+
+                    Resolved_Constant rc = const_resolve(cb->inst, const_expr);
+                    assert(rc.status == Resolved_Constant_Status::RESOLVED);
+
+                    c_backend_emit_constant_int(cb, sb, const_expr->resolved_type, rc.integer);
+                    break;
+                };
+            }
+            break;
+        }
+
         case AST_Expression_Kind::BINARY: assert(false); break;
         case AST_Expression_Kind::MEMBER: assert(false); break;
         case AST_Expression_Kind::IMPLICIT_MEMBER: assert(false); break;
+        case AST_Expression_Kind::SUBSCRIPT: assert(false); break;
         case AST_Expression_Kind::CALL: assert(false); break;
         case AST_Expression_Kind::ADDRESS_OF: assert(false); break;
         case AST_Expression_Kind::DEREF: assert(false); break;
         case AST_Expression_Kind::CAST: assert(false); break;
 
         case AST_Expression_Kind::COMPOUND: {
-            assert(const_expr->resolved_type->kind == Type_Kind::STRUCT);
-            assert(const_expr->compound.expressions.count == const_expr->resolved_type->structure.members.count);
+            if (const_expr->resolved_type->kind == Type_Kind::STRUCT) {
+                assert(const_expr->compound.expressions.count == const_expr->resolved_type->structure.members.count);
+            } else {
+                assert(const_expr->resolved_type->kind == Type_Kind::ARRAY);
+                assert(const_expr->compound.expressions.count == const_expr->resolved_type->array.length);
+            }
 
             string_builder_append(sb, "{ ");
 
@@ -1066,7 +1163,7 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
         case AST_Expression_Kind::TYPE: assert(false); break;
 
         case AST_Expression_Kind::INTEGER_LITERAL: {
-            string_builder_append(sb, "0x%x", const_expr->integer_literal);
+            c_backend_emit_constant_int(cb, sb, const_expr->resolved_type, const_expr->integer_literal);
             break;
         }
 
@@ -1092,6 +1189,24 @@ void c_backend_emit_constant_expression(C_Backend* cb, String_Builder* sb, AST_E
             break;
         }
 
+    }
+}
+
+void c_backend_emit_constant_int(C_Backend* cb, String_Builder* sb,  Type* type, u64 value)
+{
+    assert(type->kind == Type_Kind::INTEGER);
+
+    string_builder_append(sb, "(");
+    c_backend_emit_c_type(cb, sb, type, "");
+    string_builder_append(sb, ")");
+
+    switch (type->bit_size) {
+        default: assert(false);
+
+        case 8: string_builder_append(sb, "0x%hhx", value); break;
+        case 16: string_builder_append(sb, "0x%hx", value); break;
+        case 32: string_builder_append(sb, "0x%lx", value); break;
+        case 64: string_builder_append(sb, "0x%llx", value); break;
     }
 }
 

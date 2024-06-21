@@ -1,0 +1,225 @@
+
+#import "c"
+
+array_basics :: () {
+    a1 : [3]int;
+
+    assert(a1.length == 3);
+    assert(a1.data == *a1[0]);
+
+    // TODO: Implement this!
+    assert(a1[0] == 0);
+    assert(a1[1] == 0);
+    assert(a1[2] == 0);
+
+    old_ptr := a1.data;
+    a1 = { 12, 23, 34 };
+    assert(a1.data == old_ptr);
+    assert(a1[0] == 12);
+    assert(a1[1] == 23);
+    assert(a1[2] == 34);
+
+    a2 : [3]int = { 45, 56, 67 };
+    assert(a2.length == 3);
+    assert(a2.data == *a2[0]);
+    assert(a2[0] == 45);
+    assert(a2[1] == 56);
+    assert(a2[2] == 67);
+
+    a3 : [3]int = { add(1, 2), add(2, 3), add(3, 4) };
+    assert(a3.length == 3);
+    assert(a3.data == *a3[0]);
+    assert(a3[0] == 3);
+    assert(a3[1] == 5);
+    assert(a3[2] == 7);
+
+    a3 = { add(11, 22), add(22, 33), add(33, 44) };
+    assert(a3[0] == 33);
+    assert(a3[1] == 55);
+    assert(a3[2] == 77);
+
+    array_value_func_1(a3);
+    assert(a3[0] == 33);
+    assert(a3[1] == 55);
+    assert(a3[2] == 77);
+
+    a4 := make_array(42, 43, 44);
+    assert(a4[0] == 42);
+    assert(a4[1] == 43);
+    assert(a4[2] == 44);
+
+    a4 = make_array(44, 34, 24);
+    assert(a4[0] == 44);
+    assert(a4[1] == 34);
+    assert(a4[2] == 24);
+
+    init_array_1(*a1, 1, 2, 3);
+    assert(a1[0] == 1);
+    assert(a1[1] == 2);
+    assert(a1[2] == 3);
+
+    a1p := *a1;
+    init_array_1(a1p, 11, 22, 33);
+    assert(a1[0] == 11);
+    assert(a1[1] == 22);
+    assert(a1[2] == 33);
+
+    (<*a1)[0] = 111;
+    (<*a1)[1] = 222;
+    (<*a1)[2] = 333;
+    assert(a1[0] == 111);
+    assert(a1[1] == 222);
+    assert(a1[2] == 333);
+
+    <a1p = { 1111, 2222, 3333 };
+    assert(a1[0] == 1111);
+    assert(a1[1] == 2222);
+    assert(a1[2] == 3333);
+
+    init_array_2(*a2, 1, 2, 3);
+    assert(a2[0] == 1);
+    assert(a2[1] == 2);
+    assert(a2[2] == 3);
+
+    a2p := *a2;
+    init_array_2(a2p, 11, 22, 33);
+    assert(a2[0] == 11);
+    assert(a2[1] == 22);
+    assert(a2[2] == 33);
+
+    init_array_3(*a3, 1, 2, 3);
+    assert(a3[0] == 1);
+    assert(a3[1] == 2);
+    assert(a3[2] == 3);
+
+    a3p := *a3;
+    init_array_3(a3p, 11, 22, 33);
+    assert(a3[0] == 11);
+    assert(a3[1] == 22);
+    assert(a3[2] == 33);
+
+    init_array_4(*a4, 1, 2, 3);
+    assert(a4[0] == 1);
+    assert(a4[1] == 2);
+    assert(a4[2] == 3);
+
+    a4p := *a4;
+    init_array_4(a4p, 11, 22, 33);
+    assert(a4[0] == 11);
+    assert(a4[1] == 22);
+    assert(a4[2] == 33);
+
+    a5 : [3]int;
+    init_array_5(*a5, 1, 2, 3);
+    assert(a5[0] == 1);
+    assert(a5[1] == 2);
+    assert(a5[2] == 3);
+
+    a5p := *a5;
+    init_array_5(a5p, 11, 22, 33);
+    assert(a5[0] == 11);
+    assert(a5[1] == 22);
+    assert(a5[2] == 33);
+
+    assert(a5.data == a5p.data);
+    assert(a5p.data == (*a5).data);
+    assert(a5.length == a5p.length);
+
+    a6 : *[3]int = heap_array(1, 2, 3);
+    assert(a6.length == 3);
+    assert(cast(s64, a6.data) == cast(s64, a6) + 8);
+    assert(a6[0] == 1);
+    assert(a6[1] == 2);
+    assert(a6[2] == 3);
+
+    free(cast(*void, a6));
+
+
+    a1 = { 1, 2, 3 };
+    a2 = { 11, 22, 33 };
+    assert(a1.data != a2.data);
+
+    a1.data = a2.data;
+    assert(a1.data == a2.data);
+    assert(a1[0] == a2[0]);
+    assert(a1[1] == a2[1]);
+    assert(a1[2] == a2[2]);
+
+    a1[0] = 111;
+    assert(a1[0] == a2[0]);
+    assert(a2[0] == 111);
+
+    a2[1] = 222;
+    assert(a1[1] == a2[1]);
+    assert(a1[1] == 222);
+
+}
+
+add :: (a: int, b: int) -> int { return a + b; }
+
+array_value_func_1 :: (a: [3]int) {
+
+    a[0] = -1;
+    a[1] = -2;
+    a[1] = -3;
+
+    array_value_func_2(a);
+}
+
+array_value_func_2 :: (a: [3]int) {
+    a = { -11, -12, -13 };
+}
+
+make_array :: (v0: int, v1: int, v2: int) -> [3]int {
+    return { v0, v1, v2 };
+}
+
+init_array_1 :: (a: *[3]int, v0: int, v1: int, v2: int) {
+    ptr := <cast(**int, a);
+    <(ptr + 0) = v0;
+    <(ptr + 1) = v1;
+    <(ptr + 2) = v2;
+}
+
+init_array_2 :: (a: *[3]int, v0: int, v1: int, v2: int) {
+    (<a)[0] = v0;
+    (<a)[1] = v1;
+    (<a)[2] = v2;
+}
+
+init_array_3 :: (a: *[3]int, v0: int, v1: int, v2: int) {
+    <a = { v0, v1, v2 };
+}
+
+init_array_4 :: (a: *[3]int, v0: int, v1: int, v2: int) {
+    a[0] = v0;
+    a[1] = v1;
+    a[2] = v2;
+}
+
+init_array_5 :: (a: *[3]int, v0: int, v1: int, v2: int) {
+    <a = { v0, v1, v2 };
+}
+
+heap_array :: (v0: int, v1: int, v2: int) -> *[3]int {
+    // Allocate space for the array, and a pointer to the array
+    alloc : **void = malloc(sizeof(:*[3]int) + sizeof(:[3]int));
+
+    result := cast(*[3]int, alloc);
+
+    // First pointer sized element is pointer to the rest of the elements
+    elem_ptr : *void = alloc + 1;
+    <alloc = elem_ptr;
+
+    // At this point result is a valid array pointer, assign the values
+    <result = { v0, v1, v2 };
+
+    return result;
+}
+
+main :: () -> int {
+
+    array_basics();
+
+    return 0;
+}

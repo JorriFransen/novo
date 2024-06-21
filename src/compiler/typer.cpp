@@ -9,6 +9,7 @@
 #include "ast.h"
 #include "const_resolver.h"
 #include "instance.h"
+#include "keywords.h"
 #include "resolver.h"
 #include "scope.h"
 #include "source_pos.h"
@@ -385,6 +386,15 @@ bool type_statement(Instance* inst, Type_Task* task, AST_Statement* stmt, Scope*
                         temp_type_string(inst, lvalue->resolved_type).data,
                         temp_type_string(inst, rvalue->resolved_type).data);
             }
+
+            if (lvalue->kind == AST_Expression_Kind::IDENTIFIER &&
+                lvalue->identifier->decl->kind == AST_Declaration_Kind::VARIABLE &&
+                lvalue->identifier->decl->flags & AST_DECL_FLAG_PARAM &&
+                !(lvalue->resolved_type->kind == Type_Kind::ARRAY)) {
+
+                lvalue->identifier->decl->flags |= AST_DECL_FLAG_PARAMETER_STORAGE_REQUIRED;
+            }
+
 
             break;
         }
@@ -802,18 +812,31 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             Type* base_type = expr->member.base->resolved_type;
             Scope* base_scope = nullptr;
             bool aggregate = false;
+            bool array = false;
 
             switch (base_type->kind) {
                 default: assert(false); // Error should have been reported in resolver
 
                 case Type_Kind::POINTER: {
-                    assert(base_type->pointer.base->kind == Type_Kind::STRUCT);
+                    aggregate = base_type->pointer.base->kind == Type_Kind::STRUCT;
+                    array = base_type->pointer.base->kind == Type_Kind::ARRAY;
+
                     base_type = base_type->pointer.base;
-                    // Falltrough
+
+                    if (aggregate) {
+                        base_scope = base_type->structure.scope;
+                    }
+                    break;
                 }
+
                 case Type_Kind::STRUCT: {
-                    base_scope = base_type->structure.scope;
                     aggregate = true;
+                    base_scope = base_type->structure.scope;
+                    break;
+                }
+
+                case Type_Kind::ARRAY: {
+                    array = true;
                     break;
                 }
 
@@ -824,23 +847,35 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             }
 
             assert(base_type);
-            assert(base_scope);
 
-            AST_Declaration* mem_decl = scope_find_symbol(base_scope, expr->member.member_name->atom, nullptr);
+            if (array) {
 
-            Type* mem_type = nullptr;
+                if (expr->member.member_name->atom == g_atom_length) {
+                    expr->resolved_type = inst->builtin_type_int;
+                } else if (expr->member.member_name->atom == g_atom_data) {
+                    assert(base_type->kind == Type_Kind::ARRAY);
+                    expr->resolved_type = pointer_type_get(inst, base_type->array.element_type);
+                } else assert(false && !"Should have been caught in resolver");
 
-            if (aggregate) {
-                u32 index = mem_decl->variable.index;
-                assert(index >= 0 && index < base_type->structure.members.count);
-                mem_type = base_type->structure.members[index].type;
             } else {
-                mem_type = base_type;
+                assert(base_scope);
+
+                AST_Declaration* mem_decl = scope_find_symbol(base_scope, expr->member.member_name->atom, nullptr);
+
+                Type* mem_type = nullptr;
+
+                if (aggregate) {
+                    u32 index = mem_decl->variable.index;
+                    assert(index >= 0 && index < base_type->structure.members.count);
+                    mem_type = base_type->structure.members[index].type;
+                } else {
+                    mem_type = base_type;
+                }
+
+                assert(mem_type);
+
+                expr->resolved_type = mem_type;
             }
-
-            assert(mem_type);
-
-            expr->resolved_type = mem_type;
             break;
         }
 
@@ -868,6 +903,52 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
             expr->implicit_member.enum_scope = left_type->enumeration.scope;
             expr->resolved_type = left_type;
+            break;
+        }
+
+        case AST_Expression_Kind::SUBSCRIPT: {
+
+            AST_Expression* base = expr->subscript.base;
+            AST_Expression* index = expr->subscript.index;
+
+            if (!type_expression(inst, task, base, scope, nullptr)) {
+                return false;
+            }
+
+            Type* array_type = base->resolved_type;
+            if (array_type->kind == Type_Kind::POINTER && array_type->pointer.base->kind == Type_Kind::ARRAY) {
+                array_type = array_type->pointer.base;
+            }
+
+            if (array_type->kind != Type_Kind::ARRAY) {
+                String tname = temp_type_string(inst, base->resolved_type);
+                instance_fatal_error(inst, source_pos(inst, base), "Base of subscript must be of array type, got '%.*s'", (int)tname.length, tname.data);
+            }
+
+            if (!type_expression(inst, task, index, scope, inst->builtin_type_s64)) {
+                return false;
+            }
+
+            if (index->resolved_type->kind != Type_Kind::INTEGER) {
+                String tname = temp_type_string(inst, index->resolved_type);
+                instance_fatal_error(inst, source_pos(inst, index), "Type of subscript index must be integer, got '%.*s'", (int)tname.length, tname.data);
+            }
+
+            if (index->flags & AST_EXPR_FLAG_CONST) {
+                Resolved_Constant rc = const_resolve(inst, index);
+                assert(rc.status == Resolved_Constant_Status::RESOLVED);
+                assert(rc.type == inst->builtin_type_s64);
+
+                s64 ci = rc.integer;
+
+                if (ci < 0 || ci >= base->resolved_type->array.length) {
+                    String tname = temp_type_string(inst, base->resolved_type);
+                    instance_fatal_error(inst, source_pos(inst, index), "Constant index '%lld' out of bounds of type '%.*s'", ci, (int)tname.length, tname.data);
+                }
+
+            }
+
+            expr->resolved_type = array_type->array.element_type;
             break;
         }
 
@@ -926,14 +1007,14 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
             expr->resolved_type = fn_type->function.return_type;
             assert(task->fn_decl || child_of_run);
             for (s64 i = 0; i < expr->call.args.count; i++) {
-                if (expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
-                    darray_append_unique(&task->fn_decl->function.temp_structs, expr->call.args[i]);
+                if ((expr->call.args[i]->resolved_type->kind == Type_Kind::STRUCT || expr->call.args[i]->resolved_type->kind == Type_Kind::ARRAY) && !child_of_run) {
+                    darray_append_unique(&task->fn_decl->function.implicit_allocs, expr->call.args[i]);
                 }
             }
 
-            if (expr->resolved_type->kind == Type_Kind::STRUCT && !child_of_run) {
-                assert(fn_type->function.return_type->kind == Type_Kind::STRUCT);
-                darray_append_unique(&task->fn_decl->function.temp_structs, expr);
+            if ((expr->resolved_type->kind == Type_Kind::STRUCT || expr->resolved_type->kind == Type_Kind::ARRAY) && !child_of_run) {
+                assert(fn_type->function.return_type == expr->resolved_type);
+                darray_append_unique(&task->fn_decl->function.implicit_allocs, expr);
             }
 
             assert(base->kind == AST_Expression_Kind::IDENTIFIER);
@@ -1006,18 +1087,36 @@ bool type_expression(Instance* inst, Type_Task* task, AST_Expression* expr, Scop
 
         case AST_Expression_Kind::COMPOUND: {
             assert(suggested_type);
-            assert(suggested_type->kind == Type_Kind::STRUCT);
 
-            assert(suggested_type->structure.members.count == expr->compound.expressions.count);
+            if (suggested_type->kind == Type_Kind::STRUCT) {
+                assert(suggested_type->structure.members.count == expr->compound.expressions.count);
 
-            for (s64 i = 0; i < expr->compound.expressions.count; i++) {
-                if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->structure.members[i].type)) {
-                    return false;
+                for (s64 i = 0; i < expr->compound.expressions.count; i++) {
+                    if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->structure.members[i].type)) {
+                        return false;
+                    }
                 }
+
+            } else if (suggested_type->kind == Type_Kind::ARRAY) {
+
+                if (suggested_type->array.length != expr->compound.expressions.count) {
+                    String tname = temp_type_string(inst, suggested_type);
+                    instance_fatal_error(inst, source_pos(inst, expr), "Invalid compound expression length, got '%lld', expected '%lld' for type '%.*s'",
+                                         expr->compound.expressions.count, suggested_type->array.length,
+                                         (int)tname.length, tname.data);
+                }
+
+                for (s64 i = 0; i < expr->compound.expressions.count; i++) {
+                    if (!type_expression(inst, task, expr->compound.expressions[i], scope, suggested_type->array.element_type)) {
+                        return false;
+                    }
+                }
+            } else {
+                assert(false && "Unhandled suggested type for compound expr");
             }
 
             if (!(expr->flags & AST_EXPR_FLAG_CONST)) {
-                darray_append_unique(&task->fn_decl->function.temp_structs, expr);
+                darray_append_unique(&task->fn_decl->function.implicit_allocs, expr);
             }
             expr->resolved_type = suggested_type;
             break;
@@ -1230,6 +1329,31 @@ bool type_type_spec(Instance* inst, Type_Task* task, AST_Type_Spec* ts, Scope* s
             ts->resolved_type = pointer_type_get(inst, ts->base->resolved_type);
             break;
         }
+
+        case AST_Type_Spec_Kind::ARRAY: {
+            if (!type_expression(inst, task, ts->array.length, scope, inst->builtin_type_int)) {
+                return false;
+            }
+
+            if (!(ts->array.length->flags & AST_EXPR_FLAG_CONST)) {
+                instance_fatal_error(inst, source_pos(inst, ts->array.length), "Length of static array must be constant");
+            }
+
+            Resolved_Constant rc = const_resolve(inst, ts->array.length);
+            assert(rc.status == Resolved_Constant_Status::RESOLVED);
+            s64 length = rc.integer;
+
+            if (length < 1) {
+                instance_fatal_error(inst, source_pos(inst, ts->array.length), "Invalid array length '%lld', minimum length is '1'", length);
+            }
+
+            if (!type_type_spec(inst, task, ts->array.element_ts, scope)) {
+                return false;
+            }
+
+            ts->resolved_type = array_type_get(inst, length, ts->array.element_ts->resolved_type);
+            break;
+        }
     }
 
     assert(ts->resolved_type);
@@ -1358,6 +1482,7 @@ bool valid_cast(Instance* inst, Type* from_type, Type* to_type, AST_Expression* 
             break;
         }
 
+        case Type_Kind::ARRAY: assert(false); break;
         case Type_Kind::FUNCTION: assert(false); break;
         case Type_Kind::STRUCT: assert(false); break;
         case Type_Kind::ENUM: assert(false); break;

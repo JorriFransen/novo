@@ -1,0 +1,167 @@
+
+// - Invalid1 := <a2; // Disallow dereference
+// - Default initializers
+// - Test returning array from #run
+
+// - Try to remove double memcopy when calling functions like make_array.
+//      There is a memcopy from a temporary in make_arrays frame into a temporary in the callers frame.
+//      The temporary in the callers frame in then copied into the final destination.
+//
+//      In make_array, when returning a comound, emit into the destination instead of a temporary.
+//      in the callers frame, try to pass the final destination directly instead of a temporary.
+
+#import "c"
+
+main :: () -> int {
+
+    a1 : [2]int; // Local allocation, uninitialized
+    a2 : [2]int = { 33, 44 }; // Local allocation, initialized
+
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+
+    a1[0] = 90;
+    a1[1] = 91;
+    a2[0] = 92;
+    a2[1] = 93;
+
+    printf("\n".data);
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+
+    assert(a1.length == 2);
+    assert(a1.data == *a1[0]);
+
+    assert(a2.length == 2);
+    assert(a2.data == *a2[0]);
+
+    assert(a1.data != a2.data);
+
+    a1 = { 11, 22 }; // Store in local allocation
+
+    printf("\n".data);
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+
+    a1 = a2;         // Store in local allocation, still seperate arrays
+    printf("\n".data);
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("a2: { %lld, %lld }\n".data, a2[0], a2[1]);
+    assert(a1[0] == a2[0]);
+    assert(a1[1] == a2[1]);
+
+    assert(a1.data != a2.data);
+
+    a3 : [2]int = { add(101, 10), add(202, 20) };
+
+    printf("\n".data);
+    printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
+
+    a3 = { add(101, 11), add(202, 22) };
+
+    printf("\n".data);
+    printf("a3: { %lld, %lld }\n".data, a3[0], a3[1]);
+    printf("\n".data);
+
+    array_value_func_1(a1); // Create local copy of a1's elements, pass pointer to function
+    printf("a1: { %lld, %lld }\n".data, a1[0], a1[1]);
+    printf("\n".data);
+    assert(a1[0] == 92);
+    assert(a1[1] == 93);
+
+    a4 := make_array(55, 66); // Create temporary array for return value, pass pointer, assign (memcpy) to variable after return
+    printf("a4: { %lld, %lld }\n".data, a4[0], a4[1]);
+
+    a4 = make_array(66, 77); // Create temporary array for return value, pass pointer, assign (memcpy) to variable after return
+    printf("\n".data);
+    printf("a4: { %lld, %lld }\n".data, a4[0], a4[1]);
+
+    // Create uninitialized local allocation, pass it's pointer
+    a5 : [2]int;
+    init_array(*a5, 77, 88);
+    printf("\n".data);
+    printf("a5: { %lld, %lld }\n".data, a5[0], a5[1]);
+
+    printf("*a5: { %lld, %lld }\n".data, (*a5)[0], (*a5)[1]);
+    ap5 := *a5;
+    printf("ap5: { %lld, %lld }\n".data, ap5[0], ap5[1]);
+
+    printf("\n".data);
+    printf("a5.length: %i\n".data, a5.length);
+    printf("ap5.length: %i\n".data, ap5.length);
+    assert(a5.length == ap5.length);
+    assert(a5.data == ap5.data);
+    assert(ap5.data == (*a5).data);
+
+    printf("\n".data);
+    a6 : *[2]int = heap_array(99, 1010); // Allocate array on heap
+    printf("a6:                    %p\n".data, a6);
+    printf("a6.data:               %p\n".data, a6.data);
+    assert(a6.length == 2);
+    assert(a6.data != a5.data);
+    assert(cast(s64, a6.data) == cast(s64, a6) + sizeof(:*void));
+
+    printf("a6: { %i, %i }\n".data, a6[0], a6[1]);
+    free(cast(*void, a6));
+
+    assert(a1.data != a2.data);
+    a2.data = a1.data;
+    assert(a1.data == a2.data);
+
+    assert(a3.data != a4.data);
+    a3p := *a3;
+    a3p.data = a4.data;
+    assert(a3.data == a4.data);
+
+    return 0;
+
+}
+
+add :: (a: s64, b: s64) -> int { return a + b; }
+
+array_value_func_1 :: (a: [2]int) {
+
+    printf("[enter] array_value_func_1: (%p) { %i, %i }\n".data, a.data, a[0], a[1]);
+
+    a[0] = -1;
+    a[1] = -2;
+
+    array_value_func_2(a);
+
+    printf("[exit]  array_value_func_1: (%p) { %i, %i }\n".data, a.data, a[0], a[1]);
+}
+
+array_value_func_2 :: (a: [2]int) {
+    printf("[enter] array_value_func_2: (%p) { %i, %i }\n".data, a.data,  a[0], a[1]);
+
+    a = { -11, -12 };
+
+    printf("[exit]  array_value_func_2: (%p) { %i, %i }\n".data, a.data,  a[0], a[1]);
+}
+
+make_array :: (v1: int, v2: int) -> [2]int {
+    return { v1, v2 };
+}
+
+init_array :: (a: *[2]int, v1: int, v2: int) {
+
+    <a = { v1, v2 };
+
+}
+
+heap_array ::  (v0: int, v1: int) -> *[2]int {
+    // Allocate space for the array, and a pointer to the array
+    alloc : **void = malloc(sizeof(:*[2]int) + sizeof(:[2]int));
+
+    result := cast(*[2]int, alloc);
+    elem_ptr : *void = alloc + 1;
+    <alloc = elem_ptr;
+
+    printf("[heap_array] alloc:    %p\n".data, alloc);
+    printf("[heap_array] result:   %p\n".data, result);
+    printf("[heap_array] elem_ptr: %p\n".data, elem_ptr);
+
+    <result = { v0, v1 };
+
+    return result;
+}

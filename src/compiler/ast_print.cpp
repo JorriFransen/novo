@@ -532,6 +532,22 @@ static void ast_expr_to_string(Instance* inst, String_Builder* sb, AST_Expressio
             break;
         }
 
+        case AST_Expression_Kind::SUBSCRIPT: {
+
+            string_builder_append(sb, "EXPR_SUBSCRIPT:\n");
+
+            ast_print_pos(inst, sb, expr->subscript.base);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "BASE:\n");
+            ast_expr_to_string(inst, sb, expr->subscript.base, indent + 2);
+
+            ast_print_pos(inst, sb, expr->subscript.index);
+            ast_print_indent(sb, indent + 1);
+            string_builder_append(sb, "INDEX:\n");
+            ast_expr_to_string(inst, sb, expr->subscript.index, indent + 2);
+            break;
+        }
+
         case AST_Expression_Kind::CALL: {
             string_builder_append(sb, "EXPR_CALL:\n");
             ast_print_pos(inst, sb, expr->call.base);
@@ -672,6 +688,12 @@ static void ast_ts_to_string(Instance* inst, String_Builder* sb, AST_Type_Spec* 
         case AST_Type_Spec_Kind::POINTER: {
             string_builder_append(sb, "POINTER_TS:\n");
             ast_ts_to_string(inst, sb, ts->base, indent + 1);
+            break;
+        }
+
+        case AST_Type_Spec_Kind::ARRAY: {
+            string_builder_append(sb, "ARRAY_TS:\n");
+            assert(false);
             break;
         }
     }

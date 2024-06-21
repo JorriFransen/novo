@@ -24,6 +24,7 @@ enum class Type_Kind : u32
     BOOLEAN,
 
     POINTER,
+    ARRAY,
 
     FUNCTION,
     STRUCT,
@@ -80,6 +81,11 @@ struct Type
         } pointer;
 
         struct {
+            u64 length;
+            Type* element_type;
+        } array;
+
+        struct {
             DArray<Type*> param_types;
             Type* return_type;
         } function;
@@ -123,11 +129,14 @@ NAPI Type* void_type_new(Instance* inst);
 NAPI Type* integer_type_new(Instance* inst, bool sign, u32 bit_size);
 NAPI Type* boolean_type_new(Instance* inst, u32 bit_size);
 NAPI Type* pointer_type_new(Instance* inst, Type* base);
+NAPI Type* array_type_new(Instance* inst, s64 length, Type* element_type);
 NAPI Type* function_type_new(Instance* inst, DArray<Type*> param_types, Type* return_type, Type_Flags flags);
 NAPI Type* struct_type_new(Instance* inst, Atom name, Array_Ref<Type_Struct_Member> members, Scope* scope);
 NAPI Type* enum_type_new(Instance* inst, Atom name, Type* strict_Type,  Array_Ref<Type_Enum_Member> members, Scope* scope);
 
 NAPI Type* pointer_type_get(Instance *inst, Type* base);
+
+NAPI Type* array_type_get(Instance* inst, s64 length, Type* element_type);
 NAPI Type* function_type_get(Instance* inst, Array_Ref<Type*> param_types, Type* return_type, Type_Flags flags);
 
 NAPI bool is_pointer_or_parent_of_pointer(Type* type);
@@ -135,7 +144,7 @@ NAPI bool is_pointer_or_parent_of_pointer(Type* type);
 NAPI bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to);
 
 NAPI String temp_type_string(Instance* inst, Type* type);
-NAPI void type_to_string(Instance* instance, String_Builder* sb, Type* type);
+NAPI void type_to_string(Instance* inst, String_Builder* sb, Type* type);
 
 NAPI Infer_Node infer_node();
 NAPI Infer_Node infer_node(Type* type);

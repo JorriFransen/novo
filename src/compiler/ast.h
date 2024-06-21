@@ -119,7 +119,7 @@ struct AST_Declaration
             AST_Type_Spec* return_ts;
             DArray<AST_Statement *> body;
             DArray<AST_Declaration *> variables;
-            DArray<AST_Expression *> temp_structs;
+            DArray<AST_Expression *> implicit_allocs;
 
             Scope* scope;
 
@@ -244,6 +244,7 @@ enum class AST_Expression_Kind : u32
     BINARY,
     MEMBER,
     IMPLICIT_MEMBER,
+    SUBSCRIPT,
     CALL,
 
     ADDRESS_OF,
@@ -272,17 +273,19 @@ enum class AST_Expression_Kind : u32
 typedef u32 AST_Expression_Flags;
 enum AST_Expression_Flag : AST_Expression_Flags
 {
-    AST_EXPR_FLAG_NONE              = 0x0000,
+    AST_EXPR_FLAG_NONE           = 0x0000,
 
-    AST_EXPR_FLAG_RESOLVED          = 0x0001,
-    AST_EXPR_FLAG_TYPED             = 0x0002,
-    AST_EXPR_FLAG_CONST             = 0x0004,
-    AST_EXPR_FLAG_LVALUE            = 0x0008,
+    AST_EXPR_FLAG_RESOLVED       = 0x0001,
+    AST_EXPR_FLAG_TYPED          = 0x0002,
+    AST_EXPR_FLAG_CONST          = 0x0004,
+    AST_EXPR_FLAG_LVALUE         = 0x0008,
 
-    AST_EXPR_FLAG_HEX_LITERAL       = 0x0010,
-    AST_EXPR_FLAG_BINARY_LITERAL    = 0x0020,
+    AST_EXPR_FLAG_HEX_LITERAL    = 0x0010,
+    AST_EXPR_FLAG_BINARY_LITERAL = 0x0020,
 
-    AST_EXPR_FLAG_CHILD_OF_RUN      = 0x0040,
+    AST_EXPR_FLAG_CHILD_OF_RUN   = 0x0040,
+
+    AST_EXPR_FLAG_PARAM          = 0x0080,
 };
 
 struct AST_Expression
@@ -318,6 +321,11 @@ struct AST_Expression
             Scope* enum_scope;
             AST_Identifier* member_name;
         } implicit_member;
+
+        struct {
+            AST_Expression* base;
+            AST_Expression* index;
+        } subscript;
 
         struct
         {
@@ -369,6 +377,7 @@ enum class AST_Type_Spec_Kind : u32
     INVALID,
     IDENTIFIER,
     POINTER,
+    ARRAY,
 };
 
 typedef u32 AST_Type_Spec_Flags;
@@ -389,6 +398,11 @@ struct AST_Type_Spec
     union {
         AST_Identifier* identifier;
         AST_Type_Spec *base;
+
+        struct {
+            AST_Expression* length;
+            AST_Type_Spec* element_ts;
+        } array;
     };
 };
 
@@ -407,8 +421,6 @@ NAPI AST_Node ast_node(AST_Statement* stmt);
 NAPI AST_Node ast_node(AST_Expression* expr);
 NAPI AST_Node ast_node(AST_Type_Spec* expr);
 NAPI AST_Node ast_node(AST_Identifier* ident);
-
-NAPI Type* ast_node_type(const AST_Node& node);
 
 NAPI AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes);
 
@@ -445,6 +457,7 @@ NAPI AST_Expression* ast_unary_expression(Instance* inst, u32 op, AST_Expression
 NAPI AST_Expression* ast_binary_expression(Instance* inst, u32 op, AST_Expression* lhs, AST_Expression* rhs);
 NAPI AST_Expression* ast_member_expression(Instance* inst, AST_Expression* base, AST_Identifier* member_name);
 NAPI AST_Expression* ast_implicit_member_expression(Instance* inst, AST_Identifier* member_name);
+NAPI AST_Expression* ast_subscript_expression(Instance* inst, AST_Expression* base, AST_Expression* index);
 NAPI AST_Expression* ast_call_expression(Instance* inst, AST_Expression* base_expr, DArray<AST_Expression*> args);
 NAPI AST_Expression* ast_address_of_expression(Instance* instance, AST_Expression* operand);
 NAPI AST_Expression* ast_deref_expression(Instance* instance, AST_Expression* operand);
@@ -465,6 +478,7 @@ NAPI AST_Expression* ast_string_literal_expression(Instance* inst, Atom atom);
 NAPI AST_Type_Spec* ast_type_spec(Instance* inst, AST_Type_Spec_Kind kind);
 NAPI AST_Type_Spec* ast_identifier_type_spec(Instance* inst, AST_Identifier* ident);
 NAPI AST_Type_Spec* ast_pointer_type_spec(Instance* inst, AST_Type_Spec *base);
+NAPI AST_Type_Spec* ast_array_type_spec(Instance* inst, AST_Expression* length_expr, AST_Type_Spec* element_ts);
 
 NAPI AST_Identifier* ast_identifier(Instance* inst, Atom atom);
 

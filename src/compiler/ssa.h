@@ -94,6 +94,7 @@ struct SSA_Register_Handle
 struct SSA_Alloc
 {
     AST_Node ast_node;
+    Type* type;
     SSA_Register_Handle alloc_reg;
 };
 
@@ -230,7 +231,7 @@ NAPI void ssa_emit_memcpy(SSA_Builder* builder, SSA_Register_Handle dest_ptr_reg
 NAPI void ssa_emit_store_ptr(SSA_Builder* builder, s64 bit_size, SSA_Register_Handle dest_reg, SSA_Register_Handle source_reg);
 NAPI SSA_Register_Handle ssa_emit_load_immediate(SSA_Builder* builder, Type* type, u64 immediate_value);
 NAPI SSA_Register_Handle ssa_emit_load_param(SSA_Builder* builder, u32 param_index);
-NAPI SSA_Register_Handle ssa_emit_load_ptr(SSA_Builder* builder, Type* type, SSA_Register_Handle ptr_reg);
+NAPI SSA_Register_Handle ssa_emit_load_ptr(SSA_Builder* builder, Type* dest_type, SSA_Register_Handle ptr_reg);
 NAPI SSA_Register_Handle ssa_emit_load_constant(SSA_Builder *builder, u32 index);
 NAPI SSA_Register_Handle ssa_emit_load_enum(SSA_Builder* builder, Type* enum_type, s64 index);
 NAPI SSA_Register_Handle ssa_emit_struct_offset(SSA_Builder* builder, SSA_Register_Handle struct_ptr_reg, Type* struct_type, s64 index);
@@ -259,6 +260,7 @@ NAPI void ssa_emit_64(DArray<u8> *bytes, u64 value);
 NAPI SSA_Register_Handle ssa_emit_load_constant_value(SSA_Builder* builder, AST_Expression* expr, Scope* scope);
 NAPI u32 ssa_emit_constant(Instance *inst, SSA_Program* program, AST_Expression* const_expr, DArray<u8>* bytes = nullptr);
 NAPI u32 ssa_emit_constant(SSA_Program* program, Array_Ref<u8> bytes, Type* type, AST_Expression* const_expr);
+NAPI void ssa_emit_constant_integer(SSA_Program* program, DArray<u8> *bytes, Type* type, u64 value);
 
 NAPI Atom ssa_unique_function_name(Instance* inst, SSA_Program* program, String_Ref name);
 
