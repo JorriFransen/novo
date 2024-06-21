@@ -326,7 +326,7 @@ void grow() {
 
     // Fill remainder of third block
     // Now there is no 'free' memory anymore
-    size_t mem4_size = fl->remaining - sizeof(Freelist_Alloc_Header);
+    s64 mem4_size = fl->remaining - sizeof(Freelist_Alloc_Header);
     void* mem4 = freelist_allocate(fl, mem4_size, 1);
     assert(mem4);
     assert(fl->arena.capacity == initial_size * 4);
