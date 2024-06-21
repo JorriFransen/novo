@@ -289,8 +289,6 @@ void grow() {
     Allocator* flalloc = fl_allocator();
     Freelist* fl = (Freelist*)flalloc->user_data;
 
-    freelist_dump_graph(fl, "grow1_initial.dot");
-
     u64 initial_size = fl->arena.capacity;
     void* memory_start = fl->first_free;
     #define memory_end ((u8*)memory_start + fl->arena.capacity)
@@ -307,8 +305,6 @@ void grow() {
     assert(mem1 < memory_end);
     assert(fl->remaining == fl->arena.capacity - (alloc_size + (sizeof(Freelist_Alloc_Header))));
 
-    freelist_dump_graph(fl, "grow2_a1.dot");
-
     // Grow, make a small allocation
     // Since there is no 'free' memory, there are no nodes, this grow will create a new node
     void* mem2 = freelist_allocate(fl, 128, 1);
@@ -317,8 +313,6 @@ void grow() {
     assert(mem2 >= memory_start);
     assert(mem2 < memory_end);
     assert(fl->remaining == fl->arena.capacity - (alloc_size + 128 + (sizeof(Freelist_Alloc_Header) * 2)));
-
-    freelist_dump_graph(fl, "grow3_a2.dot");
 
     // Grow, fill remainder of second block, and a small part of the third block
     // Since there is free memory, and it is at the end of the memory space before growing,
@@ -329,8 +323,6 @@ void grow() {
     assert(mem3 >= memory_start);
     assert(mem3 < memory_end);
     assert(fl->remaining == fl->arena.capacity - ((alloc_size * 2) + 128 + (sizeof(Freelist_Alloc_Header) * 3)));
-
-    freelist_dump_graph(fl, "grow4_a3.dot");
 
     // Fill remainder of third block
     // Now there is no 'free' memory anymore
@@ -343,14 +335,11 @@ void grow() {
     assert(fl->remaining == fl->arena.capacity - ((alloc_size * 2) + 128 + mem4_size + (sizeof(Freelist_Alloc_Header) * 4)));
     assert(fl->remaining == 0);
 
-    freelist_dump_graph(fl, "grow5_a4.dot");
-
     // Fee a previous allocation, creating a free node in the middle of the memory space.
     freelist_release(fl, mem2);
     assert(fl->remaining == fl->arena.capacity - ((alloc_size * 2) + mem4_size + (sizeof(Freelist_Alloc_Header) * 3)));
     assert(fl->remaining == 128 + sizeof(Freelist_Alloc_Header));
 
-    freelist_dump_graph(fl, "grow6_r1.dot");
 
     // Make another allocation, bigger than the memory released before.
     // Since this is the only 'free' memory, the arena should grow, and the new freelist node should not merge.
@@ -361,23 +350,17 @@ void grow() {
     assert(mem5 < memory_end);
     assert(fl->remaining == fl->arena.capacity - ((alloc_size * 3) + mem4_size + (sizeof(Freelist_Alloc_Header) * 4)));
 
-    freelist_dump_graph(fl, "grow7_a5.dot");
-
     freelist_release(fl, mem1);
     assert(fl->remaining == fl->arena.capacity - ((alloc_size * 2) + mem4_size + (sizeof(Freelist_Alloc_Header) * 3)));
-    freelist_dump_graph(fl, "grow8_r2.dot");
 
     freelist_release(fl, mem3);
     assert(fl->remaining == fl->arena.capacity - (alloc_size + mem4_size + (sizeof(Freelist_Alloc_Header) * 2)));
-    freelist_dump_graph(fl, "grow9_r3.dot");
 
     freelist_release(fl, mem4);
     assert(fl->remaining == fl->arena.capacity - (alloc_size + sizeof(Freelist_Alloc_Header)));
-    freelist_dump_graph(fl, "grow10_r4.dot");
 
     freelist_release(fl, mem5);
     assert(fl->remaining == fl->arena.capacity);
-    freelist_dump_graph(fl, "grow11_r5.dot");
 
     assert(fl->remaining == initial_size * 8);
     assert(fl->first_free);
