@@ -140,6 +140,7 @@ int main(int argc, char* argv[]) {
 
 static bool run_test_case(Test_Case* tc, Options options)
 {
+    // options.no_backend = true;
     options.keep_c_backend_output = true;
     options.input_file = tc->file_path;
     // options.verbose = true;

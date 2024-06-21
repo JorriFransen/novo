@@ -1,6 +1,5 @@
 #pragma once
 
-#include <containers/darray.h>
 #include <defines.h>
 #include <nstring.h>
 
@@ -25,6 +24,7 @@ struct Atom_Table
     Allocator* allocator;
 
     u32 capacity;
+
     u32 next_block_size;
 
     u64* hashes;
