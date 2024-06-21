@@ -1,7 +1,7 @@
 #include "task.h"
 
 #include <containers/darray.h>
-#include <memory/c_allocator.h>
+#include <memory/freelist.h>
 
 #include "instance.h"
 #include "parser.h"
@@ -123,9 +123,8 @@ void add_resolve_tasks(Instance* inst, AST_Declaration* decl, Scope* scope, AST_
 
             Scope* fn_scope = decl->function.scope;
 
-            // TODO: Dynamic allocator
-            auto fn_deps = allocate(c_allocator(), DArray<AST_Node>);
-            darray_init(c_allocator(), fn_deps, 0);
+            auto fn_deps = allocate(fl_allocator(), DArray<AST_Node>);
+            darray_init(fl_allocator(), fn_deps, 0);
 
             for (s64 i = 0; i < decl->function.params.count; i++) {
                 add_resolve_tasks(inst, decl->function.params[i], fn_scope, decl, bc_deps);

@@ -3,8 +3,8 @@
 #include <defines.h>
 #include <filesystem.h>
 #include <logger.h>
-#include <memory/c_allocator.h>
 #include <memory/arena.h>
+#include <memory/freelist.h>
 #include <nstring.h>
 #include <platform.h>
 
@@ -149,7 +149,7 @@ Options parse_command_line(int argc, char *argv[], Options *default_opts/*=nullp
     }
 
     // TODO: Move extension stripping to instance init
-    cop.result.output = string_copy(c_allocator(), out_file_name).data;
+    cop.result.output = string_copy(fl_allocator(), out_file_name).data;
 
     temp_arena_release(tarena);
 

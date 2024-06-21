@@ -4,7 +4,7 @@
 #include <containers/stack.h>
 #include <filesystem.h>
 #include <logger.h>
-#include <memory/c_allocator.h>
+#include <memory/freelist.h>
 #include <memory/arena.h>
 #include <nstring.h>
 #include <platform.h>
@@ -51,11 +51,11 @@ void instance_init(Instance* inst, Options options)
     Temp_Arena tarena = temp_arena(nullptr);
     Allocator ta = arena_allocator_create(tarena.arena);
 
-    darray_init(c_allocator(), &inst->parse_tasks);
-    darray_init(c_allocator(), &inst->resolve_tasks);
-    darray_init(c_allocator(), &inst->type_tasks);
-    darray_init(c_allocator(), &inst->ssa_tasks);
-    darray_init(c_allocator(), &inst->run_tasks);
+    darray_init(fl_allocator(), &inst->parse_tasks);
+    darray_init(fl_allocator(), &inst->resolve_tasks);
+    darray_init(fl_allocator(), &inst->type_tasks);
+    darray_init(fl_allocator(), &inst->ssa_tasks);
+    darray_init(fl_allocator(), &inst->run_tasks);
 
     inst->global_scope = scope_new(inst, Scope_Kind::GLOBAL);
 
@@ -75,7 +75,7 @@ void instance_init(Instance* inst, Options options)
     inst->fatal_error = false;
 
     if (!g_atoms_initialized) {
-        initialize_atoms(c_allocator(), 128);
+        initialize_atoms(fl_allocator(), 128);
         initialize_keywords();
         g_atoms_initialized = true;
     }
@@ -135,10 +135,10 @@ void instance_init(Instance* inst, Options options)
     inst->builtin_module_loaded = false;
 
     // TODO: Custom allocator
-    ssa_program_init(&inst->ssa_program, c_allocator());
+    ssa_program_init(&inst->ssa_program, fl_allocator());
 
     // TODO: Custom allocator
-    vm_init(&inst->vm, c_allocator(), inst);
+    vm_init(&inst->vm, fl_allocator(), inst);
 
     assert(sizeof(void*) == 8);
     inst->pointer_byte_size = 8;
@@ -195,13 +195,12 @@ void instance_init(Instance* inst, Options options)
 
     inst->type_string = nullptr;
 
-    // TODO: Dynamic allocator
-    hash_table_create(c_allocator(), &inst->ident_positions);
-    hash_table_create(c_allocator(), &inst->decl_positions);
-    hash_table_create(c_allocator(), &inst->function_body_positions);
-    hash_table_create(c_allocator(), &inst->stmt_positions);
-    hash_table_create(c_allocator(), &inst->expr_positions);
-    hash_table_create(c_allocator(), &inst->ts_positions);
+    hash_table_create(fl_allocator(), &inst->ident_positions);
+    hash_table_create(fl_allocator(), &inst->decl_positions);
+    hash_table_create(fl_allocator(), &inst->function_body_positions);
+    hash_table_create(fl_allocator(), &inst->stmt_positions);
+    hash_table_create(fl_allocator(), &inst->expr_positions);
+    hash_table_create(fl_allocator(), &inst->ts_positions);
 
     temp_arena_release(tarena);
 }
@@ -322,7 +321,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 add_resolve_tasks(inst, parsed_file, inst->global_scope, nullptr);
             } else {
 
-                release(c_allocator(), task.content.data);
+                release(fl_allocator(), task.content.data);
 
                 assert(task.insert.scope);
                 add_resolve_tasks(inst, nodes, task.insert.scope, task.insert.fn_decl, task.insert.bc_deps);
@@ -470,7 +469,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                 if (task.bytecode_deps && task.kind != SSA_Task_Kind::CONSTANT) {
                     darray_free(task.bytecode_deps);
-                    release(c_allocator(), task.bytecode_deps);
+                    release(fl_allocator(), task.bytecode_deps);
                 }
             }
         }
@@ -513,7 +512,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                     String insert_string = vm_string_from_result(inst, &ta, run_result);
 
                     // TODO: @ARENA
-                    insert_string = fix_special_characters_in_insert_string(inst, c_allocator(), insert_string);
+                    insert_string = fix_special_characters_in_insert_string(inst, fl_allocator(), insert_string);
 
                     temp_arena_release(tar);
 
@@ -618,8 +617,7 @@ u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)
             .ast = nullptr,
         };
 
-        // TODO: Dynamic allocator
-        darray_init(c_allocator(), &insert_file.newline_offsets);
+        darray_init(fl_allocator(), &insert_file.newline_offsets);
 
         darray_append(&inst->imported_files, insert_file);
         inst->insert_file_index = index;
