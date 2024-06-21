@@ -55,10 +55,10 @@ struct Allocator {
     NAPI FN_FREE_ALL(allocate_free_all);
 
 #   define allocate(allocator, type) \
-        (type*)(allocate_unaligned((allocator), sizeof(type), __FILE__, __LINE__))
+        (type*)(allocate_aligned((allocator), sizeof(type), alignof(type), __FILE__, __LINE__))
 
 #   define allocate_size(allocator, size, cast_type) \
-        (cast_type*)(allocate_unaligned((allocator), (size), __FILE__, __LINE__))
+        (cast_type*)(allocate_aligned((allocator), (size), sizeof(void*), __FILE__, __LINE__))
 
 #   define allocate_size_align(allocator, size, align, cast_type) \
         (cast_type*)(allocate_aligned((allocator), (size), (align), __FILE__, __LINE__))
