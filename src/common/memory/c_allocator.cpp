@@ -18,7 +18,6 @@ Allocator_Trace g_c_allocator_trace;
 
 Allocator* c_allocator()
 {
-    // return fl_allocator();
     if (!g_c_allocator_initialized) {
 
         void* user_data = nullptr;
