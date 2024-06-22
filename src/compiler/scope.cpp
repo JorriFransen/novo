@@ -26,6 +26,7 @@ bool scope_add_symbol(Scope* scope, Atom atom, AST_Declaration* decl, Scope_Find
         }
     }
 
+    // TODO: Ast freelist allocator?
     darray_append(&scope->symbols, { atom, decl });
     return true;
 }

@@ -100,17 +100,21 @@ void darray_grow(DArray<Element_Type>* array, s64 new_cap)
 {
     assert(new_cap > array->capacity);
 
-    Element_Type* new_data = allocate_array(array->backing_allocator, Element_Type, new_cap);
-    assert(new_data);
-    if (array->capacity) {
-        memcpy(new_data, array->data, sizeof(Element_Type) * array->count);
+    if (!array->data) {
+        assert(array->capacity == 0);
 
-        assert(array->data);
-        if (!(array->backing_allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-            release(array->backing_allocator, array->data);
-        }
+        array->data = allocate_array(array->backing_allocator, Element_Type, new_cap);
+        array->capacity = new_cap;
+
+        return;
     }
-    array->data = new_data;
+
+    assert(!(array->backing_allocator->flags & ALLOCATOR_FLAG_CANT_REALLOC));
+
+
+    array->data = reallocate_array(array->backing_allocator, Element_Type, array->data, array->capacity, new_cap);
+    assert(array->data);
+
     array->capacity = new_cap;
 }
 

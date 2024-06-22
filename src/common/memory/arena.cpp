@@ -24,7 +24,7 @@ namespace Novo {
 
 Allocator arena_allocator_create(Arena* arena)
 {
-    return { arena_allocator_fn, arena, ALLOCATOR_FLAG_CANT_FREE | ALLOCATOR_FLAG_CANT_REALLOC };
+    return { arena_allocator_fn, arena, ALLOCATOR_FLAG_CANT_FREE };
 }
 
 Arena arena_create(u8* data, s64 size)
@@ -111,7 +111,7 @@ void* arena_alloc(Arena* arena, s64 size, s64 align)
     void* start = arena->data + arena->used;
 
     if (arena->used + aligned_size > arena->capacity) {
-        if (!arena_grow(arena, aligned_size)) {
+        if (!arena_grow(arena, arena->capacity + aligned_size)) {
             assert(false && !"Growing arena failed!");
             return nullptr;
         }
@@ -127,15 +127,46 @@ void* arena_alloc(Arena* arena, s64 size, s64 align)
 
     memset(result, 0, size);
 
+    arena->last = result;
+    arena->last_size = size;
     return result;
 }
 
-bool arena_grow(Arena* arena, u64 min_size)
+void* arena_realloc(Arena* arena, void* old_pointer, s64 old_size, s64 size, s64 align)
+{
+    assert(old_pointer);
+    assert(size > old_size);
+
+    if (old_pointer == arena->last) {
+        assert(old_size == arena->last_size);
+
+        s64 diff = size - old_size;
+        if (arena->used + diff > arena->capacity) {
+            if (!arena_grow(arena, arena->capacity + diff)) {
+                assert(false && !"Growing arena failed!");
+                return nullptr;
+            }
+        }
+
+        arena->used += diff;
+        arena->last_size += diff;
+
+        return arena->last;
+
+    } else {
+
+        void* result = arena_alloc(arena, size, align);
+        memcpy(result, old_pointer, old_size);
+        return result;
+    }
+}
+
+bool arena_grow(Arena* arena, u64 min_cap)
 {
     if (!(arena->flags & ARENA_FLAG_GROW)) return false;
 
     u64 new_cap = arena->capacity * 2;
-    while (new_cap < min_size) new_cap *= 2;
+    while (new_cap < min_cap) new_cap *= 2;
 
     assert(new_cap <= NOVO_ARENA_MAX_CAP);
 
@@ -173,7 +204,9 @@ NAPI FN_ALLOCATOR(arena_allocator_fn)
             return arena_alloc(arena, size, align);
         }
 
-        case Allocator_Mode::REALLOCATE: assert(false); break;
+        case Allocator_Mode::REALLOCATE: {
+            return arena_realloc(arena, old_pointer, old_size, size, align);
+        }
 
         case Allocator_Mode::FREE: return nullptr;
 

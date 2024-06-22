@@ -136,12 +136,12 @@ Freelist_Node* freelist_find_first(Freelist* freelist, s64 size, s64 align, s64*
 
 void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
 {
-    if (size < sizeof(Freelist_Node)) {
-        size = sizeof(Freelist_Node);
+    if (size < (s64)sizeof(Freelist_Node)) {
+        size = (s64)sizeof(Freelist_Node);
     }
 
-    if (align < sizeof(size_t)) {
-        align = sizeof(size_t);
+    if (align < (s64)sizeof(size_t)) {
+        align = (s64)sizeof(size_t);
     }
 
     s64 padding = 0;
@@ -243,7 +243,21 @@ FN_ALLOCATOR(fl_allocator_fn)
             return result;
         }
 
-        case Allocator_Mode::REALLOCATE: assert(false); break;
+        case Allocator_Mode::REALLOCATE: {
+
+            // TODO: Freelist reallocate
+            trace_timer_start(alloc_time);
+            void* new_ptr = freelist_allocate(freelist, size, align);
+            trace_alloc_timer_end(&freelist->trace, alloc_time, result, size);
+
+            memcpy(new_ptr, old_pointer, old_size);
+
+            trace_timer_start(release_time);
+            freelist_release(freelist, old_pointer);
+            trace_release_timer_end(&freelist->trace, release_time, old_pointer);
+
+            return new_ptr;
+        };
 
         case Allocator_Mode::FREE: {
 
@@ -262,8 +276,8 @@ FN_ALLOCATOR(fl_allocator_fn)
 }
 
 N__tls bool g_fl_allocator_initialized = false;
-N__tls Freelist g_freelist;
-N__tls Allocator g_fl_allocator;
+N__tls Freelist g_freelist = {};
+N__tls Allocator g_fl_allocator = {};
 
 Allocator* fl_allocator()
 {

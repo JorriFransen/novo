@@ -43,7 +43,7 @@ FN_ALLOCATOR(c_allocator_fn)
         s64 actual_size = size + (align - 1) + sizeof(void*);
 
         trace_timer_start(malloc_time);
-        u8* mem = (u8*)malloc(actual_size);
+        u8* mem = (u8*)::malloc(actual_size);
         trace_alloc_timer_end(allocator_data, malloc_time, mem, actual_size);
 
         void **ptr = (void**)get_aligned((u64)mem + sizeof(void*), align);
@@ -57,8 +57,22 @@ FN_ALLOCATOR(c_allocator_fn)
     }
 
     case Allocator_Mode::REALLOCATE: {
-        assert(false && "c_allocator does not support reallocation\n");
-        break;
+
+        auto old = (void**)old_pointer;
+        auto _old = old[-1];
+
+        s64 actual_size = size + (align - 1) + sizeof(void*);
+
+        void* mem = ::realloc(_old, actual_size);
+        void **ptr = (void**)get_aligned((u64)mem + sizeof(void*), align);
+
+        // Store the pointer returned by malloc
+        ptr[-1] = mem;
+
+        assert(size > old_size);
+        memset((u8*)ptr + old_size, 0, size - old_size);
+
+        return ptr;
     }
 
     case Allocator_Mode::FREE: {
