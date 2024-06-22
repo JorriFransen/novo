@@ -261,9 +261,9 @@ FN_ALLOCATOR(fl_allocator_fn)
     return nullptr;
 }
 
-bool g_fl_allocator_initialized = false;
-Freelist g_freelist;
-Allocator g_fl_allocator;
+N__tls bool g_fl_allocator_initialized = false;
+N__tls Freelist g_freelist;
+N__tls Allocator g_fl_allocator;
 
 Allocator* fl_allocator()
 {
