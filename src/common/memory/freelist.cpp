@@ -36,7 +36,7 @@ void freelist_reset(Freelist* freelist)
     freelist->remaining = freelist->arena.capacity;
 }
 
-Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, Freelist_Node** prev_out)
+Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, s64 align, s64* padding_out, Freelist_Node** prev_out)
 {
     if (!(freelist->arena.flags & ARENA_FLAG_GROW)) return nullptr;
 
@@ -81,6 +81,11 @@ Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, Freelist_Node
     }
 
     assert(result);
+
+    s64 padding = get_aligned((u64)result + sizeof(Freelist_Alloc_Header), align) - (u64)result;
+    assert(padding >= 0);
+
+    if (padding_out) *padding_out = padding;
     if (prev_out) *prev_out = prev_node;
 
     return result;
@@ -92,9 +97,7 @@ void freelist_insert(Freelist* freelist, Freelist_Node* insert_after, Freelist_N
         node->next = insert_after->next;
         insert_after->next = node;
     } else {
-        if (freelist->first_free) {
-            node->next = freelist->first_free;
-        }
+        node->next = freelist->first_free;
         freelist->first_free = node;
     }
 }
@@ -108,36 +111,6 @@ void freelist_remove(Freelist* freelist, Freelist_Node* prev, Freelist_Node* nod
     }
 }
 
-static bool is_power_of_two(p_uint_t x) { return (x & (x - 1)) == 0; };
-
-static s64 calc_padding_with_header(p_uint_t operand, p_uint_t align, u64 header_size)
-{
-    assert(is_power_of_two(align));
-
-    p_uint_t p = operand;
-    p_uint_t a = (p_uint_t)align;
-    p_uint_t modulo = p & (a - 1);
-    s64 padding = 0;
-
-    if (modulo) {
-        padding = a - modulo;
-    }
-
-    u64 needed_space = header_size;
-
-    if (padding < needed_space) {
-        needed_space -= padding;
-
-        if ((needed_space & (a - 1)) != 0) {
-            padding += a * (1 + (needed_space / a));
-        } else {
-            padding += a * (needed_space / a);
-        }
-
-    }
-    return padding;
-}
-
 Freelist_Node* freelist_find_first(Freelist* freelist, s64 size, s64 align, s64* padding_out, Freelist_Node** prev_node_out)
 {
     Freelist_Node* node = freelist->first_free;
@@ -145,7 +118,7 @@ Freelist_Node* freelist_find_first(Freelist* freelist, s64 size, s64 align, s64*
 
     s64 padding = 0;
     while (node) {
-        padding = calc_padding_with_header((p_uint_t)node, (p_uint_t)align, sizeof(Freelist_Alloc_Header));
+        padding = get_aligned((u64)node + sizeof(Freelist_Alloc_Header), align) - (u64)node;
         u64 required_space = size + padding;
         if (node->size >= required_space) {
             break;
@@ -178,8 +151,7 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
 
     if (node == nullptr) {
 
-        freelist_grow(freelist, size, nullptr);
-        node = freelist_find_first(freelist, size, align, &padding, &prev);
+        node = freelist_grow(freelist, size, align, &padding, &prev);
 
         if (node == nullptr) {
             assert(false && "Freelist out of memory");

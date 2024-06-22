@@ -40,7 +40,7 @@ struct Freelist_Alloc_Header
 NAPI void freelist_init(Freelist* freelist, Arena arena);
 NAPI void freelist_reset(Freelist* freelist);
 
-NAPI Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, Freelist_Node** prev_out);
+NAPI Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, s64 align, s64* padding_out, Freelist_Node** prev_out);
 
 NAPI void freelist_insert(Freelist* freelist, Freelist_Node* insert_after, Freelist_Node* node);
 NAPI void freelist_remove(Freelist* freelist, Freelist_Node* prev, Freelist_Node* node);
