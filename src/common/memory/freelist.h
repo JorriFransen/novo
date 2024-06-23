@@ -21,9 +21,7 @@ struct Freelist_Node
 struct Freelist
 {
     Freelist_Node* first_free;
-
     Arena arena;
-    u64 remaining; // TODO: Remove this and use 'used' from the arena
 
 #ifdef NOVO_TRACE_ALLOC
     Allocator_Trace trace;

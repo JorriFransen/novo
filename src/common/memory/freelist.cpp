@@ -14,7 +14,6 @@ namespace Novo {
 void freelist_init(Freelist* freelist, Arena arena)
 {
     freelist->arena = arena;
-    freelist->remaining = arena.capacity;
 
     freelist_reset(freelist);
 
@@ -33,7 +32,7 @@ void freelist_reset(Freelist* freelist)
     node->next = nullptr;
 
     freelist->first_free = node;
-    freelist->remaining = freelist->arena.capacity;
+    freelist->arena.used = 0;
 }
 
 Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, s64 align, s64* padding_out, Freelist_Node** prev_out)
@@ -47,7 +46,6 @@ Freelist_Node* freelist_grow(Freelist* freelist, s64 min_increase, s64 align, s6
 
     s64 increase = freelist->arena.capacity - old_cap;
     assert(increase >= min_increase);
-    freelist->remaining += increase;
 
     Freelist_Node* last_node = freelist->first_free;
     Freelist_Node* prev_node = nullptr;
@@ -177,7 +175,7 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
     alloc_header->size = required_space;
     alloc_header->padding = alignment_padding;
 
-    freelist->remaining -= required_space;
+    freelist->arena.used += required_space;
 
     void* result = (void*)((u8*)alloc_header + sizeof(Freelist_Alloc_Header));
 
@@ -197,7 +195,7 @@ void freelist_release(Freelist* freelist, void* ptr)
     new_node->size = header.size;
     new_node->next = nullptr;
 
-    freelist->remaining += new_node->size;
+    freelist->arena.used -= new_node->size;
 
     Freelist_Node* node = freelist->first_free;
     Freelist_Node* prev_node = nullptr;
