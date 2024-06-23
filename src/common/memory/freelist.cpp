@@ -164,6 +164,7 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
     if (remaining >= sizeof(Freelist_Node)) {
         Freelist_Node* new_node = (Freelist_Node*)((u8*)node + required_space);
         new_node->size = remaining;
+        new_node->next = nullptr;
         freelist_insert(freelist, node, new_node);
     } else {
         required_space += remaining;
@@ -182,6 +183,69 @@ void* freelist_allocate(Freelist* freelist, s64 size, s64 align)
     memset(result, 0, size);
 
     return result;
+}
+
+void* freelist_reallocate(Freelist* freelist, void* old_pointer, s64 old_size, s64 size, s64 align)
+{
+    assert(old_size);
+    assert(size > old_size);
+
+    Freelist_Alloc_Header* header_pointer = (Freelist_Alloc_Header*)((u8*)old_pointer - sizeof(Freelist_Alloc_Header));
+
+    void* end = (u8*)old_pointer + (header_pointer->size - sizeof(Freelist_Alloc_Header));
+
+    Freelist_Node* node_after = nullptr;
+
+    Freelist_Node* node = freelist->first_free;
+    Freelist_Node* prev = nullptr;
+
+    while (node) {
+        if (node == end) {
+            assert(!node_after);
+            node_after = node;
+            break;
+        }
+
+        prev = node;
+        node = node->next;
+    }
+
+    s64 diff = size - old_size;
+    // TODO: Grow when old_pointer + size is the end of the arena,
+    //       Grow when node_after is the end of the arena, but too small to statify diff
+    if (diff > sizeof(Freelist_Node) && node_after && node_after->size >= diff) {
+
+        s64 remainder = node_after->size - diff;
+        if (remainder >= sizeof(Freelist_Node)) {
+            Freelist_Node* new_node = (Freelist_Node*)((u8*)node_after + diff);
+            assert((u8*)new_node - (u8*)node_after >= sizeof(Freelist_Node)); // Nodes can't overlap
+
+            new_node->size = node_after->size - diff;
+            new_node->next = nullptr;
+
+            freelist_insert(freelist, node_after, new_node);
+
+            header_pointer->size += diff;
+            freelist->arena.used += diff;
+
+        } else {
+
+            header_pointer->size += diff + remainder;
+            freelist->arena.used += diff + remainder;
+
+        }
+        freelist_remove(freelist, prev, node_after);
+
+        memset(end, 0, diff);
+
+        return old_pointer;
+
+    } else {
+        void* new_ptr = freelist_allocate(freelist, size, align);
+        memcpy(new_ptr, old_pointer, old_size);
+        freelist_release(freelist, old_pointer);
+        return new_ptr;
+    }
 }
 
 void freelist_release(Freelist* freelist, void* ptr)
@@ -243,18 +307,10 @@ FN_ALLOCATOR(fl_allocator_fn)
 
         case Allocator_Mode::REALLOCATE: {
 
-            // TODO: Freelist reallocate
-            trace_timer_start(alloc_time);
-            void* new_ptr = freelist_allocate(freelist, size, align);
-            trace_alloc_timer_end(&freelist->trace, alloc_time, result, size);
-
-            memcpy(new_ptr, old_pointer, old_size);
-
             trace_timer_start(release_time);
-            freelist_release(freelist, old_pointer);
-            trace_release_timer_end(&freelist->trace, release_time, old_pointer);
-
-            return new_ptr;
+            void* result = freelist_reallocate(freelist, old_pointer, old_size, size, align);
+            trace_alloc_timer_end(&freelist->trace, alloc_time, result, size);
+            return result;
         };
 
         case Allocator_Mode::FREE: {

@@ -45,6 +45,7 @@ NAPI void freelist_remove(Freelist* freelist, Freelist_Node* prev, Freelist_Node
 
 NAPI Freelist_Node* freelist_find_first(Freelist* freelist, s64 size, s64 align, s64* padding_out, Freelist_Node** prev_node_out);
 NAPI void* freelist_allocate(Freelist* freelist, s64 size, s64 align);
+NAPI void* freelist_reallocate(Freelist* freelist, void* old_pointer, s64 old_size, s64 size, s64 align);
 NAPI void freelist_release(Freelist* freelist, void* ptr);
 
 NAPI FN_ALLOCATOR(fl_allocator_fn);

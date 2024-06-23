@@ -371,7 +371,6 @@ static DWORD WINAPI read_cmd_stdout(LPVOID data) {
     return 0;
 }
 
-// TODO: Use a thread save arena/dynamic allocator for the string builders.
 // TODO: MAYBE use overlapped/async io and named pipes, get rid of the threading completely.
 Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena* output_arena)
 {

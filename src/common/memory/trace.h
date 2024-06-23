@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: Trace reallocations
+
 #ifdef NOVO_TRACE_ALLOC
 
 #include "defines.h"
