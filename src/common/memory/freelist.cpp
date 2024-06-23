@@ -284,6 +284,7 @@ Allocator* fl_allocator()
     if (!g_fl_allocator_initialized) {
         Arena arena;
         arena_new(&arena);
+        arena.flags |= ARENA_FLAG_NOZERO;
         freelist_init(&g_freelist, arena);
         g_fl_allocator = { fl_allocator_fn, &g_freelist, ALLOCATOR_FLAG_NONE };
         g_fl_allocator_initialized = true;

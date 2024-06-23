@@ -12,6 +12,7 @@ enum Arena_Flag : Arena_Flags {
     ARENA_FLAG_NONE    = 0x00,
     ARENA_FLAG_NOALIGN = 0x01,
     ARENA_FLAG_GROW    = 0x02,
+    ARENA_FLAG_NOZERO  = 0x04,
 };
 
 struct Arena
@@ -20,6 +21,7 @@ struct Arena
     u64 used;
     u64 capacity;
     u64 max_capacity;
+
     Arena_Flags flags;
 
     void* last;

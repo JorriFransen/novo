@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO: Add flags zero flags to specific allocators or to the interface?
-
 #include "defines.h"
 
 namespace Novo {

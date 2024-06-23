@@ -125,7 +125,9 @@ void* arena_alloc(Arena* arena, s64 size, s64 align)
         result = (void*)get_aligned((u64)start, align);
     }
 
-    memset(result, 0, size);
+    if (!(arena->flags & ARENA_FLAG_NOZERO)) {
+        memset(result, 0, size);
+    }
 
     arena->last = result;
     arena->last_size = size;
