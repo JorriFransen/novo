@@ -21,7 +21,7 @@ void alloc_free_one() {
 
     const s64 alloc_size = 64;
 
-    void* memory = allocate_size(flalloc, alloc_size, void);
+    void* memory = nallocate_size(flalloc, alloc_size, void);
     assert(memory);
     // assert(fl->remaining == initial_size - (alloc_size + sizeof(Freelist_Alloc_Header)));
     assert(fl->arena.used == (alloc_size + sizeof(Freelist_Alloc_Header)));
@@ -29,7 +29,7 @@ void alloc_free_one() {
     assert(memory >= memory_start);
     assert(memory < memory_end);
 
-    release(flalloc, memory);
+    nrelease(flalloc, memory);
 
     assert(fl->arena.used == 0);
     assert(fl->first_free == memory_start);

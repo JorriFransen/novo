@@ -34,7 +34,7 @@ void string_builder_free(String_Builder* sb)
     auto block = sb->first_block;
     while (block) {
         auto next = block->next_block;
-        release(sb->allocator, block);
+        nrelease(sb->allocator, block);
         block = next;
     }
 }
@@ -114,7 +114,7 @@ static String_Builder_Block* string_builder_block(Allocator* allocator, u64 size
 {
     u64 alloc_size = sizeof(String_Builder_Block) + size;
 
-    String_Builder_Block* result = allocate_size(allocator, alloc_size, String_Builder_Block);
+    String_Builder_Block* result = nallocate_size(allocator, alloc_size, String_Builder_Block);
     result->cursor = (char*)&result[1];
     result->end = &result->cursor[size];
     result->next_block = nullptr;
@@ -140,7 +140,7 @@ String string_builder_to_string(String_Builder* sb, Allocator* allocator)
     if (size <= 0) return {};
 
     String result = {
-        allocate_array(allocator, char, size + 1),
+        nallocate_array(allocator, char, size + 1),
         size,
     };
 

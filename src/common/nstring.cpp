@@ -109,10 +109,9 @@ String string_copy(Allocator* allocator, const char* a_buf, s64 a_length)
     String result = {
 
 #ifdef NOVO_TRACE_ALLOC
-        // allocate_array(allocator, char, a_length + 1),
         (char*)allocate_unaligned(allocator, sizeof(char) * (a_length + 1), file, line),
 # else // NOVO_TRACE_ALLOC
-        allocate_array(allocator, char, a_length + 1),
+        nallocate_array(allocator, char, a_length + 1),
 #endif // NOVO_TRACE_ALLOC
 
         a_length,
@@ -133,7 +132,7 @@ String string_append_internal(Allocator* allocator, const char* a_buf, s64 a_len
     }
 
     s64 new_length = a_length + b_length;
-    auto new_buf = allocate_array(allocator, char, new_length + 1);
+    auto new_buf = nallocate_array(allocator, char, new_length + 1);
 
     memcpy(new_buf, a_buf, a_length);
     memcpy(&new_buf[a_length], b_buf, b_length);
@@ -165,7 +164,7 @@ const String string_format_va_list(Allocator* allocator, const String_Ref fmt, v
 
     va_end(args_copy);
 
-    char* buf = allocate_array(allocator, char, size + 1);
+    char* buf = nallocate_array(allocator, char, size + 1);
     assert(buf);
 
     auto written_size = vsnprintf(buf, (size_t)size + 1, fmt.data, args);
@@ -253,7 +252,7 @@ String convert_special_characters_to_escape_characters(Allocator* allocator, con
 
     auto new_length = str.length + special_count;
 
-    auto data = allocate_array(allocator, char, new_length + 1);
+    auto data = nallocate_array(allocator, char, new_length + 1);
 
     s64 ni = 0;
     for (s64 i = 0; i < str.length; i++) {
@@ -299,7 +298,7 @@ String convert_escape_characters_to_special_characters(Allocator* allocator, con
 
     auto new_length = str.length - escape_count;
 
-    auto data = allocate_array(allocator, char, new_length + 1);
+    auto data = nallocate_array(allocator, char, new_length + 1);
 
     s64 ni = 0;
     for (s64 i = 0; i < str.length; i++) {
@@ -350,7 +349,7 @@ Wide_String::Wide_String(Allocator* allocator, const String_Ref ref)
     int size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, ref.data, (int)ref.length + 1, nullptr, 0);
     assert(size > 0);
 
-    LPWSTR buf = allocate_array(allocator, wchar_t, size);
+    LPWSTR buf = nallocate_array(allocator, wchar_t, size);
     int written_size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, ref.data, (int)ref.length + 1, buf, size);
     assert(written_size == size);
 
@@ -364,7 +363,7 @@ String wide_string_to_regular(Allocator* allocator, const Wide_String wstring)
 {
     int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wstring.data, (int)wstring.length, nullptr, 0, nullptr, nullptr);
 
-    char* data = allocate_array<char>(allocator, size + 1);
+    char* data = nallocate_array(allocator, char, size + 1);
 
     int actual_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wstring.data, (int)wstring.length, data, size + 1, nullptr, nullptr);
 

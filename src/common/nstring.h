@@ -100,7 +100,7 @@ NINLINE String string_append(Allocator* allocator, Array_Ref<String_Ref> strings
     assert(length);
 
     String result;
-    result.data = allocate_array(allocator, char, length + 1);
+    result.data = nallocate_array(allocator, char, length + 1);
     result.length = length;
 
     s64 offset = 0;

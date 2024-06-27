@@ -9,7 +9,7 @@ namespace Novo {
 
 Scope* scope_new(Instance* instance, Scope_Kind kind, Scope* parent/*=nullptr*/)
 {
-    Scope* result = allocate(&instance->ast_allocator, Scope);
+    Scope* result = nallocate(&instance->ast_allocator, Scope);
     result->kind = kind;
     result->parent = parent;
 

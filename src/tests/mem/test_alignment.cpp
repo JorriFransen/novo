@@ -46,14 +46,14 @@ bool test_align(Allocator* allocator)
             s64 size = align * i;
             printf("align: %llu, size: %lld\n", align, size);
 
-            void* ptr = allocate_size_align(allocator, size, align, void);
+            void* ptr = nallocate_size_align(allocator, size, align, void);
             assert((u64)ptr % align == 0);
 
-            if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) release(allocator, ptr);
+            if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) nrelease(allocator, ptr);
         }
 
         printf("\n");
-        if (allocator->flags & ALLOCATOR_FLAG_CANT_FREE) release_all(allocator);
+        if (allocator->flags & ALLOCATOR_FLAG_CANT_FREE) nrelease_all(allocator);
 
     }
 

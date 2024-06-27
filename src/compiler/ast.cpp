@@ -40,7 +40,7 @@ AST_Node ast_node(AST_Identifier* ident)
 
 AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes)
 {
-    auto result = allocate(&inst->ast_allocator, AST_File);
+    auto result = nallocate(&inst->ast_allocator, AST_File);
     result->nodes = nodes;
 
     return result;
@@ -48,7 +48,7 @@ AST_File* ast_file(Instance* inst, DArray<AST_Node> nodes)
 
 AST_Declaration* ast_declaration(Instance* inst, AST_Declaration_Kind kind, AST_Identifier* ident, AST_Declaration_Flags flags/*=AST_DECL_FLAG_NONE*/)
 {
-    auto result = allocate(&inst->ast_allocator, AST_Declaration);
+    auto result = nallocate(&inst->ast_allocator, AST_Declaration);
     result->kind = kind;
     result->flags = flags;
     result->ident = ident;
@@ -136,7 +136,7 @@ AST_Declaration* ast_function_declaration(Instance* inst, AST_Identifier* ident,
 
 AST_Statement* ast_statement(Instance* inst, AST_Statement_Kind kind)
 {
-    auto result = allocate(&inst->ast_allocator, AST_Statement);
+    auto result = nallocate(&inst->ast_allocator, AST_Statement);
     result->kind = kind;
     result->flags = AST_STMT_FLAG_NONE;
     return result;
@@ -266,7 +266,7 @@ AST_Statement* ast_assert_statement(Instance* inst, AST_Expression* cond, AST_Ex
 
 AST_Expression* ast_expression(Instance* inst, AST_Expression_Kind kind, AST_Expression_Flags flags/*=AST_EXPR_FLAG_NONE*/)
 {
-    auto result = allocate(&inst->ast_allocator, AST_Expression);
+    auto result = nallocate(&inst->ast_allocator, AST_Expression);
     result->kind = kind;
     result->flags = flags;
     result->resolved_type = nullptr;
@@ -439,7 +439,7 @@ AST_Expression* ast_string_literal_expression(Instance* inst, Atom atom)
 
 AST_Type_Spec* ast_type_spec(Instance* inst, AST_Type_Spec_Kind kind)
 {
-    auto result = allocate(&inst->ast_allocator, AST_Type_Spec);
+    auto result = nallocate(&inst->ast_allocator, AST_Type_Spec);
     result->kind = kind;
     result->flags = AST_TS_FLAG_NONE;
     result->resolved_type = nullptr;
@@ -470,7 +470,7 @@ AST_Type_Spec* ast_array_type_spec(Instance* inst, AST_Expression* length_expr, 
 
 AST_Identifier* ast_identifier(Instance* inst, Atom atom)
 {
-    auto result = allocate(&inst->ast_allocator, AST_Identifier);
+    auto result = nallocate(&inst->ast_allocator, AST_Identifier);
     result->atom = atom;
     result->decl = nullptr;
     return result;

@@ -45,7 +45,7 @@ void hash_table_create(Allocator *allocator, Hash_Table<Key_Type, Value_Type> *h
 
     auto total_size = hashes_size + keys_size + values_size;
 
-    u8 *mem = allocate_array(allocator, u8, total_size);
+    u8 *mem = nallocate_array(allocator, u8, total_size);
     assert(mem);
 
     hash_table->hashes = (u64 *)mem;
@@ -67,7 +67,7 @@ void hash_table_free(Hash_Table<Key_Type, Value_Type> *hash_table)
 
     assert(hash_table->hashes);
 
-    release(hash_table->allocator, hash_table->hashes);
+    nrelease(hash_table->allocator, hash_table->hashes);
 
     *hash_table = {};
 }
@@ -117,7 +117,7 @@ void hash_table_grow(Hash_Table<Key_Type, Value_Type> *ht)
     auto old_keys = ht->keys;
     auto old_values = ht->values;
 
-    auto new_mem = allocate_array(ht->allocator, u8, new_total_size);
+    auto new_mem = nallocate_array(ht->allocator, u8, new_total_size);
 
     ht->capacity = new_cap;
     ht->hashes = (u64*)(&new_mem[0]);
@@ -132,7 +132,7 @@ void hash_table_grow(Hash_Table<Key_Type, Value_Type> *ht)
         }
     }
 
-    release(ht->allocator, old_hashes);
+    nrelease(ht->allocator, old_hashes);
 }
 
 template <typename Key_Type, typename Value_Type>

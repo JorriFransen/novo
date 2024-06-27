@@ -116,31 +116,31 @@ struct Allocator {
     typedef FN_FREE_ALL(FN_Free_All);
     NAPI FN_FREE_ALL(allocate_free_all);
 
-#   define allocate(allocator, type) \
+#   define nallocate(allocator, type) \
        (type*)(allocate_aligned((allocator), sizeof(type), alignof(type)));
 
-#   define allocate_size(allocator, size, cast_type) \
+#   define nallocate_size(allocator, size, cast_type) \
         (cast_type*)(allocate_aligned((allocator), (size), alignof(void*)));
 
-#   define allocate_size_align(allocator, size, align, cast_type) \
+#   define nallocate_size_align(allocator, size, align, cast_type) \
         (cast_type*)(allocate_aligned((allocator), (size), (align)))
 
-#   define allocate_array(allocator, type, cap) \
+#   define nallocate_array(allocator, type, cap) \
        (type*)(allocate_aligned((allocator), sizeof(type) * (cap), alignof(type)))
 
-#   define reallocate_size(allocator, old_ptr, old_size,  new_size, cast_type) \
+#   define nreallocate_size(allocator, old_ptr, old_size,  new_size, cast_type) \
         (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size)))
 
-#   define reallocate_size_align(allocator, old_ptr, old_size, new_size, align, cast_type) \
+#   define nreallocate_size_align(allocator, old_ptr, old_size, new_size, align, cast_type) \
         (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), (align)))
 
-#   define reallocate_array(allocator, type, old_ptr, old_cap, new_cap) \
+#   define nreallocate_array(allocator, type, old_ptr, old_cap, new_cap) \
         (type*)(reallocate_aligned((allocator), (old_ptr), sizeof(type) * (old_cap), sizeof(type) * (new_cap), alignof(type)))
 
-#   define release(allocator, ptr) \
+#   define nrelease(allocator, ptr) \
        allocate_free((allocator), (ptr))
 
-#   define release_all(allocator) \
+#   define nrelease_all(allocator) \
        allocate_free_all((allocator))
 
 #endif // NOVO_TRACE_ALLOC

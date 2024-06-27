@@ -321,7 +321,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
                 add_resolve_tasks(inst, parsed_file, inst->global_scope, nullptr);
             } else {
 
-                release(fl_allocator(), task.content.data);
+                nrelease(fl_allocator(), task.content.data);
 
                 assert(task.insert.scope);
                 add_resolve_tasks(inst, nodes, task.insert.scope, task.insert.fn_decl, task.insert.bc_deps);
@@ -469,7 +469,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
 
                 if (task.bytecode_deps && task.kind != SSA_Task_Kind::CONSTANT) {
                     darray_free(task.bytecode_deps);
-                    release(fl_allocator(), task.bytecode_deps);
+                    nrelease(fl_allocator(), task.bytecode_deps);
                 }
             }
         }
@@ -714,7 +714,7 @@ String fix_special_characters_in_insert_string(Instance* inst, Allocator* alloca
 
     s64 new_length = str.length + escape_count;
     String result {
-        .data = allocate_array(allocator, char, new_length + 1),
+        .data = nallocate_array(allocator, char, new_length + 1),
         .length = new_length,
     };
 

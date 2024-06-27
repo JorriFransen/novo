@@ -41,7 +41,7 @@ String platform_dirname(Allocator* allocator, const String_Ref path)
     String result_copy = string_copy(allocator, result);
 
     if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-        release(allocator, path_copy.data);
+        nrelease(allocator, path_copy.data);
     }
 
     return result_copy;
@@ -57,7 +57,7 @@ String platform_filename(Allocator* allocator, String_Ref path)
     String result_copy = string_copy(allocator, result);
 
     if (!(allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-        release(allocator, path_copy.data);
+        nrelease(allocator, path_copy.data);
     }
 
     return result_copy;
@@ -150,7 +150,7 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena*
         close(PARENT_STDIN_FD);
         close(PARENT_STDERR_FD);
 
-        char** argv = allocate_array(&ta, char*, command_line.count + 1);
+        char** argv = nallocate_array(&ta, char*, command_line.count + 1);
 
         for (s64 i = 0; i < command_line.count; i++) {
             argv[i] = (char*)command_line[i].data;
@@ -450,13 +450,13 @@ Command_Result _platform_run_command_(Array_Ref<String_Ref> command_line, Arena*
     HANDLE read_threads[2];
 
     Arena stdout_arena;
-    arena_new("stdout_read platform_run_command", &stdout_arena, GIBIBYTE(1));
+    arena_new(&stdout_arena, GIBIBYTE(1));
     Read_Thread_Data stdout_thread_data = { stdout_read_handle, &stdout_arena };
     read_threads[0]= CreateThread(nullptr, 0, read_cmd_stdout, &stdout_thread_data, 0, nullptr);
     assert(read_threads[0]);
 
     Arena stderr_arena;
-    arena_new("stderr_read platform_run_command", &stderr_arena, GIBIBYTE(1));
+    arena_new(&stderr_arena, GIBIBYTE(1));
     Read_Thread_Data stderr_thread_data = { stderr_read_handle, &stderr_arena };
     read_threads[1] = CreateThread(nullptr, 0, read_cmd_stdout, &stderr_thread_data, 0, nullptr);
     assert(read_threads[1]);
@@ -494,7 +494,7 @@ String platform_windows_normalize_line_endings(Allocator* allocator, const Strin
     }
 
     auto new_length = str.length - cr_count;
-    auto buf = allocate_array(allocator, char, new_length + 1);
+    auto buf = nallocate_array(allocator, char, new_length + 1);
 
     s64 read_index = 0;
     s64 copy_length = 0;

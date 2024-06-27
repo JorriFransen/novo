@@ -67,7 +67,7 @@ void darray_init(Allocator* backing_allocator, DArray<Element_Type>* out_array, 
     assert(backing_allocator && out_array);
     assert(capacity >= 0);
 
-    if (capacity) out_array->data = allocate_array(backing_allocator, Element_Type, capacity);
+    if (capacity) out_array->data = nallocate_array(backing_allocator, Element_Type, capacity);
     else out_array->data = nullptr;
 
     out_array->count = 0;
@@ -88,7 +88,7 @@ void darray_free(DArray<Element_Type>* array)
     if (array->data) {
         assert(array->capacity);
         if (!(array->backing_allocator->flags & ALLOCATOR_FLAG_CANT_FREE)) {
-            release(array->backing_allocator, array->data);
+            nrelease(array->backing_allocator, array->data);
         }
     }
 
@@ -103,7 +103,7 @@ void darray_grow(DArray<Element_Type>* array, s64 new_cap)
     if (!array->data) {
         assert(array->capacity == 0);
 
-        array->data = allocate_array(array->backing_allocator, Element_Type, new_cap);
+        array->data = nallocate_array(array->backing_allocator, Element_Type, new_cap);
         array->capacity = new_cap;
 
         return;
@@ -112,7 +112,7 @@ void darray_grow(DArray<Element_Type>* array, s64 new_cap)
     assert(!(array->backing_allocator->flags & ALLOCATOR_FLAG_CANT_REALLOC));
 
 
-    array->data = reallocate_array(array->backing_allocator, Element_Type, array->data, array->capacity, new_cap);
+    array->data = nreallocate_array(array->backing_allocator, Element_Type, array->data, array->capacity, new_cap);
     assert(array->data);
 
     array->capacity = new_cap;
