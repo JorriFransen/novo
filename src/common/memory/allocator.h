@@ -46,11 +46,12 @@ struct Allocator {
     typedef FN_ALLOCATE_ALIGNED(FN_Allocate_Aligned);
     NAPI FN_ALLOCATE_ALIGNED(allocate_aligned);
 
-#   define FN_REALLOCATE_UNALIGNED(f) void* f(Allocator* allocator, void* old_pointer, s64 new_size, const char* file, s64 line)
+
+#   define FN_REALLOCATE_UNALIGNED(f) void* f(Allocator* allocator, void* old_pointer, s64 old_size, s64 new_size, const char* file, s64 line)
     typedef FN_REALLOCATE_UNALIGNED(FN_Reallocate_Unaligned);
     NAPI FN_REALLOCATE_UNALIGNED(reallocate_unaligned);
 
-#   define FN_REALLOCATE_ALIGNED(f) void* f(Allocator* allocator, void* old_pointer, s64 new_size, s64 align, const char* file, s64 line)
+#   define FN_REALLOCATE_ALIGNED(f) void* f(Allocator* allocator, void* old_pointer, s64 old_size, s64 new_size, s64 align, const char* file, s64 line)
     typedef FN_REALLOCATE_ALIGNED(FN_Reallocate_Analigned);
     NAPI FN_REALLOCATE_ALIGNED(reallocate_aligned);
 
@@ -62,31 +63,31 @@ struct Allocator {
     typedef FN_FREE_ALL(FN_Free_All);
     NAPI FN_FREE_ALL(allocate_free_all);
 
-#   define allocate(allocator, type) \
+#   define nallocate(allocator, type) \
         (type*)(allocate_aligned((allocator), sizeof(type), alignof(type), __FILE__, __LINE__))
 
-#   define allocate_size(allocator, size, cast_type) \
+#   define nallocate_size(allocator, size, cast_type) \
         (cast_type*)(allocate_aligned((allocator), (size), sizeof(void*), __FILE__, __LINE__))
 
-#   define allocate_size_align(allocator, size, align, cast_type) \
+#   define nallocate_size_align(allocator, size, align, cast_type) \
         (cast_type*)(allocate_aligned((allocator), (size), (align), __FILE__, __LINE__))
 
-#   define allocate_array(allocator, type, length) \
+#   define nallocate_array(allocator, type, length) \
        (type*)(allocate_aligned((allocator), sizeof(type) * (length), alignof(type), __FILE__, __LINE__))
 
-#   define reallocate_size(allocator, old_ptr, new_size, cast_type) \
-        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (new_size), __FILE__, __LINE__))
+#   define nreallocate_size(allocator, old_ptr, old_size, new_size, cast_type) \
+        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), __FILE__, __LINE__))
 
-#   define reallocate_size_align(allocator, old_ptr, new_size, align, cast_type) \
-        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (new_size), (align), __FILE__, __LINE__))
+#   define nreallocate_size_align(allocator, old_ptr, old_size, new_size, align, cast_type) \
+        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), (align), __FILE__, __LINE__))
 
-#   define reallocate_array(allocator, type, old_ptr, new_cap) \
-        (type*)(reallocate_aligned((allocator), (old_ptr), sizeof(type) * (new_cap), alignof(type), __FILE__, __LINE__))
+#   define nreallocate_array(allocator, type, old_ptr, old_cap, new_cap) \
+        (type*)(reallocate_aligned((allocator), (old_ptr), sizeof(type) * (old_cap), sizeof(type) * (new_cap), alignof(type), __FILE__, __LINE__))
 
-#   define release(allocator, ptr) \
+#   define nrelease(allocator, ptr) \
        allocate_free((allocator), (void*)(ptr), __FILE__, __LINE__)
 
-#   define release_all(allocator) \
+#   define nrelease_all(allocator) \
        allocate_free_all((allocator), __FILE__, __LINE__)
 
 
