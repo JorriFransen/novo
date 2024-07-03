@@ -131,8 +131,8 @@ int main(int argc, char* argv[]) {
     #ifdef NOVO_TRACE_ALLOC
         free_atoms();
 
-        // report_allocator_trace("fl_allocator()", &((Freelist*)fl_allocator()->user_data)->trace);
-        // report_allocator_trace("c_allocator()", (Allocator_Trace*)c_allocator()->user_data);
+        report_allocator_trace("fl_allocator()", &((Freelist*)fl_allocator()->user_data)->trace);
+        report_allocator_trace("c_allocator()", (Allocator_Trace*)c_allocator()->user_data);
     #endif // NOVO_TRACE_ALLOC
 
     return result;

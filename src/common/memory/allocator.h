@@ -76,7 +76,7 @@ struct Allocator {
        (type*)(allocate_aligned((allocator), sizeof(type) * (length), alignof(type), __FILE__, __LINE__))
 
 #   define nreallocate_size(allocator, old_ptr, old_size, new_size, cast_type) \
-        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), __FILE__, __LINE__))
+        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), alignof(void*), __FILE__, __LINE__))
 
 #   define nreallocate_size_align(allocator, old_ptr, old_size, new_size, align, cast_type) \
         (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), (align), __FILE__, __LINE__))
@@ -130,7 +130,7 @@ struct Allocator {
        (type*)(allocate_aligned((allocator), sizeof(type) * (cap), alignof(type)))
 
 #   define nreallocate_size(allocator, old_ptr, old_size,  new_size, cast_type) \
-        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size)))
+        (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), alignof(void*)))
 
 #   define nreallocate_size_align(allocator, old_ptr, old_size, new_size, align, cast_type) \
         (cast_type*)(reallocate_aligned((allocator), (old_ptr), (old_size), (new_size), (align)))

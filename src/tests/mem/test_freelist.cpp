@@ -364,6 +364,39 @@ void grow() {
 #undef memory_end
 }
 
+void reallocate()
+{
+    Allocator* flalloc = fl_allocator();
+    Freelist* fl = (Freelist*)flalloc->user_data;
+
+    s64 size_1 = 2048;
+    s64 size_2 = size_1 * 3;
+
+    void* p1 = nallocate_size(flalloc, size_1, void);
+    void* p2 = nreallocate_size(flalloc, p1, size_1, size_2, void);
+    assert(p1 == p2);
+
+    s64 size_3 = size_1 - (sizeof(Freelist_Alloc_Header) * 2);
+    s64 size_4 = size_3 * 2;
+
+    void* p3 = nallocate_size(flalloc, size_3, void);
+    void* p4 = nreallocate_size(flalloc, p3, size_3, size_4, void);
+    assert(p3 == p4);
+
+    s64 size_5 = size_2 + size_1;
+    void* p5 = nreallocate_size(flalloc, p2, size_2, size_5, void);
+    assert(p5 != p1);
+
+    nrelease(flalloc, p5);
+    nrelease(flalloc, p4);
+
+
+    assert(fl->arena.used == 0);
+
+    freelist_reset(fl);
+
+}
+
 int main() {
 
     alloc_free_one();
@@ -373,6 +406,8 @@ int main() {
     alloc_aligned();
 
     grow();
+
+    reallocate();
 
     return 0;
 }

@@ -210,15 +210,30 @@ void* freelist_reallocate(Freelist* freelist, void* old_pointer, s64 old_size, s
         node = node->next;
     }
 
-    s64 diff = size - old_size;
-    // TODO: Grow when old_pointer + size is the end of the arena,
-    //       Grow when node_after is the end of the arena, but too small to statify diff
-    if (diff > sizeof(Freelist_Node) && node_after && node_after->size >= diff) {
+    u64 diff = size - old_size;
 
-        s64 remainder = node_after->size - diff;
+    void* current_end = freelist->arena.data + freelist->arena.capacity;
+
+    // Grow if the old allocation is at the end of the arena, OR
+    //  if the old allocation is next to the last free node, and the last free node is at the end of the arena.
+    bool grow = (!node_after && (u8*)old_pointer + old_size == current_end) ||
+                (node_after && (u8*)node_after + node_after->size == current_end && node_after->size < diff);
+
+    bool extend = false;
+
+    if (grow) {
+        node_after = freelist_grow(freelist, diff, align, nullptr, &prev);
+        extend = true;
+    } else {
+        extend = node_after && diff > sizeof(Freelist_Node) && node_after->size >= diff;
+    }
+
+    if (extend) {
+
+        u64 remainder = node_after->size - diff;
         if (remainder >= sizeof(Freelist_Node)) {
             Freelist_Node* new_node = (Freelist_Node*)((u8*)node_after + diff);
-            assert((u8*)new_node - (u8*)node_after >= sizeof(Freelist_Node)); // Nodes can't overlap
+            assert((size_t)((u8*)new_node - (u8*)node_after) >= sizeof(Freelist_Node)); // Nodes can't overlap
 
             new_node->size = node_after->size - diff;
             new_node->next = nullptr;
@@ -285,7 +300,6 @@ void freelist_release(Freelist* freelist, void* ptr)
     }
 
     if (prev_node && (u8*)prev_node + prev_node->size == (u8*)new_node) {
-        assert(prev_node->next == new_node);
         prev_node->size += new_node->size;
         freelist_remove(freelist, prev_node, new_node);
     }
