@@ -63,8 +63,10 @@ FN_ALLOCATOR(c_allocator_fn)
 
         s64 actual_size = size + (align - 1) + sizeof(void*);
 
+        trace_timer_start(malloc_time);
         void* mem = ::realloc(_old, actual_size);
         void **ptr = (void**)get_aligned((u64)mem + sizeof(void*), align);
+        trace_realloc_timer_end(allocator_data, malloc_time, old_pointer, mem, actual_size);
 
         // Store the pointer returned by malloc
         ptr[-1] = mem;

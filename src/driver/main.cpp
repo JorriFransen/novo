@@ -1,6 +1,7 @@
 
 #include <defines.h>
 #include <instance.h>
+#include <memory/allocator.h>
 
 #include "command_line_args.h"
 
@@ -28,8 +29,8 @@ int main(int argc, char* argv[])
         nrelease(fl_allocator(), options.output);
         free_atoms();
 
-        // report_allocator_trace("c_allocator()", (Allocator_Trace*)c_allocator()->user_data);
-        // report_allocator_trace("fl_allocator()", &((Freelist*)fl_allocator()->user_data)->trace);
+        report_allocator_trace("c_allocator()", (Allocator_Trace*)c_allocator()->user_data);
+        report_allocator_trace("fl_allocator()", &((Freelist*)fl_allocator()->user_data)->trace);
     #endif //NOVO_TRACE_ALLOC
     return 0;
 }

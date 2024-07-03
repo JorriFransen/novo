@@ -309,7 +309,7 @@ FN_ALLOCATOR(fl_allocator_fn)
 
             trace_timer_start(release_time);
             void* result = freelist_reallocate(freelist, old_pointer, old_size, size, align);
-            trace_alloc_timer_end(&freelist->trace, release_time, result, size);
+            trace_realloc_timer_end(&freelist->trace, release_time, old_pointer, result, size);
             return result;
         };
 
