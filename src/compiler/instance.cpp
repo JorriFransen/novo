@@ -13,6 +13,7 @@
 #include "ast_print.h"
 #include "atom.h"
 #include "backend.h"
+#include "c_backend.h"
 #include "keywords.h"
 #include "parser.h"
 #include "resolver.h"
@@ -140,6 +141,8 @@ void instance_init(Instance* inst, Options options)
     // TODO: Custom allocator
     vm_init(&inst->vm, fl_allocator(), inst);
 
+    backend_init(&inst->backend, backend_default_platform(), c_backend_emit);
+
     assert(sizeof(void*) == 8);
     inst->pointer_byte_size = 8;
 
@@ -186,6 +189,11 @@ void instance_init(Instance* inst, Options options)
     inst->builtin_type_bool = boolean_type_new(inst, 8);
     auto bool_decl = ast_builtin_type_decl(inst, inst->builtin_type_bool, "bool");
     scope_add_symbol(inst->global_scope, bool_decl->ident->atom, bool_decl);
+
+    // TODO: Query backend for c int size
+    inst->builtin_type_cint = integer_type_new(inst, true, backend_integer_bit_size(&inst->backend));
+    auto cint_decl = ast_builtin_type_decl(inst, inst->builtin_type_cint, "cint");
+    scope_add_symbol(inst->global_scope, cint_decl->ident->atom, cint_decl);
 
     inst->builtin_type_cchar = integer_type_new(inst, false, 8);
 
@@ -605,7 +613,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
     if (builtin_module || inst->options.no_backend)
         return true;
 
-    return backend_emit(inst);
+    return backend_emit(&inst->backend, inst);
 }
 
 u32 add_insert_string(Instance* inst, Source_Pos insert_pos, String_Ref str)

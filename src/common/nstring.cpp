@@ -1,7 +1,9 @@
 #include "nstring.h"
 
+#include "defines.h"
 #include "memory/allocator.h"
 
+#include <cctype>
 #include <cstdio>
 #include <cstring>
 
@@ -317,6 +319,24 @@ String convert_escape_characters_to_special_characters(Allocator* allocator, con
     return string(data, new_length);
 }
 
+
+s64 convert_string_to_signed(const String_Ref& str, u32 base/*=10*/)
+{
+    s64 result = 0;
+
+    for (s64 i = 0; i < str.length; i++) {
+
+        if (!(isdigit(str[i]))) break;
+        u64 digit = char_to_digit(str[i]);
+        if (digit == 0 && str[i] != '0') break;
+
+        assert(digit < base);
+
+        result = result * base + digit;
+    }
+
+    return result;
+}
 
 u64 hash_string(const char* cstr, u64 length)
 {

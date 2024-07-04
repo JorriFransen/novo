@@ -163,7 +163,7 @@ init_array :: (a: *[2]int, v1: int, v2: int) {
 
 heap_array ::  (v0: int, v1: int) -> *[2]int {
     // Allocate space for the array, and a pointer to the array
-    alloc : **void = malloc(sizeof(:*[2]int) + sizeof(:[2]int));
+    alloc : **void = malloc(cast(cint, sizeof(:*[2]int) + sizeof(:[2]int)));
 
     result := cast(*[2]int, alloc);
     elem_ptr : *void = alloc + 1;

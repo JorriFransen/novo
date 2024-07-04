@@ -223,7 +223,7 @@ init_array_5 :: (a: *[3]int, v0: int, v1: int, v2: int) {
 
 heap_array :: (v0: int, v1: int, v2: int) -> *[3]int {
     // Allocate space for the array, and a pointer to the array
-    alloc : **void = malloc(sizeof(:*[3]int) + sizeof(:[3]int));
+    alloc : **void = malloc(cast(cint, sizeof(:*[3]int) + sizeof(:[3]int)));
 
     result := cast(*[3]int, alloc);
 

@@ -1,6 +1,8 @@
 
-putchar :: (char: s32) -> s32 #foreign;
-puts :: (str: cstring) -> s32 #foreign;
-printf :: (format: cstring, ..) -> s32 #foreign;
-malloc :: (size: s64) -> *void #foreign;
+
+
+putchar :: (char: cint) -> cint #foreign;
+puts :: (str: cstring) -> cint #foreign;
+printf :: (format: cstring, ..) -> cint #foreign;
+malloc :: (size: cint) -> *void #foreign;
 free :: (ptr: *void) -> void #foreign;

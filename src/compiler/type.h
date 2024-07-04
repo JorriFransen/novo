@@ -140,6 +140,7 @@ NAPI Type* array_type_get(Instance* inst, u64 length, Type* element_type);
 NAPI Type* function_type_get(Instance* inst, Array_Ref<Type*> param_types, Type* return_type, Type_Flags flags);
 
 NAPI bool is_pointer_or_parent_of_pointer(Type* type);
+NAPI bool is_indirect_void_pointer(Type* type);
 
 NAPI bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to);
 

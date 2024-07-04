@@ -933,7 +933,7 @@ AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem)
             Type* elem_type = type->array.element_type;
             u64 offset = 0;
 
-            for (s64 i = 0; i < type->array.length; i++) {
+            for (u64 i = 0; i < type->array.length; i++) {
 
                 AST_Expression* mem_expr = vm_const_expr_from_memory(inst, elem_type, mem + offset);
                 darray_append(&expressions, mem_expr);

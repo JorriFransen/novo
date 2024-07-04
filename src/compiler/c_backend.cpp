@@ -344,11 +344,15 @@ String c_backend_emit_c_type(C_Backend* cb, Type* type, String_Ref name, CType_F
         }
 
         case Type_Kind::INTEGER: {
-            result = string_format(&ta,
-                                   name.length ? "%c%ld %.*s" : "%c%ld%.*s",
-                                   type->integer.sign ? 's' : 'u',
-                                   type->bit_size,
-                                   (int)name.length, name.data);
+            if (type == cb->inst->builtin_type_cint) {
+                result = string_format(&ta, name.length ? "int %.*s" : "int%.*s", (int)name.length, name.data);
+            } else {
+                result = string_format(&ta,
+                                       name.length ? "%c%ld %.*s" : "%c%ld%.*s",
+                                       type->integer.sign ? 's' : 'u',
+                                       type->bit_size,
+                                       (int)name.length, name.data);
+            }
             break;
         }
 

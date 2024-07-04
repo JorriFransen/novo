@@ -131,6 +131,8 @@ NAPI char get_escape_char(s64 index);
 NAPI String convert_special_characters_to_escape_characters(Allocator* allocator, const String_Ref str);
 NAPI String convert_escape_characters_to_special_characters(Allocator* allocator, const String_Ref str, const char **err_char = nullptr);
 
+NAPI s64 convert_string_to_signed(const String_Ref& str, u32 base = 10);
+
 NAPI u64 hash_string(const char* cstr, u64 length);
 NAPI u64 hash_string(const char* cstr);
 

@@ -226,10 +226,21 @@ bool is_pointer_or_parent_of_pointer(Type* type)
 
 bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to)
 {
+    // Integer to integer
+    if (from->kind == Type_Kind::INTEGER && to->kind == Type_Kind::INTEGER) {
+
+        if (from->integer.sign == to->integer.sign && from->bit_size == to->bit_size) return true;
+
+        return false;
+    }
+
     // Enum to integer
     if (from->kind == Type_Kind::ENUM && to->kind == Type_Kind::INTEGER) {
         return from->enumeration.strict_type == to;
     }
+
+    // Some level of void pointer to some level of void pointer
+    if (is_indirect_void_pointer(from) && is_indirect_void_pointer(to)) return true;
 
     // Implicit conversion to cstring
     if ((from == pointer_type_get(inst, inst->builtin_type_u8) || from == pointer_type_get(inst, inst->builtin_type_s8)) &&
@@ -238,6 +249,16 @@ bool valid_implicit_type_conversion(Instance* inst, Type* from, Type* to)
         return true;
 
     }
+    return false;
+}
+
+bool is_indirect_void_pointer(Type* type)
+{
+    while (type->kind == Type_Kind::POINTER) {
+        type = type->pointer.base;
+        if (type->kind == Type_Kind::VOID) return true;
+    }
+
     return false;
 }
 

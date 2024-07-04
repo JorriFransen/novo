@@ -8,6 +8,7 @@
 #include <nstring.h>
 
 #include "atom.h"
+#include "backend.h"
 #include "options.h"
 #include "ssa.h"
 #include "vm.h"
@@ -71,6 +72,8 @@ struct Instance
     VM vm;
     VM_Result entry_run_result;
 
+    Backend backend;
+
     s64 pointer_byte_size;
 
     Type* builtin_type_void;
@@ -85,6 +88,7 @@ struct Instance
     Type* builtin_type_int;
     Type* builtin_type_bool;
 
+    Type* builtin_type_cint;
     Type* builtin_type_cchar;
     Type* builtin_type_cstring;
 

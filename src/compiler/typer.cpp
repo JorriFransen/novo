@@ -83,7 +83,7 @@ bool type_declaration(Instance* inst, Type_Task* task, AST_Declaration* decl, Sc
                 }
 
                 if (!result_type) result_type = decl->variable.init_expr->resolved_type;
-                else if (valid_implicit_type_conversion(inst, result_type, decl->variable.init_expr->resolved_type)) {
+                else if (result_type != decl->variable.init_expr->resolved_type && !valid_implicit_type_conversion(inst, decl->variable.init_expr->resolved_type, result_type)) {
                     Source_Pos pos = source_pos(inst, decl->variable.init_expr);
                     instance_fatal_error(inst, pos, "Mismatching types in variable declaration, expected: '%s', got: '%s'",
                             temp_type_string(inst, result_type).data,
