@@ -333,6 +333,7 @@ bool instance_start(Instance* inst, String_Ref first_file_name, bool builtin_mod
             Resolve_Task* task_ptr = &inst->resolve_tasks[i];
             auto task = *task_ptr;
 
+            // TODO: Move this outside of the loop, reset each iteration?
             Temp_Arena loop_control_arena = temp_arena_create(tarena.arena);
             Allocator lc_alloc = arena_allocator_create(loop_control_arena.arena);
 

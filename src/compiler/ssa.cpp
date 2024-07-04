@@ -1119,8 +1119,9 @@ SSA_Register_Handle ssa_emit_lvalue(SSA_Builder* builder, AST_Expression* lvalue
         case AST_Expression_Kind::TYPE: assert(false); break;
 
         case AST_Expression_Kind::RUN: {
+            // Non compound values are emitted as constants.
             assert(lvalue_expr->run.generated_expression);
-            assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT);
+            assert(lvalue_expr->resolved_type->kind == Type_Kind::STRUCT || lvalue_expr->resolved_type->kind == Type_Kind::ARRAY);
 
             return ssa_emit_lvalue(builder, lvalue_expr->run.generated_expression, scope);
         }

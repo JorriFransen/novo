@@ -1,7 +1,7 @@
 
-// - Invalid1 := <a2; // Disallow dereference
 // - Default initializers
 // - Test returning array from #run
+// - Global array
 
 // - Try to remove double memcopy when calling functions like make_array.
 //      There is a memcopy from a temporary in make_arrays frame into a temporary in the callers frame.
@@ -11,11 +11,6 @@
 //      in the callers frame, try to pass the final destination directly instead of a temporary.
 
 #import "c"
-
-Vec2 :: struct {
-    x: s64;
-    y: s64;
-}
 
 main :: () -> int {
 
@@ -124,11 +119,17 @@ main :: () -> int {
     printf("positions[0]: { %d, %d }\n".data, positions[0].x, positions[0].y);
     printf("positions[1]: { %d, %d }\n".data, positions[1].x, positions[1].y);
 
+    a7 := #run make_array(77, 88);
+    //  assert(a7[0] == 77);
+    //  assert(a7[1] == 88);
+
     return 0;
 
 }
 
-add :: (a: s64, b: s64) -> int { return a + b; }
+return_int :: (x: s64) -> s64 { return x; }
+
+add :: (a: s64, b: s64) -> s64 { return a + b; }
 
 array_value_func_1 :: (a: [2]int) {
 
@@ -175,4 +176,9 @@ heap_array ::  (v0: int, v1: int) -> *[2]int {
     <result = { v0, v1 };
 
     return result;
+}
+
+Vec2 :: struct {
+    x: s64;
+    y: s64;
 }

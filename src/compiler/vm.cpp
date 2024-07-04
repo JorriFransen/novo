@@ -886,9 +886,11 @@ AST_Expression* vm_const_expr_from_result(Instance* inst, VM_Result vm_res)
 
         case Type_Kind::BOOLEAN: assert(false); break;
         case Type_Kind::POINTER: assert(false); break;
-        case Type_Kind::ARRAY: assert(false); break;
+
+
         case Type_Kind::FUNCTION: assert(false); break;
 
+        case Type_Kind::ARRAY:
         case Type_Kind::STRUCT: {
             u8* ptr = (u8*)vm_res.return_value;
             return vm_const_expr_from_memory(inst, vm_res.type, ptr);
@@ -923,7 +925,25 @@ AST_Expression* vm_const_expr_from_memory(Instance* inst, Type* type, u8* mem)
         }
 
         case Type_Kind::POINTER: assert(false); break;
-        case Type_Kind::ARRAY: assert(false); break;
+
+        case Type_Kind::ARRAY: {
+            DArray<AST_Expression*> expressions;
+            darray_init(&inst->ast_allocator, &expressions, type->array.length);
+
+            Type* elem_type = type->array.element_type;
+            u64 offset = 0;
+
+            for (s64 i = 0; i < type->array.length; i++) {
+
+                AST_Expression* mem_expr = vm_const_expr_from_memory(inst, elem_type, mem + offset);
+                darray_append(&expressions, mem_expr);
+
+                offset += elem_type->bit_size / 8;
+            }
+
+            return ast_compound_expression(inst, expressions);
+        }
+
         case Type_Kind::FUNCTION: assert(false); break;
 
         case Type_Kind::STRUCT: {
