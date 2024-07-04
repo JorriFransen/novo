@@ -153,6 +153,26 @@ array_basics :: () {
     assert(a1[1] == a2[1]);
     assert(a1[1] == 222);
 
+
+    p1 : Vec2 = { 22, 33 };
+
+    positions : [3]Vec2 = { { 11, 22 }, p1, make_vec(33, 44) };
+    assert(positions[0].x == 11);
+    assert(positions[0].y == 22);
+    assert(positions[1].x == 22);
+    assert(positions[1].y == 33);
+    assert(positions[2].x == 33);
+    assert(positions[2].y == 44);
+
+}
+
+Vec2 :: struct {
+    x: s64;
+    y: s64;
+}
+
+make_vec :: (x: s64, y: s64) -> Vec2 {
+    return { x, y };
 }
 
 add :: (a: int, b: int) -> int { return a + b; }

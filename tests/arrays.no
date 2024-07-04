@@ -12,6 +12,11 @@
 
 #import "c"
 
+Vec2 :: struct {
+    x: s64;
+    y: s64;
+}
+
 main :: () -> int {
 
     a1 : [2]int; // Local allocation, uninitialized
@@ -112,6 +117,12 @@ main :: () -> int {
     a3p := *a3;
     a3p.data = a4.data;
     assert(a3.data == a4.data);
+
+    printf("\n".data);
+    positions : [2]Vec2 = { { 11, 22 }, { 33, 44 } };
+
+    printf("positions[0]: { %d, %d }\n".data, positions[0].x, positions[0].y);
+    printf("positions[1]: { %d, %d }\n".data, positions[1].x, positions[1].y);
 
     return 0;
 
